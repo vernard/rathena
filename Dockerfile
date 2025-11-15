@@ -17,6 +17,6 @@ RUN ./configure --enable-prere=yes --enable-trans=yes --enable-epoll=yes --enabl
 # Compile rAthena
 RUN mkdir build && cd build && cmake .. && make -j$(nproc)
 
-RUN chmod +x ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh && chmod +x ./healthcheck.sh
 ENTRYPOINT ["./entrypoint.sh"]
 
