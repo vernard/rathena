@@ -1,4 +1,0 @@
-login_port: ${LOGIN_SERVER_PORT}
-
-use_MD5_passwords: ${LOGIN_USE_MD5_PASSWORDS}
-console_silent: ${LOGIN_CONSOLE_SILENT}
