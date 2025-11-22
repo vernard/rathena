@@ -4,6 +4,7 @@
 #ifndef CONFIG_PACKETS_HPP
 #define CONFIG_PACKETS_HPP
 
+#define PACKETVER 20180530
 /**
  * rAthena configuration file (http://rathena.org)
  * For detailed guidance on these check http://rathena.org/wiki/SRC/config/
