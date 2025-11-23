@@ -1,10 +1,12 @@
 //===== rAthena Script =======================================
-//= Auto-Potion
+//= Auto-Potion (with death disable)
 //===== Description: =========================================
 //= Provides an @autopot command to automatically use potions.
+//= Modified: Disables autopot on character death.
 //===== Changelogs: ==========================================
 //= 1.0 First version. [Euphy]
 //= 2.0 rewrite and adding SP option. [sader1992]
+//= 2.1 Added OnPCDieEvent to disable autopot on death, and add example usage [Vernard]
 //============================================================
 -	script	#autopot	-1,{
 OnInit:
@@ -36,6 +38,11 @@ L_Help:
 	dispbottom "    @autopot info";
 	dispbottom "    @autopot help";
 	dispbottom "    @autopot blacklist";
+	dispbottom "Example:";
+	dispbottom "    @autopot hp 569 60% (use Notice Potion [item_id: 569] if HP is less than 60%)";
+	dispbottom "Note: Auto-Potion is disabled on death. Use '@autopot hp on' or '@autopot sp on' to re-enable.";
+
+
 	return;
 
 L_Info:
@@ -89,7 +96,7 @@ OnCommand:
 	}
 	.@command$[0] = strtolower(.@atcmd_parameters$[0]);
 	.@command$[1] = strtolower(.@atcmd_parameters$[1]);
-	
+
 	if(.@command$[0] == "hp" || .@command$[0] == "sp"){
 		if((!.HP_Option && .@command$[0] == "hp") || (!.SP_Option && .@command$[0] == "sp")){
 			message strcharinfo(0), "Auto-Potion " + strtoupper(.@command$[0]) + " is Disabled from The Server.";
@@ -169,7 +176,7 @@ OnCommand:
 		callsub L_Help;
 		end;
 	}
-	
+
 	message strcharinfo(0), "Invalid syntax.";
 	callsub L_Help;
 end;
@@ -199,5 +206,14 @@ OnStart:
 	}
 	if(@autopot_hp_Active || @autopot_sp_Active)
 		addtimer @autopot_delay,strnpcinfo(3) + "::OnStart";
+end;
+
+OnPCDieEvent:
+	if(@autopot_hp_Active || @autopot_sp_Active) {
+		@autopot_hp_Active = false;
+		@autopot_sp_Active = false;
+		deltimer strnpcinfo(3) + "::OnStart";
+		message strcharinfo(0), "Auto-Potion disabled due to death.";
+	}
 end;
 }
