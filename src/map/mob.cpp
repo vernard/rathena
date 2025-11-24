@@ -40,6 +40,7 @@
 #include "pc.hpp"
 #include "pet.hpp"
 #include "quest.hpp"
+#include "raredrop.hpp"
 
 using namespace rathena;
 
@@ -3343,11 +3344,11 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 			std::shared_ptr<s_item_drop> ditem = mob_setdropitem(entry, 1, md->mob_id);
 
 			//A Rare Drop Global Announce by Lupus
-			if (first_sd != nullptr && entry->rate <= battle_config.rare_drop_announce) {
-				char message[128];
-				sprintf(message, msg_txt(nullptr, 541), first_sd->status.name, md->name, it->ename.c_str(), (float)drop_rate / 100);
-				//MSG: "'%s' won %s's %s (chance: %0.02f%%)"
-				intif_broadcast(message, strlen(message) + 1, BC_DEFAULT);
+			//Modified for Rare Drop Tracking system - logs and announces based on thresholds
+			if (first_sd != nullptr) {
+				raredrop_record_and_announce(first_sd, entry->nameid, it->ename.c_str(),
+					RAREDROP_SOURCE_MOB, md->mob_id, md->name, drop_rate,
+					battle_config.rare_drop_announce);
 			}
 			// Announce first, or else ditem will be freed. [Lance]
 			// By popular demand, use base drop rate for autoloot code. [Skotlex]
@@ -3508,12 +3509,10 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 				log_mvp_nameid = item.nameid;
 
 				//A Rare MVP Drop Global Announce by Lupus
-				if(temp<=battle_config.rare_drop_announce) {
-					char message[128];
-					sprintf (message, msg_txt(nullptr,541), mvp_sd->status.name, md->name, i_data->ename.c_str(), temp/100.);
-					//MSG: "'%s' won %s's %s (chance: %0.02f%%)"
-					intif_broadcast(message,strlen(message)+1,BC_DEFAULT);
-				}
+				//Modified for Rare Drop Tracking system - logs and announces based on thresholds
+				raredrop_record_and_announce(mvp_sd, entry->nameid, i_data->ename.c_str(),
+					RAREDROP_SOURCE_MOB, md->mob_id, md->name, temp,
+					battle_config.rare_drop_announce);
 
 				mob_setdropitem_option( item, entry );
 
@@ -3583,6 +3582,9 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 				else
 					achievement_update_objective(sd, AG_BATTLE, 1, md->mob_id);
 			}
+
+			// Rare Drop Tracking - record kill for drop announcements
+			raredrop_record_kill(sd, md->mob_id);
 
 			// The master or Mercenary can increase the kill count, if the monster level is greater or equal than half the baselevel of the master
 			if (sd->md && src && (src->type == BL_PC || src->type == BL_MER) && mob->lv >= sd->status.base_level / 2)

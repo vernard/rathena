@@ -25,6 +25,7 @@
 #include "log.hpp"
 #include "mob.hpp"
 #include "pc.hpp"
+#include "raredrop.hpp"
 #include "status.hpp"
 
 using namespace rathena;
@@ -3073,6 +3074,18 @@ void ItemGroupDatabase::pc_get_itemgroup_sub( map_session_data& sd, bool identif
 		if( flag == ADDITEM_SUCCESS ){
 			if( data->isAnnounced ){
 				intif_broadcast_obtain_special_item( &sd, data->nameid, sd.itemid, ITEMOBTAIN_TYPE_BOXITEM );
+			}
+
+			// Rare Drop Tracking for item box rewards
+			// Use adj_rate (adjusted rate) which accounts for item_group_rate config
+			if (data->adj_rate > 0 && data->adj_rate <= (uint16)battle_config.rare_drop_announce) {
+				std::shared_ptr<item_data> i_data = item_db.find(data->nameid);
+				std::shared_ptr<item_data> source_data = item_db.find(sd.itemid);
+				if (i_data != nullptr && source_data != nullptr) {
+					raredrop_record_and_announce(&sd, data->nameid, i_data->ename.c_str(),
+						RAREDROP_SOURCE_ITEM, sd.itemid, source_data->ename.c_str(),
+						data->adj_rate, battle_config.rare_drop_announce);
+				}
 			}
 		}else{
 			clif_additem( &sd, 0, 0, flag );

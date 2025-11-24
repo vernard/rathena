@@ -1,0 +1,182 @@
+
+// Rare Drop Tracking Module
+// Custom module for enhanced rare drop announcements
+
+#include "raredrop.hpp"
+
+#include <common/nullpo.hpp>
+#include <common/showmsg.hpp>
+#include <common/sql.hpp>
+
+#include "intif.hpp"
+#include "map.hpp"
+#include "pc.hpp"
+
+
+/**
+ * Increment the kill count for a character killing a specific mob
+ */
+void raredrop_record_kill(map_session_data* sd, int32 mob_id) {
+	nullpo_retv(sd);
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"INSERT INTO `char_mob_kills` (`char_id`, `mob_id`, `kill_count`) "
+		"VALUES ('%u', '%d', 1) "
+		"ON DUPLICATE KEY UPDATE `kill_count` = `kill_count` + 1, `last_kill` = NOW()",
+		sd->status.char_id, mob_id))
+	{
+		Sql_ShowDebug(mmysql_handle);
+	}
+}
+
+/**
+ * Get the kill count for a character against a specific mob
+ */
+uint32 raredrop_get_kill_count(uint32 char_id, int32 mob_id) {
+	uint32 count = 0;
+	char* data;
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT `kill_count` FROM `char_mob_kills` WHERE `char_id` = '%u' AND `mob_id` = '%d'",
+		char_id, mob_id))
+	{
+		Sql_ShowDebug(mmysql_handle);
+		return 0;
+	}
+
+	if (SQL_SUCCESS == Sql_NextRow(mmysql_handle)) {
+		Sql_GetData(mmysql_handle, 0, &data, nullptr);
+		count = (uint32)strtoul(data, nullptr, 10);
+	}
+
+	Sql_FreeResult(mmysql_handle);
+	return count;
+}
+
+/**
+ * Increment item drop count and return the new count
+ */
+static uint32 raredrop_increment_item_count(uint32 char_id, t_itemid item_id) {
+	uint32 count = 0;
+	char* data;
+
+	// Increment the count
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"INSERT INTO `char_rare_item_count` (`char_id`, `item_id`, `drop_count`) "
+		"VALUES ('%u', '%u', 1) "
+		"ON DUPLICATE KEY UPDATE `drop_count` = `drop_count` + 1, `last_drop` = NOW()",
+		char_id, item_id))
+	{
+		Sql_ShowDebug(mmysql_handle);
+		return 1;
+	}
+
+	// Retrieve the new count
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT `drop_count` FROM `char_rare_item_count` WHERE `char_id` = '%u' AND `item_id` = '%u'",
+		char_id, item_id))
+	{
+		Sql_ShowDebug(mmysql_handle);
+		return 1;
+	}
+
+	if (SQL_SUCCESS == Sql_NextRow(mmysql_handle)) {
+		Sql_GetData(mmysql_handle, 0, &data, nullptr);
+		count = (uint32)strtoul(data, nullptr, 10);
+	}
+
+	Sql_FreeResult(mmysql_handle);
+	return count > 0 ? count : 1;
+}
+
+/**
+ * Get ordinal suffix for a number
+ */
+const char* raredrop_ordinal_suffix(uint32 n) {
+	// Special cases for 11, 12, 13
+	if (n % 100 >= 11 && n % 100 <= 13) {
+		return "th";
+	}
+
+	switch (n % 10) {
+		case 1: return "st";
+		case 2: return "nd";
+		case 3: return "rd";
+		default: return "th";
+	}
+}
+
+/**
+ * Format a number with comma separators
+ */
+static void raredrop_format_number(uint32 n, char* buf, size_t buf_size) {
+	if (n >= 1000000) {
+		snprintf(buf, buf_size, "%u,%03u,%03u",
+			n / 1000000,
+			(n / 1000) % 1000,
+			n % 1000);
+	} else if (n >= 1000) {
+		snprintf(buf, buf_size, "%u,%03u",
+			n / 1000,
+			n % 1000);
+	} else {
+		snprintf(buf, buf_size, "%u", n);
+	}
+}
+
+/**
+ * Record a rare drop and announce it
+ */
+void raredrop_record_and_announce(map_session_data* sd, t_itemid item_id,
+                                   const char* item_name, e_raredrop_source source_type,
+                                   uint32 source_id, const char* source_name,
+                                   int32 drop_rate, int32 announce_threshold)
+{
+	nullpo_retv(sd);
+
+	// Skip if above announce threshold
+	if (drop_rate > announce_threshold) {
+		return;
+	}
+
+	// Increment item drop count and get the new count
+	uint32 drop_count = raredrop_increment_item_count(sd->status.char_id, item_id);
+
+	// Get kill count (only relevant for mob sources)
+	uint32 kill_count = 0;
+	if (source_type == RAREDROP_SOURCE_MOB) {
+		kill_count = raredrop_get_kill_count(sd->status.char_id, source_id);
+	}
+
+	// Prepare the announcement message
+	char message[256];
+	char count_str[32];
+
+	if (source_type == RAREDROP_SOURCE_MOB) {
+		// Monster drop format:
+		// "Player got their 3rd Item Name (0.01%) after hunting Monster Name 1,234 times."
+		raredrop_format_number(kill_count, count_str, sizeof(count_str));
+		snprintf(message, sizeof(message),
+			"%s got their %u%s %s (%0.02f%%) after hunting %s %s times.",
+			sd->status.name,
+			drop_count,
+			raredrop_ordinal_suffix(drop_count),
+			item_name,
+			(float)drop_rate / 100.0f,
+			source_name,
+			count_str);
+	} else {
+		// Item box format:
+		// "Player got their 3rd Item Name (0.01%) from Old Blue Box."
+		snprintf(message, sizeof(message),
+			"%s got their %u%s %s (%0.02f%%) from %s.",
+			sd->status.name,
+			drop_count,
+			raredrop_ordinal_suffix(drop_count),
+			item_name,
+			(float)drop_rate / 100.0f,
+			source_name);
+	}
+
+	intif_broadcast(message, (int)strlen(message) + 1, BC_DEFAULT);
+}
