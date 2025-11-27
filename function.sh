@@ -16,11 +16,11 @@ check_files() {
 }
 
 check_inst_right(){
-    if [ ! -w $INST_PATH ]; then echo "You must have sudo right to use this install (write/read permission in /opt/ )" && exit; fi
+    if [ ! -w "$INST_PATH" ]; then echo "You must have sudo right to use this install (write/read permission in /opt/ )" && exit; fi
 }
 
 inst_launch_workaround(){
-  if [ -d $PKG_PATH ]; then
-    if [ $(pwd) != $PKG_PATH ]; then cd $PKG_PATH; fi
+  if [ -d "$PKG_PATH" ]; then
+    if [ "$(pwd)" != "$PKG_PATH" ]; then cd "$PKG_PATH"; fi
   fi
 }
