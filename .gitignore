@@ -1,8 +1,7 @@
-autom4te.cache/
-
+/autom4te.cache/output.0
+/autom4te.cache/requests
+/autom4te.cache/traces.0
 #Global
-.cache
-.idea
 .vscode
 .Apple*
 .DS_Store
@@ -41,10 +40,8 @@ Thumbs.db
 /Makefile
 /Makefile.cache
 /map-server
-/map-server-generator
 /mapcache
 /nbproject
-/web-server
 /yaml2sql
 /yamlupgrade
 
@@ -53,15 +50,8 @@ Thumbs.db
 /3rdparty/libconfig/*.o
 /3rdparty/libconfig/obj
 
-# /3rdparty/rapidyaml/
-/3rdparty/rapidyaml/Makefile
-
 # /3rdparty/yaml-cpp/
 /3rdparty/yaml-cpp/Makefile
-
-# /3rdparty/httplib/
-/3rdparty/httplib/Makefile
-/3rdparty/httplib/obj
 
 # /db/
 /db/import
@@ -99,10 +89,6 @@ Thumbs.db
 /src/map/obj_sql
 /src/map/pcre.hpp
 
-# /src/web
-/src/web/Makefile
-/src/web/obj
-
 # /src/tool/
 /src/tool/Makefile
 /src/tool/obj_all
@@ -118,7 +104,6 @@ Thumbs.db
 .vs
 *.VC.db
 *.VC.opendb
-*.slnLaunch.user
 
 /.idea/.name
 /.idea/misc.xml
@@ -137,10 +122,8 @@ Thumbs.db
 /mapserv.bat
 /runserver.bat
 /serv.bat
-/webserv.bat
 /yaml2sql.bat
 /yamlupgrade.bat
-/navigenerator.bat
 
 # dlls
 /libmysql.dll
@@ -149,6 +132,3 @@ Thumbs.db
 
 # CMakeFiles
 /CMakeFiles/
-
-# generated files
-generated

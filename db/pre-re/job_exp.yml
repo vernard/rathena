@@ -25,12 +25,9 @@
 # - Jobs:                    List of jobs associated to group.
 #     Job                    Job name.
 #   MaxWeight                Base maximum weight. (Default: 20000)
-#   HpFactor                 Exponential HP increase. Per base level: [HpFactor * BaseLv / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 0)
-#   HpIncrease               Linear HP increase. Per base level: [HpIncrease / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 500)
-#   SpFactor                 Exponential SP increase. Per base level: [SpFactor * BaseLv / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 0)
-#   SpIncrease               Linear SP increase. Per base level: [SpIncrease / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 100)
-#   ApFactor                 Exponential AP increase. Per base level: [ApFactor * BaseLv / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 0)
-#   ApIncrease               Linear AP increase. Per base level: [ApIncrease / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 0)
+#   HPFactor                 HP increase per base level. Floor(HPFactor / 100) * BaseLv. Used when macro HP_SP_TABLES is disabled. (Default: 20000)
+#   HPMultiplicator          Base HP value. 35 + BaseLv * (HPMultiplicator / 100). Used when macro HP_SP_TABLES is disabled. (Default: 500)
+#   SPFactor                 SP increase per job level. Floor(SPFactor / 100) * BaseLv. Used when macro HP_SP_TABLES is disabled. (Default: 100)
 #   BaseASPD:                Base ASPD for each weapon type. (Default: 2000)
 #     Weapon                 Weapon type with associated ASPD.
 #   BonusStats:              Job level bonus stats/traits.
@@ -77,12 +74,11 @@
 #   BaseAp:                  Base AP per base level.
 #     - Level                Base level.
 #       Ap                   Base AP.
-#   AlternateOutfits:        Alternate Jobs outfits. (Default: empty)
 ###########################################################################
 
 Header:
   Type: JOB_STATS
-  Version: 4
+  Version: 1
 
 Body:
   - Jobs:
@@ -138,6 +134,9 @@ Body:
       Star_Gladiator: true
       Star_Gladiator2: true
       Soul_Linker: true
+      Gangsi: true
+      Death_Knight: true
+      Dark_Collector: true
     MaxBaseLevel: 99
     BaseExp:
       - Level: 1
@@ -600,6 +599,7 @@ Body:
       Baby_Merchant: true
       Baby_Thief: true
       Taekwon: true
+      Gangsi: true
     MaxJobLevel: 50
     JobExp:
       - Level: 1
@@ -734,6 +734,8 @@ Body:
       Baby_Dancer: true
       Baby_Crusader2: true
       Soul_Linker: true
+      Death_Knight: true
+      Dark_Collector: true
     MaxJobLevel: 50
     JobExp:
       - Level: 1

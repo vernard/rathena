@@ -9,7 +9,7 @@
  * For detailed guidance on these check http://rathena.org/wiki/SRC/config/
  **/
 
-#include <custom/defines_pre.hpp>
+#include "../custom/defines_pre.hpp"
 
 /// Max number of items on @autolootid list
 #define AUTOLOOTITEM_SIZE 10
@@ -18,11 +18,9 @@
 #define MAX_SUGGESTIONS 10
 
 /// Comment to disable the official walk path
-/// The official walkpath disables ranged units from taking non-clear walk paths to attack a target,
-/// e.g. if they need to get around an obstacle to attack, players will have to click to walk around it
-/// before attacking and monsters will just drop target once they get in attack range and can't attack.
-/// If disabled, the server automatically makes sure units find a position to attack from by moving closer.
-/// Disabling this also stops skills from failing when the target has walked behind an obstacle during cast.
+/// The official walkpath disables users from taking non-clear walk paths,
+/// e.g. if they want to get around an obstacle they have to walk around it,
+/// while with OFFICIAL_WALKPATH disabled if they click to walk around a obstacle the server will do it automatically
 #define OFFICIAL_WALKPATH
 
 /// Uncomment to enable the Cell Stack Limit mod.
@@ -58,22 +56,9 @@
 #define VIP_SCRIPT 0
 
 #ifdef VIP_ENABLE
-	#ifndef MIN_STORAGE
-		#define MIN_STORAGE 300 // Default number of storage slots.
-	#endif
-	#ifndef MAX_CHAR_VIP
-		#define MAX_CHAR_VIP 6 // This must be less than MAX_CHARS
-	#endif
-#else
-	#ifndef MIN_STORAGE
-		#define MIN_STORAGE MAX_STORAGE // If the VIP system is disabled the min = max.
-	#endif
-	#ifndef MAX_CHAR_VIP
-		#define MAX_CHAR_VIP 0
-	#endif
-#endif
-
-#ifndef MAX_CHAR_BILLING
+	#define MIN_STORAGE 300 // Default number of storage slots.
+	#define MIN_CHARS 3 // Default number of characters per account.
+	#define MAX_CHAR_VIP 6 // This must be less than MAX_CHARS
 	#define MAX_CHAR_BILLING 0 // This must be less than MAX_CHARS
 #endif
 
@@ -99,17 +84,6 @@
 /// Uncomment for use with Nemo patch ExtendCashShopPreview
 //#define ENABLE_CASHSHOP_PREVIEW_PATCH
 
-/// Uncomment for use with Nemo patch ExtendOldCashShopPreview
-//#define ENABLE_OLD_CASHSHOP_PREVIEW_PATCH
-
-#if defined(_DEBUG) || defined(DEBUG)
-	#define DETAILED_LOADING_OUTPUT
-#endif
-
-/// Uncomment to forcibly disable the detailed loading output.
-/// This will noticeably decrease the boot time of the map server by not having to print so many status messages.
-//#undef DETAILED_LOADING_OUTPUT
-
 /**
  * No settings past this point
  **/
@@ -123,6 +97,6 @@
  **/
 #include "./const.hpp"
 
-#include <custom/defines_post.hpp>
+#include "../custom/defines_post.hpp"
 
 #endif /* CONFIG_CORE_HPP */

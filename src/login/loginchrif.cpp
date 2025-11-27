@@ -3,20 +3,20 @@
 
 #include "loginchrif.hpp"
 
-#include <cstdlib>
-#include <cstring>
+#include <stdlib.h>
+#include <string.h>
 
-#include <common/showmsg.hpp> //show notice
-#include <common/socket.hpp> //wfifo session
-#include <common/strlib.hpp> //safeprint
-#include <common/timer.hpp> //difftick
+#include "../common/showmsg.hpp" //show notice
+#include "../common/socket.hpp" //wfifo session
+#include "../common/strlib.hpp" //safeprint
+#include "../common/timer.hpp" //difftick
 
 #include "account.hpp"
 #include "login.hpp"
 #include "loginlog.hpp"
 
 //early declaration
-void logchrif_on_disconnect(int32 id);
+void logchrif_on_disconnect(int id);
 
 /**
  * Packet send to all char-servers, except one. (wos: without our self)
@@ -25,10 +25,10 @@ void logchrif_on_disconnect(int32 id);
  * @param len: size of packet
  * @return : the number of char-serv the packet was sent to
  */
-int32 logchrif_sendallwos(int32 sfd, uint8* buf, size_t len) {
-	int32 i, c;
+int logchrif_sendallwos(int sfd, uint8* buf, size_t len) {
+	int i, c;
 	for( i = 0, c = 0; i < ARRAYLENGTH(ch_server); ++i ) {
-		int32 fd = ch_server[i].fd;
+		int fd = ch_server[i].fd;
 		if( session_isValid(fd) && fd != sfd ){
 			WFIFOHEAD(fd,len);
 			memcpy(WFIFOP(fd,0), buf, len);
@@ -69,7 +69,7 @@ TIMER_FUNC(logchrif_sync_ip_addresses){
  * @param ip: char-serv ip (used for info)
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_reqauth(int32 fd, int32 id,char* ip){
+int logchrif_parse_reqauth(int fd, int id,char* ip){
 	if( RFIFOREST(fd) < 23 )
 		return 0;
 	else{
@@ -78,12 +78,12 @@ int32 logchrif_parse_reqauth(int32 fd, int32 id,char* ip){
 		uint32 login_id2 = RFIFOL(fd,10);
 		uint8 sex = RFIFOB(fd,14);
 		//uint32 ip_ = ntohl(RFIFOL(fd,15));
-		int32 request_id = RFIFOL(fd,19);
+		int request_id = RFIFOL(fd,19);
 		RFIFOSKIP(fd,23);
 
 		struct auth_node* node = login_get_auth_node( account_id );
 
-		if( global_core->is_running() &&
+		if( runflag == LOGINSERVER_ST_RUNNING &&
 			node != nullptr &&
 			node->account_id == account_id &&
 			node->login_id1  == login_id1 &&
@@ -129,11 +129,11 @@ int32 logchrif_parse_reqauth(int32 fd, int32 id,char* ip){
  * @param id: id of char-serv
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_ackusercount(int32 fd, int32 id){
+int logchrif_parse_ackusercount(int fd, int id){
 	if( RFIFOREST(fd) < 6 )
 		return 0;
 	else{
-		int32 users = RFIFOL(fd,2);
+		int users = RFIFOL(fd,2);
 		RFIFOSKIP(fd,6);
 		// how many users on world? (update)
 		if( ch_server[id].users != users ){
@@ -150,15 +150,15 @@ int32 logchrif_parse_ackusercount(int32 fd, int32 id){
  *  isvip.1B char_vip.1B max_billing.1B (tot 75)  
  * @return -1 : account not found, 1:sucess
  */
-int32 logchrif_send_accdata(int32 fd, uint32 aid) {
+int logchrif_send_accdata(int fd, uint32 aid) {
 	struct mmo_account acc;
 	time_t expiration_time = 0;
 	char email[40] = "";
-	int32 group_id = 0;
+	int group_id = 0;
 	char birthdate[10+1] = "";
 	char pincode[PINCODE_LENGTH+1];
 	char isvip = false;
-	uint8 char_slots = MIN_CHARS, char_vip = 0, char_billing = MAX_CHAR_BILLING;
+	uint8 char_slots = MIN_CHARS, char_vip = 0, char_billing = 0;
 	AccountDB* accounts = login_get_accounts_db();
 
 	memset(pincode,0,PINCODE_LENGTH+1);
@@ -171,19 +171,14 @@ int32 logchrif_send_accdata(int32 fd, uint32 aid) {
 
 		safestrncpy(birthdate, acc.birthdate, sizeof(birthdate));
 		safestrncpy(pincode, acc.pincode, sizeof(pincode));
-		char_slots = login_config.char_per_account;
-
-		// Respect account information from login-server
-		if( acc.char_slots > 0 ){
-			char_slots = acc.char_slots;
-		}
-
 #ifdef VIP_ENABLE
 		char_vip = login_config.vip_sys.char_increase;
-		if( acc.vip_time > time(nullptr) ) {
+		if( acc.vip_time > time(NULL) ) {
 			isvip = true;
-			char_slots += char_vip;
-		}
+			char_slots = login_config.char_per_account + char_vip;
+		} else
+			char_slots = login_config.char_per_account;
+		char_billing = MAX_CHAR_BILLING; //TODO create a config for this
 #endif
 	}
 
@@ -211,12 +206,12 @@ int32 logchrif_send_accdata(int32 fd, uint32 aid) {
  * @param flag 0x1: VIP, 0x2: GM, 0x4: Show rates on player
  * @param mapfd
  */
-int32 logchrif_sendvipdata(int32 fd, struct mmo_account* acc, unsigned char flag, int32 mapfd) {
+int logchrif_sendvipdata(int fd, struct mmo_account* acc, unsigned char flag, int mapfd) {
 #ifdef VIP_ENABLE
 	WFIFOHEAD(fd,19);
 	WFIFOW(fd,0) = 0x2743;
 	WFIFOL(fd,2) = acc->account_id;
-	WFIFOL(fd,6) = (int32)acc->vip_time;
+	WFIFOL(fd,6) = (int)acc->vip_time;
 	WFIFOB(fd,10) = flag;
 	WFIFOL(fd,11) = acc->group_id; //new group id
 	WFIFOL(fd,15) = mapfd; //link to mapserv
@@ -233,7 +228,7 @@ int32 logchrif_sendvipdata(int32 fd, struct mmo_account* acc, unsigned char flag
  * @param ip: char-serv ip (used for info)
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_reqaccdata(int32 fd, int32 id, char *ip){
+int logchrif_parse_reqaccdata(int fd, int id, char *ip){
 	if( RFIFOREST(fd) < 6 )
 		return 0;
 	else {
@@ -250,7 +245,7 @@ int32 logchrif_parse_reqaccdata(int32 fd, int32 id, char *ip){
  * @param fd: fd to parse from (char-serv)
  * @return 1 success
  */
-int32 logchrif_parse_keepalive(int32 fd){
+int logchrif_parse_keepalive(int fd){
 	RFIFOSKIP(fd,2);
 	WFIFOHEAD(fd,2);
 	WFIFOW(fd,0) = 0x2718;
@@ -266,7 +261,7 @@ int32 logchrif_parse_keepalive(int32 fd){
  * @param ip: char-serv ip (used for info)
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_reqchangemail(int32 fd, int32 id, char* ip){
+int logchrif_parse_reqchangemail(int fd, int id, char* ip){
 	if (RFIFOREST(fd) < 86)
 		return 0;
 	else{
@@ -294,7 +289,7 @@ int32 logchrif_parse_reqchangemail(int32 fd, int32 id, char* ip){
 			safestrncpy(acc.email, new_email, 40);
 			ShowNotice("Char-server '%s': Modify an e-mail on an account (@email GM command) (account: %d (%s), new e-mail: %s, ip: %s).\n", ch_server[id].name, account_id, acc.userid, new_email, ip);
 			// Save
-			accounts->save(accounts, &acc, false);
+			accounts->save(accounts, &acc);
 		}
 	}
 	return 1;
@@ -308,14 +303,14 @@ int32 logchrif_parse_reqchangemail(int32 fd, int32 id, char* ip){
  * @return 0 not enough info transmitted, 1 success
  * TODO seems pretty damn close to logchrif_parse_reqbanacc
  */
-int32 logchrif_parse_requpdaccstate(int32 fd, int32 id, char* ip){
+int logchrif_parse_requpdaccstate(int fd, int id, char* ip){
 	if (RFIFOREST(fd) < 10)
 		return 0;
 	else{
 		struct mmo_account acc;
 
 		uint32 account_id = RFIFOL(fd,2);
-		uint32 state = RFIFOL(fd,6);
+		unsigned int state = RFIFOL(fd,6);
 		AccountDB* accounts = login_get_accounts_db();
 
 		RFIFOSKIP(fd,10);
@@ -329,7 +324,7 @@ int32 logchrif_parse_requpdaccstate(int32 fd, int32 id, char* ip){
 
 			acc.state = state;
 			// Save
-			accounts->save(accounts, &acc, false);
+			accounts->save(accounts, &acc);
 
 			// notify other servers
 			if (state != 0){
@@ -353,7 +348,7 @@ int32 logchrif_parse_requpdaccstate(int32 fd, int32 id, char* ip){
  * @return 0 not enough info transmitted, 1 success
  * TODO check logchrif_parse_requpdaccstate for possible merge
  */
-int32 logchrif_parse_reqbanacc(int32 fd, int32 id, char* ip){
+int logchrif_parse_reqbanacc(int fd, int id, char* ip){
 	if (RFIFOREST(fd) < 10)
 		return 0;
 	else{
@@ -361,21 +356,21 @@ int32 logchrif_parse_reqbanacc(int32 fd, int32 id, char* ip){
 		AccountDB* accounts = login_get_accounts_db();
 
 		uint32 account_id = RFIFOL(fd,2);
-		int32 timediff = RFIFOL(fd,6);
+		int timediff = RFIFOL(fd,6);
 		RFIFOSKIP(fd,10);
 
 		if( !accounts->load_num(accounts, &acc, account_id) )
 			ShowNotice("Char-server '%s': Error of ban request (account: %d not found, ip: %s).\n", ch_server[id].name, account_id, ip);
 		else{
 			time_t timestamp;
-			if (acc.unban_time == 0 || acc.unban_time < time(nullptr))
-				timestamp = time(nullptr); // new ban
+			if (acc.unban_time == 0 || acc.unban_time < time(NULL))
+				timestamp = time(NULL); // new ban
 			else
 				timestamp = acc.unban_time; // add to existing ban
 			timestamp += timediff;
 			if (timestamp == -1)
 				ShowNotice("Char-server '%s': Error of ban request (account: %d, invalid date, ip: %s).\n", ch_server[id].name, account_id, ip);
-			else if( timestamp <= time(nullptr) || timestamp == 0 )
+			else if( timestamp <= time(NULL) || timestamp == 0 )
 				ShowNotice("Char-server '%s': Error of ban request (account: %d, new date unbans the account, ip: %s).\n", ch_server[id].name, account_id, ip);
 			else{
 				uint8 buf[11];
@@ -386,7 +381,7 @@ int32 logchrif_parse_reqbanacc(int32 fd, int32 id, char* ip){
 				acc.unban_time = timestamp;
 
 				// Save
-				accounts->save(accounts, &acc, false);
+				accounts->save(accounts, &acc);
 
 				WBUFW(buf,0) = 0x2731;
 				WBUFL(buf,2) = account_id;
@@ -406,7 +401,7 @@ int32 logchrif_parse_reqbanacc(int32 fd, int32 id, char* ip){
  * @param ip: char-serv ip (used for info)
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_reqchgsex(int32 fd, int32 id, char* ip){
+int logchrif_parse_reqchgsex(int fd, int id, char* ip){
 	if( RFIFOREST(fd) < 6 )
 		return 0;
 	else{
@@ -428,7 +423,7 @@ int32 logchrif_parse_reqchgsex(int32 fd, int32 id, char* ip){
 
 			acc.sex = sex;
 			// Save
-			accounts->save(accounts, &acc, false);
+			accounts->save(accounts, &acc);
 
 			// announce to other servers
 			WBUFW(buf,0) = 0x2723;
@@ -447,7 +442,7 @@ int32 logchrif_parse_reqchgsex(int32 fd, int32 id, char* ip){
  * @param ip: char-serv ip (used for info)
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_upd_global_accreg(int32 fd, int32 id, char* ip){
+int logchrif_parse_upd_global_accreg(int fd, int id, char* ip){
 	if( RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2) )
 		return 0;
 	else{
@@ -471,7 +466,7 @@ int32 logchrif_parse_upd_global_accreg(int32 fd, int32 id, char* ip){
  * @param ip: char-serv ip (used for info)
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_requnbanacc(int32 fd, int32 id, char* ip){
+int logchrif_parse_requnbanacc(int fd, int id, char* ip){
 	if( RFIFOREST(fd) < 6 )
 		return 0;
 	else{
@@ -488,7 +483,7 @@ int32 logchrif_parse_requnbanacc(int32 fd, int32 id, char* ip){
 		else{
 			ShowNotice("Char-server '%s': UnBan request (account: %d, ip: %s).\n", ch_server[id].name, account_id, ip);
 			acc.unban_time = 0;
-			accounts->save(accounts, &acc, false);
+			accounts->save(accounts, &acc);
 		}
 	}
 	return 1;
@@ -501,7 +496,7 @@ int32 logchrif_parse_requnbanacc(int32 fd, int32 id, char* ip){
  * @param id: id of char-serv
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_setacconline(int32 fd, int32 id){
+int logchrif_parse_setacconline(int fd, int id){
 	if( RFIFOREST(fd) < 6 )
 		return 0;
 	login_add_online_user(id, RFIFOL(fd,2));
@@ -515,7 +510,7 @@ int32 logchrif_parse_setacconline(int32 fd, int32 id){
  * @param fd: fd to parse from (char-serv)
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_setaccoffline(int32 fd){
+int logchrif_parse_setaccoffline(int fd){
 	if( RFIFOREST(fd) < 6 )
 		return 0;
 	login_remove_online_user(RFIFOL(fd,2));
@@ -530,7 +525,7 @@ int32 logchrif_parse_setaccoffline(int32 fd){
  * @param id: id of char-serv
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_updonlinedb(int32 fd, int32 id){
+int logchrif_parse_updonlinedb(int fd, int id){
 	if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2))
 		return 0;
 	else{
@@ -552,7 +547,7 @@ int32 logchrif_parse_updonlinedb(int32 fd, int32 id){
  * @param fd: fd to parse from (char-serv)
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_req_global_accreg(int32 fd){
+int logchrif_parse_req_global_accreg(int fd){
 	if (RFIFOREST(fd) < 10)
 		return 0;
 	else{
@@ -572,7 +567,7 @@ int32 logchrif_parse_req_global_accreg(int32 fd){
  * @param id: char-serv id
  * @return 0 not enough info transmitted, 1 success
  */
-int32 logchrif_parse_updcharip(int32 fd, int32 id){
+int logchrif_parse_updcharip(int fd, int id){
 	if( RFIFOREST(fd) < 6 )
 		return 0;
 	ch_server[id].ip = ntohl(RFIFOL(fd,2));
@@ -587,7 +582,7 @@ int32 logchrif_parse_updcharip(int32 fd, int32 id){
  * @param id: id of char-serv (char-serv)
  * @return 1 success
  */
-int32 logchrif_parse_setalloffline(int32 fd, int32 id){
+int logchrif_parse_setalloffline(int fd, int id){
 	ShowInfo("Setting accounts from char-server %d offline.\n", id);
 	login_online_db_setoffline( id );
 	RFIFOSKIP(fd,2);
@@ -600,7 +595,7 @@ int32 logchrif_parse_setalloffline(int32 fd, int32 id){
  * @param fd: fd to parse from (char-serv)
  * @return 0 fail (packet does not have enough data), 1 success
  */
-int32 logchrif_parse_updpincode(int32 fd){
+int logchrif_parse_updpincode(int fd){
 	if( RFIFOREST(fd) < 8 + PINCODE_LENGTH+1 )
 		return 0;
 	else{
@@ -609,8 +604,8 @@ int32 logchrif_parse_updpincode(int32 fd){
 
 		if( accounts->load_num(accounts, &acc, RFIFOL(fd,4) ) ){
 			strncpy( acc.pincode, RFIFOCP(fd,8), PINCODE_LENGTH+1 );
-			acc.pincode_change = time( nullptr );
-			accounts->save(accounts, &acc, false);
+			acc.pincode_change = time( NULL );
+			accounts->save(accounts, &acc);
 		}
 		RFIFOSKIP(fd,8 + PINCODE_LENGTH+1);
 	}
@@ -622,7 +617,7 @@ int32 logchrif_parse_updpincode(int32 fd){
  * @param fd: fd to parse from (char-serv)
  * @return 0 fail (packet does not have enough data), 1 success (continue parsing)
  */
-int32 logchrif_parse_pincode_authfail(int32 fd){
+int logchrif_parse_pincode_authfail(int fd){
 	if( RFIFOREST(fd) < 6 )
 		return 0;
 	else{
@@ -653,21 +648,21 @@ int32 logchrif_parse_pincode_authfail(int32 fd){
  * @param fd link to charserv
  * @return 0 missing data, 1 succeeded
  */
-int32 logchrif_parse_reqvipdata(int32 fd) {
+int logchrif_parse_reqvipdata(int fd) {
 #ifdef VIP_ENABLE
 	if( RFIFOREST(fd) < 15 )
 		return 0;
 	else { //request vip info
 		struct mmo_account acc;
 		AccountDB* accounts = login_get_accounts_db();
-		int32 aid = RFIFOL(fd,2);
+		int aid = RFIFOL(fd,2);
 		int8 flag = RFIFOB(fd,6);
 		int32 timediff = RFIFOL(fd,7);
-		int32 mapfd = RFIFOL(fd,11);
+		int mapfd = RFIFOL(fd,11);
 		RFIFOSKIP(fd,15);
 		
 		if( accounts->load_num(accounts, &acc, aid ) ) {
-			time_t now = time(nullptr);
+			time_t now = time(NULL);
 			time_t vip_time = acc.vip_time;
 			bool isvip = false;
 
@@ -681,37 +676,22 @@ int32 logchrif_parse_reqvipdata(int32 fd) {
 				vip_time += timediff; // set new duration
 			}
 			if( now < vip_time ) { //isvip
-				if(acc.group_id != login_config.vip_sys.group){ //only upd this if we're not vip already
+				if(acc.group_id != login_config.vip_sys.group) //only upd this if we're not vip already
 					acc.old_group = acc.group_id;
-					if( acc.char_slots == 0 ){
-						acc.char_slots = MIN_CHARS;
-					}
-					acc.char_slots += login_config.vip_sys.char_increase;
-				}
 				acc.group_id = login_config.vip_sys.group;
+				acc.char_slots = login_config.char_per_account + login_config.vip_sys.char_increase;
 				isvip = true;
 			} else { //expired or @vip -xx
 				vip_time = 0;
-				if(acc.group_id == login_config.vip_sys.group){ //prevent alteration in case account wasn't registered as vip yet
+				if(acc.group_id == login_config.vip_sys.group) //prevent alteration in case account wasn't registered as vip yet
 					acc.group_id = acc.old_group;
-					if( acc.char_slots == 0 ){
-						acc.char_slots = MIN_CHARS;
-					}else{
-						acc.char_slots -= login_config.vip_sys.char_increase;
-					}
-				}
 				acc.old_group = 0;
+				acc.char_slots = login_config.char_per_account;
 			}
 			acc.vip_time = vip_time;
-			accounts->save(accounts,&acc, false);
+			accounts->save(accounts,&acc);
 			if( flag&1 )
 				logchrif_sendvipdata(fd,&acc,((isvip)?0x1:0)|((flag&0x8)?0x4:0),mapfd);
-
-			if( isvip ){
-				accounts->enable_monitor_vip( accounts, aid, vip_time );
-			}else{
-				accounts->disable_monitor_vip( accounts, aid );
-			}
 		}
 	}
 #endif
@@ -722,18 +702,19 @@ int32 logchrif_parse_reqvipdata(int32 fd) {
 * IA 0x2720
 * Get account info that asked by inter/char-server
 */
-int32 logchrif_parse_accinfo(int32 fd) {
-	if( RFIFOREST(fd) < 18 )
+int logchrif_parse_accinfo(int fd) {
+	if( RFIFOREST(fd) < 19 )
 		return 0;
 	else {
-		int32 map_fd = RFIFOL(fd, 2), u_fd = RFIFOL(fd, 6), u_aid = RFIFOL(fd, 10), account_id = RFIFOL(fd, 14);
+		int map_fd = RFIFOL(fd, 2), u_fd = RFIFOL(fd, 6), u_aid = RFIFOL(fd, 10), account_id = RFIFOL(fd, 14);
+		int8 type = RFIFOB(fd, 18);
 		AccountDB* accounts = login_get_accounts_db();
 		struct mmo_account acc;
-		RFIFOSKIP(fd,18);
+		RFIFOSKIP(fd,19);
 
 		// Send back the result to char-server
 		if (accounts->load_num(accounts, &acc, account_id)) {
-			int32 len = 122 + NAME_LENGTH;
+			int len = 122 + NAME_LENGTH;
 			//ShowInfo("Found account info for %d, requested by %d\n", account_id, u_aid);
 			WFIFOHEAD(fd, len);
 			WFIFOW(fd, 0) = 0x2721;
@@ -741,7 +722,7 @@ int32 logchrif_parse_accinfo(int32 fd) {
 			WFIFOL(fd, 6) = u_fd;
 			WFIFOL(fd, 10) = u_aid;
 			WFIFOL(fd, 14) = account_id;
-			WFIFOB(fd, 18) = true; // success
+			WFIFOB(fd, 18) = (1<<type); // success
 			WFIFOL(fd, 19) = acc.group_id;
 			WFIFOL(fd, 23) = acc.logincount;
 			WFIFOL(fd, 27) = acc.state;
@@ -760,7 +741,7 @@ int32 logchrif_parse_accinfo(int32 fd) {
 			WFIFOL(fd, 6) = u_fd;
 			WFIFOL(fd, 10) = u_aid;
 			WFIFOL(fd, 14) = account_id;
-			WFIFOB(fd, 18) = false; // failed
+			WFIFOB(fd, 18) = 0; // failed
 			WFIFOSET(fd, 19);
 		}
 	}
@@ -773,8 +754,8 @@ int32 logchrif_parse_accinfo(int32 fd) {
  * @param fd: file descriptor to parse, (link to char-serv)
  * @return 0=invalid server,marked for disconnection,unknow packet; 1=success
  */
-int32 logchrif_parse(int32 fd){
-	int32 cid; //char-serv id
+int logchrif_parse(int fd){
+	int cid; //char-serv id
 	uint32 ipl;
 	char ip[16];
 
@@ -797,7 +778,7 @@ int32 logchrif_parse(int32 fd){
 	ip2str(ipl, ip);
 
 	while( RFIFOREST(fd) >= 2 ){
-		int32 next = 1; // 0: avoid processing followup packets (prev was probably incomplete) packet, 1: Continue parsing
+		int next = 1; // 0: avoid processing followup packets (prev was probably incomplete) packet, 1: Continue parsing
 		uint16 command = RFIFOW(fd,0);
 		switch( command ){
 			case 0x2712: next = logchrif_parse_reqauth(fd, cid, ip); break;
@@ -842,7 +823,7 @@ int32 logchrif_parse(int32 fd){
  * Initializes a server structure.
  * @param id: id of char-serv (should be >0, FIXME)
  */
-void logchrif_server_init(int32 id) {
+void logchrif_server_init(int id) {
 	memset(&ch_server[id], 0, sizeof(ch_server[id]));
 	ch_server[id].fd = -1;
 }
@@ -851,7 +832,7 @@ void logchrif_server_init(int32 id) {
  * Destroys a server structure.
  * @param id: id of char-serv (should be >0, FIXME)
  */
-void logchrif_server_destroy(int32 id){
+void logchrif_server_destroy(int id){
 	if( ch_server[id].fd != -1 ) {
 		do_close(ch_server[id].fd);
 		ch_server[id].fd = -1;
@@ -863,7 +844,7 @@ void logchrif_server_destroy(int32 id){
  *  Actually destroys then recreates the struct.
  * @param id: id of char-serv (should be >0, FIXME)
  */
-void logchrif_server_reset(int32 id) {
+void logchrif_server_reset(int id) {
 	login_online_db_setoffline(id); //Set all chars from this char server to offline.
 	logchrif_server_destroy(id);
 	logchrif_server_init(id);
@@ -873,7 +854,7 @@ void logchrif_server_reset(int32 id) {
  * Called when the connection to Char Server is disconnected.
  * @param id: id of char-serv (should be >0, FIXME)
  */
-void logchrif_on_disconnect(int32 id) {
+void logchrif_on_disconnect(int id) {
 	ShowStatus("Char-server '%s' has disconnected.\n", ch_server[id].name);
 	logchrif_server_reset(id);
 }
@@ -883,7 +864,7 @@ void logchrif_on_disconnect(int32 id) {
  *  Initialisation, function called at start of the login-serv.
  */
 void do_init_loginchrif(void){
-	int32 i;
+	int i;
 	for( i = 0; i < ARRAYLENGTH(ch_server); ++i )
 		logchrif_server_init(i);
 
@@ -900,7 +881,7 @@ void do_init_loginchrif(void){
  *  current signal catch : SIGTERM, SIGINT
  */
 void do_shutdown_loginchrif(void){
-	int32 id;
+	int id;
 	for( id = 0; id < ARRAYLENGTH(ch_server); ++id )
 		logchrif_server_reset(id);
 }
@@ -910,7 +891,7 @@ void do_shutdown_loginchrif(void){
  *  dealloc..., function called at exit of the login-serv
  */
 void do_final_loginchrif(void){
-	int32 i;
+	int i;
 	for( i = 0; i < ARRAYLENGTH(ch_server); ++i )
 		logchrif_server_destroy(i);
 }

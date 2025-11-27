@@ -4,8 +4,6 @@
 #ifndef INT_QUEST_HPP
 #define INT_QUEST_HPP
 
-#include <common/cbasetypes.hpp>
-
-int32 inter_quest_parse_frommap(int32 fd);
+int inter_quest_parse_frommap(int fd);
 
 #endif /* INT_QUEST_HPP */

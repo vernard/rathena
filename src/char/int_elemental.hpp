@@ -4,14 +4,12 @@
 #ifndef INT_ELEMENTAL_HPP
 #define INT_ELEMENTAL_HPP
 
-#include <common/cbasetypes.hpp>
-
 struct s_elemental;
 
 void inter_elemental_sql_init(void);
 void inter_elemental_sql_final(void);
-int32 inter_elemental_parse_frommap(int32 fd);
+int inter_elemental_parse_frommap(int fd);
 
-bool mapif_elemental_delete(int32 ele_id);
+bool mapif_elemental_delete(int ele_id);
 
 #endif /* INT_ELEMENTAL_HPP */

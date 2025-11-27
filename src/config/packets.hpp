@@ -4,7 +4,6 @@
 #ifndef CONFIG_PACKETS_HPP
 #define CONFIG_PACKETS_HPP
 
-#define PACKETVER 20180530
 /**
  * rAthena configuration file (http://rathena.org)
  * For detailed guidance on these check http://rathena.org/wiki/SRC/config/
@@ -14,13 +13,13 @@
 	/// Do NOT edit this line! To set your client version, please do this instead:
 	/// In Windows: Add this line in your src\custom\defines_pre.hpp file: #define PACKETVER YYYYMMDD
 	/// In Linux: The same as above or run the following command: ./configure --enable-packetver=YYYYMMDD
-	#define PACKETVER 20211103
+	#define PACKETVER 20200401
 #endif
 
 #ifndef PACKETVER_RE
 	/// From November 2015 only RagexeRE are supported.
 	/// After July 2018 only Ragexe are supported.
-	#if ( PACKETVER > 20151104 && PACKETVER < 20180704 ) || ( PACKETVER >= 20200902 && PACKETVER <= 20211118 )
+	#if PACKETVER > 20151104 && PACKETVER < 20180704
 		#define PACKETVER_RE
 	#endif
 #endif
@@ -46,7 +45,7 @@
 	/// Comment to disable the official packet obfuscation support.
 	/// This requires PACKETVER 2011-08-17 or newer.
 	#ifndef PACKET_OBFUSCATION
-		#define PACKET_OBFUSCATION
+		///#define PACKET_OBFUSCATION
 
 		// Define these inside src/custom/defines_pre.hpp or src/custom/defines_post.hpp
 		//#define PACKET_OBFUSCATION_KEY1 <key1>
@@ -88,8 +87,5 @@
 
 /// Check if the specified packetvresion supports the cashshop sale system
 #define PACKETVER_SUPPORTS_SALES PACKETVER >= 20131223
-
-/// Use web service?
-#define WEB_SERVER_ENABLE PACKETVER > 20200300
 
 #endif /* CONFIG_PACKETS_HPP */

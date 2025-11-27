@@ -1,5 +1,11 @@
 //===== rAthena Script =======================================
 //= Mapflag: Disable Player versus Player mode.
+//===== By: ==================================================
+//= rAthena Dev Team
+//===== Current Version: =====================================
+//= 1.3
+//===== Compatible With: =====================================
+//= rAthena Project
 //===== Description: ========================================= 
 //= Prevents PvP mode on a map.
 //===== Additional Comments: ================================= 
@@ -8,9 +14,7 @@
 //= 1.3 Renewal split. [Euphy]
 //============================================================
 
-//============================================================
-// Instances
-//============================================================
+// Instances ===================
 1@cata	mapflag	pvp	off
 2@cata	mapflag	pvp	off
 1@nyd	mapflag	pvp	off
@@ -24,9 +28,7 @@
 5@tower	mapflag	pvp	off
 6@tower	mapflag	pvp	off
 
-//============================================================
-// Battlegrounds
-//============================================================
+// Battle Grounds ==============
 bat_room	mapflag	pvp	off
 bat_a01	mapflag	pvp	off
 bat_a02	mapflag	pvp	off
@@ -36,18 +38,14 @@ bat_c01	mapflag	pvp	off
 bat_c02	mapflag	pvp	off
 bat_c03	mapflag	pvp	off
 
-//============================================================
-// GvG Arenas
-//============================================================
+// GvG Arenas ===================
 guild_vs1	mapflag	pvp	off
 guild_vs2	mapflag	pvp	off
 guild_vs3	mapflag	pvp	off
 guild_vs4	mapflag	pvp	off
 guild_vs5	mapflag	pvp	off
 
-//============================================================
-// Municipality (Cities/Towns/Villages)
-//============================================================
+// Cities ========================
 ayo_in01	mapflag	pvp	off
 ayo_in02	mapflag	pvp	off
 alberta_in	mapflag	pvp	off
@@ -58,8 +56,6 @@ aldebaran	mapflag	pvp	off
 ama_in01	mapflag	pvp	off
 ama_in02	mapflag	pvp	off
 amatsu	mapflag	pvp	off
-brasilis	mapflag	pvp	off
-bra_in01	mapflag	pvp	off
 cmd_in01	mapflag	pvp	off
 cmd_in02	mapflag	pvp	off
 comodo	mapflag	pvp	off
@@ -145,7 +141,4 @@ splendide	mapflag	pvp	off
 spl_in01	mapflag	pvp	off
 spl_in02	mapflag	pvp	off
 
-//============================================================
-// Events
-//============================================================
 //evt_zombie	mapflag	pvp	off

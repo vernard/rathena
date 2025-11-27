@@ -726,29 +726,6 @@ Refines an equipped item by the specified amount.
 128: Right Accessory
 256: Top Headgear
 512: Mid Headgear
-65536: Shadow Armor
-131072: Shadow Weapon
-262144: Shadow Shield
-524288: Shadow Shoes
-1048576: Shadow Right Accessory
-2097152: Shadow Left Accessory
-
----------------------------------------
-
-@grade <equip position> <+/- amount>
-
-Enchantgrade an equipped item by the specified amount.
-0: All Equipment
-1: Lower Headgear
-2: Right Hand
-4: Garment
-8: Left Accessory
-16: Body Armor
-32: Left Hand
-64: Shoes
-128: Right Accessory
-256: Top Headgear
-512: Mid Headgear
 
 ---------------------------------------
 
@@ -777,28 +754,6 @@ Valid item types:
 Example:
 To drop all weapons in inventory...
 @dropall 5
-
----------------------------------------
-
-@stockall {<item type>}
-
-Transfer all items from cart to inventory based on the item type.
-
-Valid item types:
-    -1 = All (default)
-     0 = Healing
-     2 = Usable
-     3 = Etc
-     4 = Armors
-     5 = Weapons
-     6 = Cards
-     7 = Pet Eggs
-     8 = Pet Armors
-     10 = Ammunition
-
-Example:
-To transfer all weapons from cart to inventory...
-@stockall 5
 
 ---------------------------------------
 
@@ -1047,10 +1002,13 @@ Changes Kafra Points by the specified amount.
 @hairstyle <default: 0-27>
 @haircolor <default: 0-8>
 @dye <default: 0-4>
-@bodystyle <job ID>
+@bodystyle <default: 0-1>
 
 Changes appearance based on the given parameters.
 The min/max values are set in '/conf/battle/client.conf'.
+
+Appearance changed via @bodystyle won't save unless
+'save_body_style' is enabled in '/conf/battle/client.conf'
 
 ---------------------------------------
 
@@ -1220,38 +1178,6 @@ If args are given, sets camera position.
 
 ---------------------------------------
 
-@enchantgradeui
-
-Opens the enchantgrade UI.
-
----------------------------------------
-
-@setcard <equip position> <slot> <card_id>
-
-Adds a card or enchant to the specific slot of the equipment.
-
-<equip position>:
-1: Lower Headgear
-2: Right Hand
-4: Garment
-8: Left Accessory
-16: Body Armor
-32: Left Hand
-64: Shoes
-128: Right Accessory
-256: Top Headgear
-512: Mid Headgear
-
-<slot> number: 0-3.
-<card_id>: Can actually be any existing card or enchant item. Put 0 to remove it.
-
----------------------------------------
-
-@resetcooltime
-/resetcooltime
-
-Resets the cooldown of all skills of the player and if active also of the homunculus or the mercenary.
-
 ==============================
 | 5. Administrative Commands |
 ==============================
@@ -1308,14 +1234,6 @@ Adopts the specified player with the attached character as one of the parents.
 Opens the refine user interface.
 
 Note: This command requires packet version 2016-10-12 or newer.
-
----------------------------------------
-
-@stylist
-
-Opens the stylist user interface.
-
-Note: This command requires packet version 2015-11-04 or newer.
 
 ---------------------------------------
 
@@ -1470,7 +1388,6 @@ This will also send a packet to clients causing them to close.
 @reloadstatusdb
 @reloadachievementdb
 @reloadattendancedb
-@reloadbarterdb
 
 Reloads a database or configuration file.
 
@@ -1479,11 +1396,10 @@ Databases:
 -- itemdb: Item Database
 -- mobdb: Monster Database
 -- questdb: Quest Database
--- script: NPC Scripts and Barter Database
+-- script: NPC Scripts
 -- skilldb: Skill Database
 -- achievementdb: Achievement Database
 -- attendancedb: Attendance Database
--- barterdb: Barter Database
 
 Configuration files:
 -- atcommand: Atcommand Settings
@@ -1497,18 +1413,17 @@ Affected files:
 -- atcommand: atcommands.yml, groups.conf
 -- battleconf: battle_athena.conf, battle_conf.txt
 -- instancedb: instance_db.yml
--- itemdb: item_db.yml, item_group_db.yml, item_noequip.txt, item_combos.yml, item_randomopt_db.yml, item_randomopt_group.yml
--- mobdb: mob_db.yml, mob_item_ratio.yml, mob_chat_db.yml, mob_avail.yml, mob_summon.yml, pet_db.yml, homunculus_db.txt, homun_skill_tree.txt, exp_homun.yml, mercenary_db.yml, elemental_db.yml
+-- itemdb: item_db.yml, item_group_db.yml, item_noequip.txt, item_combo_db.txt, item_randomopt_db.yml, item_randomopt_group.yml
+-- mobdb: mob_db.yml, mob_item_ratio.yml, mob_chat_db.yml, mob_avail.yml, mob_summon.yml, pet_db.yml, homunculus_db.txt, homun_skill_tree.txt, exp_homun.yml, mercenary_db.txt, mercenary_skill_db.txt, elemental_db.txt, elemental_skill_db.txt
 -- motd: motd.txt
 -- msgconf: atcommands.yml
--- pcdb: statpoint.yml, job_exp.yml, skill_tree.yml, attr_fix.yml, job_stats.yml, job_basepoints.yml, level_penalty.yml
+-- pcdb: statpoint.yml, job_exp.yml, skill_tree.txt, attr_fix.yml, job_stats.yml, job_basepoints.yml, level_penalty.yml
 -- questdb: quest_db.yml
--- script: /npc/*.txt, /npc/*.conf, /npc/barters.yml
+-- script: /npc/*.txt, /npc/*.conf
 -- skilldb: skill_db.yml, skill_nocast_db.txt, skill_changematerial_db.txt, skill_damage_db.txt, abra_db.yml, create_arrow_db.yml, produce_db.txt, spellbook_db.yml, magicmushroom_db.yml
 -- statusdb: attr_fix.yml, size_fix.yml, refine.yml
 -- achievementdb: achievement_db.yml
 -- attendancedb: attendance.yml
--- barterdb: /npc/barters.yml
 
 Restriction:
 	- Used from 'atcommand' or 'useatcmd'. For @reload & @reloadscript

@@ -24,12 +24,11 @@
 ###########################################################################
 # - Level             BaseLevel required.
 #   Points            Total status points given from BaseLevel 1 to 'Level'.
-#   TraitPoints       Total trait points given from BaseLevel 1 to 'Level'.
 ###########################################################################
 
 Header:
   Type: STATPOINT_DB
-  Version: 2
+  Version: 1
 
 Footer:
   Imports:

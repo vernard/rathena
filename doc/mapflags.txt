@@ -145,26 +145,16 @@ Notes:
 ---------------------------------------
 
 *nochat
-
-Disables chatroom creation on a map.
-
----------------------------------------
-
 *novending
 
-Disables shop creation on a map from the MC_VENDING skill.
-
----------------------------------------
-
-*nobuyingstore
-
-Disables shop creation on a map from the ALL_BUYING_STORE skill.
+Disables chatroom and shop creation on a map.
 
 ---------------------------------------
 
 *nousecart
 
 Disables cart usage on a map.
+[Not fully implemented.]
 
 ---------------------------------------
 
@@ -225,9 +215,10 @@ Disables Star Gladiator's "Solar, Lunar, and Stellar Miracle" from occurring on 
 
 ---------------------------------------
 
-*forcemineffect
+*nomineeffect
 
-Forces simpler skill effects, just like the command /mineffect.
+Disables mine effects on a map.
+[More information needed.]
 
 ---------------------------------------
 
@@ -241,62 +232,6 @@ Disables attacking another player without holding shift or using /ns on a map.
 
 Disables everyone to use command on a map. If group level is specified, only disables
 player who has group level below it.
-
----------------------------------------
-
-
-*nomapchannelautojoin
-
-Stops players from automatically joining the #map channel on a map.
-
-This only applies if map channels are enabled and 'map_local_channel_autojoin' is true
-in '/conf/channels.conf'.
-
----------------------------------------
-
-*notomb
-
-Disables MVP tombs from appearing on a map.
-
----------------------------------------
-
-*nocostume
-
-Disables costume sprites on a map.
-
-This only disables the sprites and not the effect of the items.
-If a player logs out on a nocostume map the costume sprites will also not be shown in the
-character server.
-
----------------------------------------
-
-*norenewaldroppenalty
-
-Disable renewal drop rate penalty due to level difference on a map.
-
----------------------------------------
-
-*norenewalexppenalty
-
-Disable renewal experience penalty due to level difference on a map.
-
----------------------------------------
-
-*nopetcapture
-
-Disable the ability to capture pets on a map.
-
----------------------------------------
-
-*nobank
-
-Disable Bank on a map.
-
----------------------------------------
-
-*norodex
-
-Disable RODex on a map.
 
 ---------------------------------------
 
@@ -396,15 +331,6 @@ prtg_cas01	mapflag	skill_duration	HT_ANKLESNARE,400
 
 ---------------------------------------
 
-*invincible_time	<duration>
-
-Sets the duration (in milliseconds) for when a player loads onto a map with how long they are invincible for.
-The duration is cancelled if the player walks or interacts in any fashion.
-
-Duration defaults to 'player_invincible_time' in '/conf/battle/player.conf' if the value is not specified.
-
----------------------------------------
-
 ==================
 | 3. Map Effects |
 ==================
@@ -477,15 +403,34 @@ atcommand is enabled on all maps by default.
 
 ---------------------------------------
 
+*nomapchannelautojoin
+
+Stops players from automatically joining the #map channel on a map.
+
+This only applies if map channels are enabled and 'map_local_channel_autojoin' is true
+in '/conf/channels.conf'.
+
+---------------------------------------
+
+*notomb
+
+Disables MVP tombs from appearing on a map.
+
+---------------------------------------
+
+*nocostume
+
+Disables costume sprites on a map.
+
+This only disables the sprites and not the effect of the items.
+If a player logs out on a nocostume map the costume sprites will also not be shown in the
+character server.
+
+---------------------------------------
+
 *hidemobhpbar
 
 Hides monster's HP bar on a map.
 Ignores config value of 'monster_hp_bars_info'.
-
----------------------------------------
-
-*specialpopup	<popup ID>
-
-Displays a special popup when a player enters the map. See script command "specialpopup" for details on different popup types.
 
 ---------------------------------------

@@ -49,16 +49,13 @@
 #   Knockback:                Amount of tiles the skill knockbacks. (Default: 0)
 #     - Level                 Skill level.
 #       Amount                Knockback count at specific skill level.
-#   GiveAp:                   Gives AP on successful skill cast. (Default: 0)
-#     - Level                 Skill level.
-#       Amount                AP gained at specific skill level.
 #   CopyFlags:                Determines if the skill is copyable. (Optional)
 #     Skill:                  Type of skill that can copy.
 #     RemoveRequirement:      Remove a requirement type. (Optional)
 #   NoNearNPC:                Determines if the skill can be used near a NPC. (Optional)
 #     AdditionalRange         Number of cells from an NPC where the skill can be cast. (Optional)
 #     Type:                   Type of NPC.
-#   CastCancel                Cancel cast when hit. (Default: true)
+#   CastCancel                Cancel cast when hit. (Default: false)
 #   CastDefenseReduction      Defense reduction rate during skill cast. (Default: 0)
 #   CastTime:                 Time to cast the skill in milliseconds. (Default: 0)
 #     - Level                 Skill level.
@@ -90,18 +87,12 @@
 #     SpCost:                 SP required to cast. (Default: 0)
 #       - Level               Skill level.
 #         Amount              SP required at specific skill level.
-#     ApCost:                 AP required to cast. (Default: 0)
-#       - Level               Skill level.
-#         Amount              AP required at specific skill level.
 #     HpRateCost:             HP rate required to cast. If positive, uses current HP, else uses Max HP. (Default: 0)
 #       - Level               Skill level.
 #         Amount              HP rate required at specific skill level.
 #     SpRateCost:             SP rate required to cast. If positive, uses current SP, else uses Max SP. (Default: 0)
 #       - Level               Skill level.
 #         Amount              SP rate required at specific skill level.
-#     ApRateCost:             AP rate required to cast. If positive, uses current AP, else uses Max AP. (Default: 0)
-#       - Level               Skill level.
-#         Amount              AP rate required at specific skill level.
 #     MaxHpTrigger:           Maximum amount of HP to cast the skill. (Default: 0)
 #       - Level               Skill level.
 #         Amount              Maximum HP trigger required at specific skill level.
@@ -115,7 +106,7 @@
 #         Amount              Ammo amount required at specific skill level.
 #     State                   Special state required to cast. (Default: None)
 #     Status:                 Status change required to cast. (Default: nullptr)
-#     SpiritSphereCost:       Spirit sphere required to cast. (Default: 0)
+#     SphereCost:             Spirit sphere required to cast. (Default: 0)
 #       - Level               Skill level.
 #         Amount              Spirit sphere required at specific skill level.
 #     ItemCost:               Item required to cast. (Default: 0)
@@ -135,12 +126,11 @@
 #     Interval                Skill unit interval in milliseconds. (Default: 0)
 #     Target                  Skill unit target type. (Default: All)
 #     Flag:                   Skill unit flags. (Default: None)
-#   Status                    Status Change that is associated to the skill. (Optional)
 ###########################################################################
 
 Header:
   Type: SKILL_DB
-  Version: 4
+  Version: 2
 
 Body:
   - Id: 1
@@ -175,7 +165,6 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
-    Duration2: 5000
     Requires:
       SpCost:
         - Level: 1
@@ -221,7 +210,6 @@ Body:
         Shotgun: true
         Grenade: true
         Huuma: true
-    Status: Stun
   - Id: 6
     Name: SM_PROVOKE
     Description: Provoke
@@ -256,7 +244,6 @@ Body:
           Amount: 12
         - Level: 10
           Amount: 13
-    Status: Provoke
   - Id: 7
     Name: SM_MAGNUM
     Description: Magnum Break
@@ -323,7 +310,6 @@ Body:
         - Level: 10
           Amount: 16
       SpCost: 30
-    Status: Watk_Element
   - Id: 8
     Name: SM_ENDURE
     Description: Endure
@@ -359,7 +345,6 @@ Body:
     Cooldown: 10000
     Requires:
       SpCost: 10
-    Status: Endure
   - Id: 9
     Name: MG_SRECOVERY
     Description: Increase SP Recovery
@@ -377,10 +362,10 @@ Body:
     HitCount: 1
     Element: Fire
     SplashArea: 3
+    CastCancel: true
     Duration1: 10000
     Requires:
       SpCost: 10
-    Status: Sight
   - Id: 11
     Name: MG_NAPALMBEAT
     Description: Napalm Beat
@@ -402,6 +387,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay:
       - Level: 1
@@ -458,6 +444,7 @@ Body:
     Hit: Multi_Hit
     HitCount: 1
     Element: Ghost
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 4000
@@ -531,7 +518,6 @@ Body:
       Flag:
         NoEnemy: true
         NoReiteration: true
-    Status: Safetywall
   - Id: 13
     Name: MG_SOULSTRIKE
     Description: Soul Strike
@@ -568,6 +554,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 500
     AfterCastActDelay:
       - Level: 1
@@ -648,6 +635,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 700
@@ -728,6 +716,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 800
     AfterCastActDelay: 1500
     Duration2:
@@ -775,7 +764,6 @@ Body:
           Amount: 17
         - Level: 10
           Amount: 16
-    Status: Freeze
   - Id: 16
     Name: MG_STONECURSE
     Description: Stone Curse
@@ -788,6 +776,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Earth
+    CastCancel: true
     CastTime: 1000
     Duration1: 5000
     Duration2: 20000
@@ -816,7 +805,6 @@ Body:
       ItemCost:
         - Item: Red_Gemstone
           Amount: 1
-    Status: StoneWait
   - Id: 17
     Name: MG_FIREBALL
     Description: Fire Ball
@@ -832,33 +820,12 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Fire
-    SplashArea:
-      - Level: 1
-        Area: 2
-      - Level: 2
-        Area: 2
-      - Level: 3
-        Area: 2
-      - Level: 4
-        Area: 2
-      - Level: 5
-        Area: 2
-      - Level: 6
-        Area: 2
-      - Level: 7
-        Area: 2
-      - Level: 8
-        Area: 2
-      - Level: 9
-        Area: 2
-      - Level: 10
-        Area: 2
-      - Level: 11
-        Area: 3
+    SplashArea: 2
     CopyFlags:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1500
@@ -921,6 +888,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -1009,6 +977,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 700
@@ -1109,6 +1078,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 700
@@ -1209,6 +1179,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -1310,10 +1281,10 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     Duration1: 10000
     Requires:
       SpCost: 10
-    Status: Ruwach
   - Id: 25
     Name: AL_PNEUMA
     Description: Pneuma
@@ -1325,6 +1296,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 10000
     Requires:
       SpCost: 10
@@ -1336,7 +1308,6 @@ Body:
         NoEnemy: true
         NoReiteration: true
         RangedSingleUnit: true
-    Status: Pneuma
   - Id: 26
     Name: AL_TELEPORT
     Description: Teleport
@@ -1350,6 +1321,7 @@ Body:
       AllowOnMado: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost:
         - Level: 1
@@ -1368,6 +1340,7 @@ Body:
     Hit: Single
     HitCount: 1
     ActiveInstance: 3
+    CastCancel: true
     CastTime: 1000
     Duration1:
       - Level: 1
@@ -1430,6 +1403,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     AfterCastActDelay: 1000
     Requires:
       SpCost:
@@ -1466,6 +1440,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -1512,7 +1487,6 @@ Body:
           Amount: 42
         - Level: 10
           Amount: 45
-    Status: IncreaseAgi
   - Id: 30
     Name: AL_DECAGI
     Description: Decrease AGI
@@ -1524,6 +1498,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -1571,7 +1546,6 @@ Body:
           Amount: 31
         - Level: 10
           Amount: 33
-    Status: DecreaseAgi
   - Id: 31
     Name: AL_HOLYWATER
     Description: Aqua Benedicta
@@ -1582,6 +1556,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Requires:
@@ -1599,11 +1574,11 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: 15
+    CastCancel: true
     CastTime: 500
     AfterCastActDelay: 2000
     Requires:
       SpCost: 35
-    Status: SignumCrucis
   - Id: 33
     Name: AL_ANGELUS
     Description: Angelus
@@ -1616,6 +1591,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     CastTime: 500
     AfterCastActDelay: 3500
     Duration1:
@@ -1661,7 +1637,6 @@ Body:
           Amount: 47
         - Level: 10
           Amount: 50
-    Status: Angelus
   - Id: 34
     Name: AL_BLESSING
     Description: Blessing
@@ -1675,6 +1650,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 60000
@@ -1718,7 +1694,6 @@ Body:
           Amount: 60
         - Level: 10
           Amount: 64
-    Status: Blessing
   - Id: 35
     Name: AL_CURE
     Description: Cure
@@ -1730,6 +1705,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 1000
     Duration2: 6000
     Requires:
@@ -1882,7 +1858,6 @@ Body:
           Amount: 65
         - Level: 10
           Amount: 70
-    Status: Concentrate
   - Id: 46
     Name: AC_DOUBLE
     Description: Double Strafe
@@ -1976,7 +1951,6 @@ Body:
       IgnoreKagehumi: true
       AllowOnMado: true
       IgnoreWugBite: true
-      Toggleable: true
     Range: 1
     Hit: Single
     HitCount: 1
@@ -2003,7 +1977,6 @@ Body:
         Time: 300000
     Requires:
       SpCost: 10
-    Status: Hiding
   - Id: 52
     Name: TF_POISON
     Description: Envenom
@@ -2021,7 +1994,6 @@ Body:
     Duration2: 60000
     Requires:
       SpCost: 12
-    Status: Poison
   - Id: 53
     Name: TF_DETOXIFY
     Description: Detoxify
@@ -2052,6 +2024,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 6000
@@ -2114,7 +2087,6 @@ Body:
         1hSpear: true
         2hSpear: true
       State: Riding
-    CastCancel: false
   - Id: 58
     Name: KN_SPEARSTAB
     Description: Spear Stab
@@ -2218,7 +2190,6 @@ Body:
           Amount: 50
       Weapon:
         2hSword: true
-    Status: TwoHandQuicken
   - Id: 61
     Name: KN_AUTOCOUNTER
     Description: Counter Attack
@@ -2267,7 +2238,6 @@ Body:
         Shotgun: true
         Grenade: true
         Huuma: true
-    Status: AutoCounter
   - Id: 62
     Name: KN_BOWLINGBASH
     Description: Bowling Bash
@@ -2311,7 +2281,6 @@ Body:
           Amount: 21
         - Level: 10
           Amount: 22
-    CastCancel: false
   - Id: 63
     Name: KN_RIDING
     Description: Peco Peco Riding
@@ -2338,6 +2307,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 3000
     Duration1: 60000
     Requires:
@@ -2352,7 +2322,6 @@ Body:
           Amount: 22
         - Level: 5
           Amount: 25
-    Status: Impositio
   - Id: 67
     Name: PR_SUFFRAGIUM
     Description: Suffragium
@@ -2366,6 +2335,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 2000
     Duration1:
       - Level: 1
@@ -2376,7 +2346,6 @@ Body:
         Time: 10000
     Requires:
       SpCost: 8
-    Status: Suffragium
   - Id: 68
     Name: PR_ASPERSIO
     Description: Aspersio
@@ -2395,6 +2364,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     AfterCastActDelay: 2000
     Duration1:
       - Level: 1
@@ -2422,7 +2392,6 @@ Body:
       ItemCost:
         - Item: Holy_Water
           Amount: 1
-    Status: Aspersio
   - Id: 69
     Name: PR_BENEDICTIO
     Description: B.S. Sacramenti
@@ -2443,6 +2412,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 40000
@@ -2456,7 +2426,6 @@ Body:
         Time: 200000
     Requires:
       SpCost: 20
-    Status: Benedictio
   - Id: 70
     Name: PR_SANCTUARY
     Description: Sanctuary
@@ -2475,6 +2444,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 5000
     Duration1:
       - Level: 1
@@ -2541,6 +2511,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 10000
@@ -2560,7 +2531,6 @@ Body:
           Amount: 10
         - Level: 4
           Amount: 12
-    Status: SlowPoison
   - Id: 72
     Name: PR_STRECOVERY
     Description: Status Recovery
@@ -2572,11 +2542,11 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 2000
     Duration2: 30000
     Requires:
       SpCost: 5
-    Status: Blind
   - Id: 73
     Name: PR_KYRIE
     Description: Kyrie Eleison
@@ -2588,6 +2558,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 2000
     Duration1: 120000
@@ -2613,7 +2584,6 @@ Body:
           Amount: 30
         - Level: 10
           Amount: 35
-    Status: Kyrie
   - Id: 74
     Name: PR_MAGNIFICAT
     Description: Magnificat
@@ -2626,6 +2596,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     CastTime: 4000
     AfterCastActDelay: 2000
     Duration1:
@@ -2641,7 +2612,6 @@ Body:
         Time: 90000
     Requires:
       SpCost: 40
-    Status: Magnificat
   - Id: 75
     Name: PR_GLORIA
     Description: Gloria
@@ -2654,6 +2624,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     AfterCastActDelay: 2000
     Duration1:
       - Level: 1
@@ -2668,7 +2639,6 @@ Body:
         Time: 30000
     Requires:
       SpCost: 20
-    Status: Gloria
   - Id: 76
     Name: PR_LEXDIVINA
     Description: Lex Divina
@@ -2679,6 +2649,7 @@ Body:
       NoDamage: true
     Range: 5
     Hit: Single
+    CastCancel: true
     AfterCastActDelay: 3000
     Duration2:
       - Level: 1
@@ -2723,7 +2694,6 @@ Body:
           Amount: 12
         - Level: 10
           Amount: 10
-    Status: Silence
   - Id: 77
     Name: PR_TURNUNDEAD
     Description: Turn Undead
@@ -2741,6 +2711,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 3000
     Requires:
@@ -2755,11 +2726,11 @@ Body:
       NoDamage: true
     Range: 9
     Hit: Single
+    CastCancel: true
     AfterCastActDelay: 3000
     Duration1: 600000
     Requires:
       SpCost: 10
-    Status: Aeterna
   - Id: 79
     Name: PR_MAGNUS
     Description: Magnus Exorcismus
@@ -2794,6 +2765,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 15000
     AfterCastActDelay: 4000
     Duration1:
@@ -2915,6 +2887,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 3000
@@ -3006,6 +2979,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 500
     AfterCastActDelay: 2000
     Duration1: 500
@@ -3089,11 +3063,12 @@ Body:
       - Level: 10
         Area: 3
       - Level: 11
-        Area: 16
+        Area: 14
     CopyFlags:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 15000
     AfterCastActDelay:
       - Level: 1
@@ -3137,8 +3112,6 @@ Body:
         Time: 6000
       - Level: 10
         Time: 7000
-      - Level: 11
-        Time: 10000
     Duration2: 5000
     Requires:
       SpCost:
@@ -3169,7 +3142,6 @@ Body:
       Target: Enemy
       Flag:
         PathCheck: true
-    Status: Stun
   - Id: 84
     Name: WZ_JUPITEL
     Description: Jupitel Thunder
@@ -3227,6 +3199,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2500
@@ -3286,6 +3259,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 15000
@@ -3363,7 +3337,6 @@ Body:
       Flag:
         NoOverlap: true
         PathCheck: true
-    Status: Blind
   - Id: 86
     Name: WZ_WATERBALL
     Description: Water Ball
@@ -3380,6 +3353,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -3463,6 +3437,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Water
+    CastCancel: true
     Requires:
       SpCost: 20
     Unit:
@@ -3486,11 +3461,12 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Water
-    SplashArea: 2
+    SplashArea: 3
     CopyFlags:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 6000
@@ -3556,7 +3532,6 @@ Body:
           Amount: 29
         - Level: 10
           Amount: 27
-    Status: Freeze
   - Id: 89
     Name: WZ_STORMGUST
     Description: Storm Gust
@@ -3574,6 +3549,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 6000
@@ -3609,7 +3585,6 @@ Body:
       Flag:
         NoOverlap: true
         PathCheck: true
-    Status: Freeze
   - Id: 90
     Name: WZ_EARTHSPIKE
     Description: Earth Spike
@@ -3636,28 +3611,19 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
-      - Level: 1
-        Time: 700
-      - Level: 2
-        Time: 1400
-      - Level: 3
-        Time: 2100
-      - Level: 4
-        Time: 2800
-      - Level: 5
-        Time: 3500
-    AfterCastActDelay:
       - Level: 1
         Time: 1000
       - Level: 2
-        Time: 1200
+        Time: 2000
       - Level: 3
-        Time: 1400
+        Time: 3000
       - Level: 4
-        Time: 1600
+        Time: 4000
       - Level: 5
-        Time: 1800
+        Time: 5000
+    AfterCastActDelay: 700
     Requires:
       SpCost:
         - Level: 1
@@ -3697,6 +3663,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -3708,7 +3675,7 @@ Body:
         Time: 4000
       - Level: 5
         Time: 5000
-    AfterCastActDelay: 1000
+    AfterCastActDelay: 700
     Duration1: 100
     Requires:
       SpCost:
@@ -3745,6 +3712,7 @@ Body:
     HitCount: 1
     Element: Earth
     ActiveInstance: 3
+    CastCancel: true
     AfterCastActDelay: 1000
     Duration1:
       - Level: 1
@@ -3788,7 +3756,6 @@ Body:
       Flag:
         PathCheck: true
         RemovedByFireRain: true
-    Status: Quagmire
   - Id: 93
     Name: WZ_ESTIMATION
     Description: Sense
@@ -3800,6 +3767,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 10
   - Id: 94
@@ -3885,6 +3853,7 @@ Body:
     Range: 2
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 7500
     Requires:
       SpCost: 30
@@ -3929,7 +3898,6 @@ Body:
         1hAxe: true
         2hAxe: true
         Mace: true
-    Status: Stun
   - Id: 111
     Name: BS_ADRENALINE
     Description: Adrenaline Rush
@@ -3971,7 +3939,6 @@ Body:
         1hAxe: true
         2hAxe: true
         Mace: true
-    Status: Adrenaline
   - Id: 112
     Name: BS_WEAPONPERFECT
     Description: Weapon Perfection
@@ -4009,7 +3976,6 @@ Body:
           Amount: 12
         - Level: 5
           Amount: 10
-    Status: WeaponPerfection
   - Id: 113
     Name: BS_OVERTHRUST
     Description: Power-Thrust
@@ -4071,7 +4037,6 @@ Body:
         Grenade: true
         Huuma: true
         2hStaff: true
-    Status: Overthrust
   - Id: 114
     Name: BS_MAXIMIZE
     Description: Maximize Power
@@ -4082,7 +4047,6 @@ Body:
       NoDamage: true
     Flags:
       AllowOnMado: true
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Duration1:
@@ -4098,7 +4062,6 @@ Body:
         Time: 5000
     Requires:
       SpCost: 10
-    Status: MaximizePower
   - Id: 115
     Name: HT_SKIDTRAP
     Description: Skid Trap
@@ -4136,6 +4099,7 @@ Body:
         Time: 120000
       - Level: 5
         Time: 60000
+    Duration2: 3000
     Requires:
       SpCost: 10
       ItemCost:
@@ -4198,7 +4162,6 @@ Body:
         NoReiteration: true
         NoFootSet: true
         RemovedByFireRain: true
-    Status: Stun
   - Id: 117
     Name: HT_ANKLESNARE
     Description: Ankle Snare
@@ -4251,7 +4214,6 @@ Body:
         NoFootSet: true
         NoKnockback: true
         RemovedByFireRain: true
-    Status: Ankle
   - Id: 118
     Name: HT_SHOCKWAVE
     Description: Shockwave Trap
@@ -4268,6 +4230,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    SplashArea: 1
     Duration1:
       - Level: 1
         Time: 200000
@@ -4336,7 +4299,6 @@ Body:
         NoReiteration: true
         NoFootSet: true
         RemovedByFireRain: true
-    Status: Sleep
   - Id: 120
     Name: HT_FLASHER
     Description: Flasher
@@ -4353,6 +4315,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    SplashArea: 1
     Duration1:
       - Level: 1
         Time: 150000
@@ -4369,7 +4332,7 @@ Body:
       SpCost: 12
       ItemCost:
         - Item: Booby_Trap
-          Amount: 1
+          Amount: 2
     Unit:
       Id: Flasher
       Range: 1
@@ -4379,7 +4342,6 @@ Body:
         NoReiteration: true
         NoFootSet: true
         RemovedByFireRain: true
-    Status: Blind
   - Id: 121
     Name: HT_FREEZINGTRAP
     Description: Freezing Trap
@@ -4388,7 +4350,7 @@ Body:
     TargetType: Ground
     DamageFlags:
       Splash: true
-      IgnoreAtkCard: true
+      IgnoreFlee: true
     Flags:
       IsTrap: true
       AlterRangeResearchTrap: true
@@ -4429,7 +4391,7 @@ Body:
       SpCost: 10
       ItemCost:
         - Item: Booby_Trap
-          Amount: 1
+          Amount: 2
     Unit:
       Id: Freezingtrap
       Range: 1
@@ -4439,7 +4401,6 @@ Body:
         NoReiteration: true
         NoFootSet: true
         RemovedByFireRain: true
-    Status: Freeze
   - Id: 122
     Name: HT_BLASTMINE
     Description: Blast Mine
@@ -4622,6 +4583,7 @@ Body:
       - Level: 5
         Count: 5
     SplashArea: 1
+    CastCancel: true
     CastTime: 1500
     AfterCastActDelay: 1000
     Requires:
@@ -4711,7 +4673,6 @@ Body:
     Flags:
       IgnoreKagehumi: true
       IgnoreWugBite: true
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Duration1:
@@ -4737,7 +4698,6 @@ Body:
         Time: 9000
     Requires:
       SpCost: 15
-    Status: Cloaking
   - Id: 136
     Name: AS_SONICBLOW
     Description: Sonic Blow
@@ -4777,7 +4737,6 @@ Body:
           Amount: 34
       Weapon:
         Katar: true
-    Status: Stun
   - Id: 137
     Name: AS_GRIMTOOTH
     Description: Grimtooth
@@ -4869,7 +4828,6 @@ Body:
         Time: 100000
     Requires:
       SpCost: 20
-    Status: EncPoison
   - Id: 139
     Name: AS_POISONREACT
     Description: Poison React
@@ -4898,8 +4856,7 @@ Body:
       - Level: 9
         Time: 60000
       - Level: 10
-        Time: 60000
-    Duration2: 60000
+        Time: 65000
     Requires:
       SpCost:
         - Level: 1
@@ -4922,7 +4879,6 @@ Body:
           Amount: 45
         - Level: 10
           Amount: 45
-    Status: PoisonReact
   - Id: 140
     Name: AS_VENOMDUST
     Description: Venom Dust
@@ -4970,7 +4926,6 @@ Body:
       Target: Enemy
       Flag:
         RemovedByFireRain: true
-    Status: Poison
   - Id: 141
     Name: AS_SPLASHER
     Description: Venom Splasher
@@ -4979,7 +4934,7 @@ Body:
     TargetType: Attack
     DamageFlags:
       NoDamage: true
-      IgnoreAtkCard: true
+      IgnoreElement: true
       IgnoreFlee: true
     Range: 1
     Hit: Single
@@ -4990,50 +4945,30 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     Duration1:
       - Level: 1
-        Time: 11000
+        Time: 5000
       - Level: 2
-        Time: 10000
+        Time: 5500
       - Level: 3
-        Time: 9000
+        Time: 6000
       - Level: 4
-        Time: 8000
+        Time: 6500
       - Level: 5
         Time: 7000
       - Level: 6
-        Time: 6000
-      - Level: 7
-        Time: 5000
-      - Level: 8
-        Time: 4000
-      - Level: 9
-        Time: 3000
-      - Level: 10
-        Time: 2000
-    Duration2: 60000
-    Cooldown:
-      - Level: 1
         Time: 7500
-      - Level: 2
-        Time: 8000
-      - Level: 3
-        Time: 8500
-      - Level: 4
-        Time: 9000
-      - Level: 5
-        Time: 9500
-      - Level: 6
-        Time: 10000
       - Level: 7
-        Time: 10500
+        Time: 8000
       - Level: 8
-        Time: 11000
+        Time: 8500
       - Level: 9
-        Time: 11500
+        Time: 9000
       - Level: 10
-        Time: 12000
+        Time: 9500
+    Duration2: 60000
     Requires:
       SpCost:
         - Level: 1
@@ -5059,7 +4994,6 @@ Body:
       ItemCost:
         - Item: Red_Gemstone
           Amount: 1
-    Status: Splasher
   - Id: 142
     Name: NV_FIRSTAID
     Description: First Aid
@@ -5082,13 +5016,11 @@ Body:
       NoDamage: true
     Flags:
       IsQuest: true
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Duration1: 600000
     Requires:
       SpCost: 5
-    Status: TrickDead
   - Id: 144
     Name: SM_MOVINGRECOVERY
     Description: Moving HP-Recovery
@@ -5102,6 +5034,7 @@ Body:
     Type: Weapon
     Flags:
       IsQuest: true
+    Duration2: 5000
   - Id: 146
     Name: SM_AUTOBERSERK
     Description: Auto Berserk
@@ -5116,7 +5049,6 @@ Body:
     HitCount: 1
     Requires:
       SpCost: 1
-    Status: AutoBerserk
   - Id: 147
     Name: AC_MAKINGARROW
     Description: Arrow Crafting
@@ -5158,15 +5090,12 @@ Body:
       Ammo:
         Arrow: true
       AmmoAmount: 1
-    CastCancel: false
   - Id: 149
     Name: TF_SPRINKLESAND
     Description: Sand Attack
     MaxLevel: 1
     Type: Weapon
     TargetType: Attack
-    DamageFlags:
-      IgnoreAtkCard: true
     Flags:
       IsQuest: true
     Range: 1
@@ -5176,7 +5105,6 @@ Body:
     Duration2: 30000
     Requires:
       SpCost: 9
-    Status: Blind
   - Id: 150
     Name: TF_BACKSLIDING
     Description: Back Slide
@@ -5208,7 +5136,6 @@ Body:
     Requires:
       SpCost: 3
       State: Recover_Weight_Rate
-    Status: Stun
   - Id: 152
     Name: TF_THROWSTONE
     Description: Stone Fling
@@ -5233,7 +5160,6 @@ Body:
       ItemCost:
         - Item: Stone
           Amount: 1
-    Status: Stun
   - Id: 153
     Name: MC_CARTREVOLUTION
     Description: Cart Revolution
@@ -5286,7 +5212,6 @@ Body:
     Duration1: 300000
     Requires:
       SpCost: 8
-    Status: Loud
   - Id: 156
     Name: AL_HOLYLIGHT
     Description: Holy Light
@@ -5303,6 +5228,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     Requires:
       SpCost: 15
@@ -5318,11 +5244,11 @@ Body:
       IsQuest: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 5000
     Duration1: 300000
     Requires:
       SpCost: 30
-    Status: EnergyCoat
   - Id: 158
     Name: NPC_PIERCINGATT
     Description: Piercing Attack
@@ -5333,7 +5259,7 @@ Body:
       IgnoreDefense: true
     Flags:
       IsNpc: true
-    Range: -7
+    Range: 3
     Hit: Single
     HitCount: 1
     Element: Weapon
@@ -5347,7 +5273,7 @@ Body:
       IgnoreFlee: true
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -1
     Hit: Single
     HitCount: 1
     Element: Weapon
@@ -5359,7 +5285,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: 9
     Hit: Single
     HitCount: 1
   - Id: 161
@@ -5374,7 +5300,6 @@ Body:
       IsNpc: true
     HitCount: 1
     Duration1: 1800000
-    Status: ElementalChange
   - Id: 162
     Name: NPC_CHANGEWATER
     Description: Water Attribute Change
@@ -5388,7 +5313,6 @@ Body:
     HitCount: 1
     Element: Water
     Duration1: 1800000
-    Status: ElementalChange
   - Id: 163
     Name: NPC_CHANGEGROUND
     Description: Earth Attribute Change
@@ -5402,7 +5326,6 @@ Body:
     HitCount: 1
     Element: Earth
     Duration1: 1800000
-    Status: ElementalChange
   - Id: 164
     Name: NPC_CHANGEFIRE
     Description: Fire Attribute Change
@@ -5416,7 +5339,6 @@ Body:
     HitCount: 1
     Element: Fire
     Duration1: 1800000
-    Status: ElementalChange
   - Id: 165
     Name: NPC_CHANGEWIND
     Description: Wind Attribute Change
@@ -5430,7 +5352,6 @@ Body:
     HitCount: 1
     Element: Wind
     Duration1: 1800000
-    Status: ElementalChange
   - Id: 166
     Name: NPC_CHANGEPOISON
     Description: Poison Attribute Change
@@ -5444,7 +5365,6 @@ Body:
     HitCount: 1
     Element: Poison
     Duration1: 1800000
-    Status: ElementalChange
   - Id: 167
     Name: NPC_CHANGEHOLY
     Description: Holy Attribute Change
@@ -5458,7 +5378,6 @@ Body:
     HitCount: 1
     Element: Holy
     Duration1: 1800000
-    Status: ElementalChange
   - Id: 168
     Name: NPC_CHANGEDARKNESS
     Description: Shadow Attribute Change
@@ -5472,7 +5391,6 @@ Body:
     HitCount: 1
     Element: Dark
     Duration1: 1800000
-    Status: ElementalChange
   - Id: 169
     Name: NPC_CHANGETELEKINESIS
     Description: Ghost Attribute Change
@@ -5486,7 +5404,6 @@ Body:
     HitCount: 1
     Element: Ghost
     Duration1: 1800000
-    Status: ElementalChange
   - Id: 170
     Name: NPC_CRITICALSLASH
     Description: Defense disregard attack
@@ -5497,7 +5414,7 @@ Body:
       IgnoreDefense: true
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
@@ -5509,7 +5426,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Multi_Hit
     HitCount:
       - Level: 1
@@ -5543,7 +5460,7 @@ Body:
       IgnoreFlee: true
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
@@ -5561,6 +5478,7 @@ Body:
     Flags:
       IsNpc: true
       TargetTrap: true
+    Range: 5
     Hit: Single
     HitCount: 1
     Element: Fire
@@ -5603,12 +5521,11 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
     Duration2: 60000
-    Status: Poison
   - Id: 177
     Name: NPC_BLINDATTACK
     Description: Blind Attack
@@ -5617,12 +5534,11 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
     Duration2: 30000
-    Status: Blind
   - Id: 178
     Name: NPC_SILENCEATTACK
     Description: Silence Attack
@@ -5631,12 +5547,11 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
     Duration2: 30000
-    Status: Silence
   - Id: 179
     Name: NPC_STUNATTACK
     Description: Stun Attack
@@ -5645,12 +5560,11 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
     Duration2: 5000
-    Status: Stun
   - Id: 180
     Name: NPC_PETRIFYATTACK
     Description: Petrify Attack
@@ -5659,13 +5573,11 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
-    Duration1: 100
     Duration2: 20000
-    Status: StoneWait
   - Id: 181
     Name: NPC_CURSEATTACK
     Description: Curse Attack
@@ -5674,12 +5586,11 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Dark
     Duration2: 30000
-    Status: Curse
   - Id: 182
     Name: NPC_SLEEPATTACK
     Description: Sleep attack
@@ -5688,12 +5599,11 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
     Duration2: 30000
-    Status: Sleep
   - Id: 183
     Name: NPC_RANDOMATTACK
     Description: Random Attack
@@ -5702,7 +5612,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Random
@@ -5714,7 +5624,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Water
@@ -5727,7 +5637,7 @@ Body:
     Flags:
       IsNpc: true
       TargetHidden: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Earth
@@ -5739,7 +5649,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Fire
@@ -5751,7 +5661,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Wind
@@ -5763,11 +5673,10 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Poison
-    Status: Poison
   - Id: 189
     Name: NPC_HOLYATTACK
     Description: Holy Attribute Attack
@@ -5776,7 +5685,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Holy
@@ -5788,7 +5697,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Dark
@@ -5800,24 +5709,23 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Ghost
   - Id: 192
     Name: NPC_MAGICALATTACK
     Description: Demon Shock Attack
-    MaxLevel: 1
-    Type: Magic
+    MaxLevel: 10
+    Type: Weapon
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
     Duration1: 15000
-    Status: MagicalAttack
   - Id: 193
     Name: NPC_METAMORPHOSIS
     Description: Metamorphosis
@@ -5872,7 +5780,6 @@ Body:
     Flags:
       IsNpc: true
     HitCount: 1
-    Status: ModeChange
   - Id: 198
     Name: NPC_TRANSFORMATION
     Description: Transformation
@@ -5894,7 +5801,7 @@ Body:
       IgnoreFlee: true
     Flags:
       IsNpc: true
-    Range: -7
+    Range: 9
     Hit: Single
     HitCount: 1
     Element: Dark
@@ -5914,14 +5821,34 @@ Body:
     Name: NPC_KEEPING
     Description: Keeping
     MaxLevel: 1
+    Type: Weapon
     TargetType: Self
     DamageFlags:
       NoDamage: true
     Flags:
       IsNpc: true
     HitCount: 1
-    Duration1: 30000
-    Status: Keeping
+    Duration1:
+      - Level: 1
+        Time: 60000
+      - Level: 2
+        Time: 70000
+      - Level: 3
+        Time: 80000
+      - Level: 4
+        Time: 90000
+      - Level: 5
+        Time: 100000
+      - Level: 6
+        Time: 110000
+      - Level: 7
+        Time: 120000
+      - Level: 8
+        Time: 130000
+      - Level: 9
+        Time: 140000
+      - Level: 10
+        Time: 150000
   - Id: 202
     Name: NPC_DARKBREATH
     Description: Dark Breath
@@ -5948,7 +5875,6 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Dark
-    Status: Coma
   - Id: 204
     Name: NPC_BARRIER
     Description: Barrier
@@ -5960,20 +5886,59 @@ Body:
     Flags:
       IsNpc: true
     HitCount: 1
-    Duration1: 15000
-    Status: Barrier
+    Duration1:
+      - Level: 1
+        Time: 60000
+      - Level: 2
+        Time: 70000
+      - Level: 3
+        Time: 80000
+      - Level: 4
+        Time: 90000
+      - Level: 5
+        Time: 100000
+      - Level: 6
+        Time: 110000
+      - Level: 7
+        Time: 120000
+      - Level: 8
+        Time: 130000
+      - Level: 9
+        Time: 140000
+      - Level: 10
+        Time: 150000
   - Id: 205
     Name: NPC_DEFENDER
     Description: Defender
     MaxLevel: 1
+    Type: Weapon
     TargetType: Self
     DamageFlags:
       NoDamage: true
     Flags:
       IsNpc: true
     HitCount: 1
-    Duration1: 15000
-    Status: Armor
+    Duration1:
+      - Level: 1
+        Time: 60000
+      - Level: 2
+        Time: 70000
+      - Level: 3
+        Time: 80000
+      - Level: 4
+        Time: 90000
+      - Level: 5
+        Time: 100000
+      - Level: 6
+        Time: 110000
+      - Level: 7
+        Time: 120000
+      - Level: 8
+        Time: 130000
+      - Level: 9
+        Time: 140000
+      - Level: 10
+        Time: 150000
   - Id: 206
     Name: NPC_LICK
     Description: Lick
@@ -5989,7 +5954,6 @@ Body:
     HitCount: 1
     Element: Weapon
     Duration2: 5000
-    Status: Stun
   - Id: 207
     Name: NPC_HALLUCINATION
     Description: Hallucination
@@ -6003,7 +5967,6 @@ Body:
     Range: 9
     HitCount: 1
     Duration2: 30000
-    Status: Hallucination
   - Id: 208
     Name: NPC_REBIRTH
     Description: Rebirth
@@ -6015,7 +5978,6 @@ Body:
     Flags:
       IsNpc: true
     HitCount: 1
-    Status: Rebirth
   - Id: 209
     Name: NPC_SUMMONMONSTER
     Description: Monster Summons
@@ -6067,7 +6029,6 @@ Body:
     AfterCastActDelay: 500
     Requires:
       SpCost: 16
-    Status: Stun
   - Id: 213
     Name: RG_TUNNELDRIVE
     Description: Stalk
@@ -6093,7 +6054,6 @@ Body:
       SpCost: 20
       Status:
         Hiding: true
-    Status: Stun
   - Id: 215
     Name: RG_STRIPWEAPON
     Description: Divest Weapon
@@ -6130,8 +6090,6 @@ Body:
           Amount: 23
         - Level: 5
           Amount: 25
-    Status: StripWeapon
-    CastCancel: false
   - Id: 216
     Name: RG_STRIPSHIELD
     Description: Divest Shield
@@ -6168,8 +6126,6 @@ Body:
           Amount: 18
         - Level: 5
           Amount: 20
-    Status: StripShield
-    CastCancel: false
   - Id: 217
     Name: RG_STRIPARMOR
     Description: Divest Armor
@@ -6206,8 +6162,6 @@ Body:
           Amount: 23
         - Level: 5
           Amount: 25
-    Status: StripArmor
-    CastCancel: false
   - Id: 218
     Name: RG_STRIPHELM
     Description: Divest Helm
@@ -6244,8 +6198,6 @@ Body:
           Amount: 18
         - Level: 5
           Amount: 20
-    Status: StripHelm
-    CastCancel: false
   - Id: 219
     Name: RG_INTIMIDATE
     Description: Snatch
@@ -6370,6 +6322,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     Duration1:
       - Level: 1
@@ -6403,7 +6356,6 @@ Body:
     TargetType: Attack
     DamageFlags:
       IgnoreAtkCard: true
-      IgnoreDefense: true
       IgnoreFlee: true
     Flags:
       IgnoreAutoGuard: true
@@ -6415,6 +6367,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     Duration1:
       - Level: 1
@@ -6433,7 +6386,6 @@ Body:
       ItemCost:
         - Item: Acid_Bottle
           Amount: 1
-    Status: Bleeding
   - Id: 231
     Name: AM_POTIONPITCHER
     Description: Aid Potion
@@ -6447,6 +6399,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 500
     Requires:
       SpCost: 1
@@ -6530,6 +6483,7 @@ Body:
     Range: 1
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -6547,7 +6501,6 @@ Body:
       ItemCost:
         - Item: Coating_Bottle
           Amount: 1
-    Status: Cp_Weapon
   - Id: 235
     Name: AM_CP_SHIELD
     Description: Synthesized Shield
@@ -6559,6 +6512,7 @@ Body:
     Range: 1
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -6576,7 +6530,6 @@ Body:
       ItemCost:
         - Item: Coating_Bottle
           Amount: 1
-    Status: Cp_Shield
   - Id: 236
     Name: AM_CP_ARMOR
     Description: Synthetic Armor
@@ -6588,6 +6541,7 @@ Body:
     Range: 1
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -6605,7 +6559,6 @@ Body:
       ItemCost:
         - Item: Coating_Bottle
           Amount: 1
-    Status: Cp_Armor
   - Id: 237
     Name: AM_CP_HELM
     Description: Biochemical Helm
@@ -6617,6 +6570,7 @@ Body:
     Range: 1
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -6634,7 +6588,6 @@ Body:
       ItemCost:
         - Item: Coating_Bottle
           Amount: 1
-    Status: Cp_Helm
   - Id: 238
     Name: AM_BIOETHICS
     Description: Bioethics
@@ -6670,6 +6623,7 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
+    Range: 9
     Hit: Single
     SplashArea: 1
     CastTime: 2000
@@ -6697,8 +6651,6 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Duration1: 300000
@@ -6725,7 +6677,6 @@ Body:
         - Level: 10
           Amount: 30
       State: Shield
-    Status: AutoGuard
   - Id: 250
     Name: CR_SHIELDCHARGE
     Description: Smite
@@ -6754,7 +6705,6 @@ Body:
     Requires:
       SpCost: 10
       State: Shield
-    Status: Stun
   - Id: 251
     Name: CR_SHIELDBOOMERANG
     Description: Shield Boomerang
@@ -6816,7 +6766,6 @@ Body:
         - Level: 10
           Amount: 80
       State: Shield
-    Status: ReflectShield
   - Id: 253
     Name: CR_HOLYCROSS
     Description: Holy Cross
@@ -6856,16 +6805,18 @@ Body:
           Amount: 19
         - Level: 10
           Amount: 20
-    Status: Blind
   - Id: 254
     Name: CR_GRANDCROSS
     Description: Grand Cross
     MaxLevel: 10
     Type: Magic
     TargetType: Self
+    DamageFlags:
+      IgnoreAtkCard: true
+      IgnoreFlee: true
     Flags:
       TargetSelf: true
-    Range: 9
+    Range: 5
     Hit: Single
     HitCount: 1
     Element: Holy
@@ -6909,8 +6860,6 @@ Body:
       Target: Enemy
       Flag:
         PathCheck: true
-    Status: Blind
-    CastCancel: false
   - Id: 255
     Name: CR_DEVOTION
     Description: Sacrifice
@@ -6934,6 +6883,7 @@ Body:
         Size: 11
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 3000
     Duration2:
       - Level: 1
@@ -6948,7 +6898,6 @@ Body:
         Time: 90000
     Requires:
       SpCost: 25
-    Status: Devotion
   - Id: 256
     Name: CR_PROVIDENCE
     Description: Resistant Souls
@@ -6961,11 +6910,11 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 3000
     Duration1: 180000
     Requires:
       SpCost: 30
-    Status: Providence
   - Id: 257
     Name: CR_DEFENDER
     Description: Defending Aura
@@ -6981,7 +6930,6 @@ Body:
     Requires:
       SpCost: 30
       State: Shield
-    Status: Defender
   - Id: 258
     Name: CR_SPEARQUICKEN
     Description: Spear Quicken
@@ -7037,7 +6985,6 @@ Body:
           Amount: 60
       Weapon:
         2hSpear: true
-    Status: SpearQuicken
   - Id: 259
     Name: MO_IRONHAND
     Description: Iron Fists
@@ -7061,7 +7008,6 @@ Body:
     Duration1: 600000
     Requires:
       SpCost: 8
-    CastCancel: false
   - Id: 262
     Name: MO_ABSORBSPIRITS
     Description: Absorb Spirit Sphere
@@ -7073,6 +7019,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Requires:
       SpCost: 5
@@ -7144,7 +7091,6 @@ Body:
         - Level: 5
           Amount: 20
       SpiritSphereCost: 1
-    CastCancel: false
   - Id: 267
     Name: MO_FINGEROFFENSIVE
     Description: Throw Spirit Sphere
@@ -7195,7 +7141,6 @@ Body:
           Amount: 4
         - Level: 5
           Amount: 5
-    CastCancel: false
   - Id: 268
     Name: MO_STEELBODY
     Description: Mental Strength
@@ -7221,8 +7166,6 @@ Body:
     Requires:
       SpCost: 200
       SpiritSphereCost: 5
-    Status: SteelBody
-    CastCancel: false
   - Id: 269
     Name: MO_BLADESTOP
     Description: Root
@@ -7281,7 +7224,6 @@ Body:
         Grenade: true
         Huuma: true
       SpiritSphereCost: 1
-    Status: BladeStop_Wait
   - Id: 270
     Name: MO_EXPLOSIONSPIRITS
     Description: Fury
@@ -7295,7 +7237,6 @@ Body:
     Requires:
       SpCost: 15
       SpiritSphereCost: 5
-    Status: ExplosionSpirits
   - Id: 271
     Name: MO_EXTREMITYFIST
     Description: Asura Strike
@@ -7314,6 +7255,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 4000
@@ -7336,7 +7278,7 @@ Body:
         Time: 1500
       - Level: 5
         Time: 1000
-    Duration1: 300000
+    Duration2: 300000
     Requires:
       SpCost: 1
       Weapon:
@@ -7365,7 +7307,6 @@ Body:
       Status:
         Explosionspirits: true
       SpiritSphereCost: 5
-    Status: ExtremityFist
   - Id: 272
     Name: MO_CHAINCOMBO
     Description: Raging Quadruple Blow
@@ -7500,6 +7441,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 400
@@ -7513,7 +7455,6 @@ Body:
         Time: 1200
     Requires:
       SpCost: 2
-    Status: MagicRod
   - Id: 277
     Name: SA_SPELLBREAKER
     Description: Spell Breaker
@@ -7525,6 +7466,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 700
     Requires:
       SpCost: 10
@@ -7543,6 +7485,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -7567,7 +7510,6 @@ Body:
         Time: 390000
     Requires:
       SpCost: 35
-    Status: AutoSpell
   - Id: 280
     Name: SA_FLAMELAUNCHER
     Description: Endow Blaze
@@ -7583,6 +7525,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Fire
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -7600,7 +7543,6 @@ Body:
       ItemCost:
         - Item: Boody_Red
           Amount: 1
-    Status: FireWeapon
   - Id: 281
     Name: SA_FROSTWEAPON
     Description: Endow Tsunami
@@ -7616,6 +7558,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Water
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -7633,7 +7576,6 @@ Body:
       ItemCost:
         - Item: Crystal_Blue
           Amount: 1
-    Status: WaterWeapon
   - Id: 282
     Name: SA_LIGHTNINGLOADER
     Description: Endow Tornado
@@ -7649,6 +7591,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Wind
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -7666,7 +7609,6 @@ Body:
       ItemCost:
         - Item: Wind_Of_Verdure
           Amount: 1
-    Status: WindWeapon
   - Id: 283
     Name: SA_SEISMICWEAPON
     Description: Endow Quake
@@ -7682,6 +7624,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Earth
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -7699,7 +7642,6 @@ Body:
       ItemCost:
         - Item: Yellow_Live
           Amount: 1
-    Status: EarthWeapon
   - Id: 284
     Name: SA_DRAGONOLOGY
     Description: Dragonology
@@ -7719,6 +7661,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Fire
+    CastCancel: true
     CastTime: 5000
     Duration1:
       - Level: 1
@@ -7753,7 +7696,6 @@ Body:
       Flag:
         PathCheck: true
         RemovedByFireRain: true
-    Status: Volcano
   - Id: 286
     Name: SA_DELUGE
     Description: Deluge
@@ -7768,6 +7710,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Water
+    CastCancel: true
     CastTime: 5000
     Duration1:
       - Level: 1
@@ -7802,7 +7745,6 @@ Body:
       Flag:
         PathCheck: true
         RemovedByFireRain: true
-    Status: Deluge
   - Id: 287
     Name: SA_VIOLENTGALE
     Description: Whirlwind
@@ -7817,6 +7759,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Wind
+    CastCancel: true
     CastTime: 5000
     Duration1:
       - Level: 1
@@ -7851,7 +7794,6 @@ Body:
       Flag:
         PathCheck: true
         RemovedByFireRain: true
-    Status: ViolentGale
   - Id: 288
     Name: SA_LANDPROTECTOR
     Description: Magnetic Earth
@@ -7863,6 +7805,7 @@ Body:
     Range: 2
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 5000
     Duration1:
       - Level: 1
@@ -7925,6 +7868,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Requires:
       SpCost: 1
@@ -7941,6 +7885,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 50
       ItemCost:
@@ -7959,6 +7904,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 292
@@ -7974,6 +7920,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 293
@@ -7988,6 +7935,7 @@ Body:
       IsNpc: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 294
@@ -8003,10 +7951,10 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 1200000
     Requires:
       SpCost: 1
-    Status: Orcish
   - Id: 295
     Name: SA_DEATH
     Description: Grim Reaper
@@ -8020,6 +7968,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 296
@@ -8035,6 +7984,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 297
@@ -8050,6 +8000,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 298
@@ -8065,6 +8016,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 299
@@ -8080,6 +8032,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 300
@@ -8095,6 +8048,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 301
@@ -8108,6 +8062,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 302
@@ -8123,6 +8078,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
   - Id: 303
@@ -8136,9 +8092,9 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 1
-    Status: Coma
   - Id: 304
     Name: BD_ADAPTATION
     Description: Amp
@@ -8167,7 +8123,6 @@ Body:
       Weapon:
         Musical: true
         Whip: true
-    Status: Dancing
   - Id: 306
     Name: BD_LULLABY
     Description: Lullaby
@@ -8181,7 +8136,7 @@ Body:
     Hit: Single
     HitCount: 1
     Duration1: 60000
-    Duration2: 30000
+    Duration2: 15000
     Requires:
       SpCost: 20
       Weapon:
@@ -8194,7 +8149,6 @@ Body:
       Target: Enemy
       Flag:
         Ensemble: true
-    Status: Sleep
   - Id: 307
     Name: BD_RICHMANKIM
     Description: Mental Sensing
@@ -8222,7 +8176,6 @@ Body:
       Flag:
         NoPc: true
         Ensemble: true
-    Status: RichManKim
   - Id: 308
     Name: BD_ETERNALCHAOS
     Description: Down Tempo
@@ -8249,7 +8202,6 @@ Body:
       Target: Enemy
       Flag:
         Ensemble: true
-    Status: EternalChaos
   - Id: 309
     Name: BD_DRUMBATTLEFIELD
     Description: Battle Theme
@@ -8267,15 +8219,15 @@ Body:
     Requires:
       SpCost:
         - Level: 1
-          Amount: 40
+          Amount: 38
         - Level: 2
-          Amount: 45
+          Amount: 41
         - Level: 3
-          Amount: 50
+          Amount: 44
         - Level: 4
-          Amount: 55
+          Amount: 47
         - Level: 5
-          Amount: 60
+          Amount: 50
       Weapon:
         Musical: true
         Whip: true
@@ -8286,7 +8238,6 @@ Body:
       Target: Party
       Flag:
         Ensemble: true
-    Status: DrumBattle
   - Id: 310
     Name: BD_RINGNIBELUNGEN
     Description: Harmonic Lick
@@ -8323,7 +8274,6 @@ Body:
       Target: Party
       Flag:
         Ensemble: true
-    Status: Nibelungen
   - Id: 311
     Name: BD_ROKISWEIL
     Description: Classical Pluck
@@ -8349,7 +8299,6 @@ Body:
       Interval: -1
       Flag:
         Ensemble: true
-    Status: RokisWeil
   - Id: 312
     Name: BD_INTOABYSS
     Description: Power Chord
@@ -8377,7 +8326,6 @@ Body:
       Flag:
         NoMob: true
         Ensemble: true
-    Status: IntoAbyss
   - Id: 313
     Name: BD_SIEGFRIED
     Description: Acoustic Rhythm
@@ -8404,7 +8352,6 @@ Body:
       Target: Party
       Flag:
         Ensemble: true
-    Status: Siegfried
   - Id: 315
     Name: BA_MUSICALLESSON
     Description: Music Lessons
@@ -8477,7 +8424,6 @@ Body:
       Target: Enemy
       Flag:
         Song: true
-        NoOverlap: true
   - Id: 318
     Name: BA_FROSTJOKER
     Description: Unbarring Octave
@@ -8491,7 +8437,6 @@ Body:
     HitCount: 1
     SplashArea: -1
     AfterCastActDelay: 4000
-    Duration1: 15000
     Duration2: 12000
     Requires:
       SpCost:
@@ -8505,7 +8450,6 @@ Body:
           Amount: 18
         - Level: 5
           Amount: 20
-    Status: Freeze
   - Id: 319
     Name: BA_WHISTLE
     Description: Perfect Tablature
@@ -8553,7 +8497,6 @@ Body:
       Flag:
         NoMob: true
         Song: true
-    Status: Whistle
   - Id: 320
     Name: BA_ASSASSINCROSS
     Description: Impressive Riff
@@ -8601,7 +8544,6 @@ Body:
       Flag:
         NoMob: true
         Song: true
-    Status: AssnCros
   - Id: 321
     Name: BA_POEMBRAGI
     Description: Magic Strings
@@ -8649,7 +8591,6 @@ Body:
       Flag:
         NoMob: true
         Song: true
-    Status: PoemBragi
   - Id: 322
     Name: BA_APPLEIDUN
     Description: Song of Lutie
@@ -8698,7 +8639,6 @@ Body:
         NoMob: true
         Song: true
         DualMode: true
-    Status: AppleIdun
   - Id: 323
     Name: DC_DANCINGLESSON
     Description: Dance Lessons
@@ -8770,7 +8710,6 @@ Body:
       Target: Enemy
       Flag:
         Dance: true
-        NoOverlap: true
   - Id: 326
     Name: DC_SCREAM
     Description: Dazzler
@@ -8784,7 +8723,6 @@ Body:
     HitCount: 1
     SplashArea: -1
     AfterCastActDelay: 4000
-    Duration1: 5000
     Duration2: 5000
     Requires:
       SpCost:
@@ -8798,7 +8736,6 @@ Body:
           Amount: 18
         - Level: 5
           Amount: 20
-    Status: Stun
   - Id: 327
     Name: DC_HUMMING
     Description: Focus Ballet
@@ -8846,7 +8783,6 @@ Body:
       Flag:
         NoMob: true
         Dance: true
-    Status: Humming
   - Id: 328
     Name: DC_DONTFORGETME
     Description: Slow Grace
@@ -8894,7 +8830,6 @@ Body:
       Target: Enemy
       Flag:
         Dance: true
-    Status: DontForgetMe
   - Id: 329
     Name: DC_FORTUNEKISS
     Description: Lady Luck
@@ -8942,7 +8877,6 @@ Body:
       Flag:
         NoMob: true
         Dance: true
-    Status: Fortune
   - Id: 330
     Name: DC_SERVICEFORYOU
     Description: Gypsy's Kiss
@@ -8990,7 +8924,6 @@ Body:
       Flag:
         NoMob: true
         Dance: true
-    Status: Service4U
   - Id: 331
     Name: NPC_RANDOMMOVE
     Description: Random Move
@@ -9033,6 +8966,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 3000
     Requires:
       SpCost: 1
@@ -9049,6 +8983,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 3000
     Requires:
       SpCost: 1
@@ -9067,6 +9002,7 @@ Body:
     HitCount: 1
     SplashArea: 3
     ActiveInstance: 1
+    CastCancel: true
     Duration1: 20000
     CastTimeFlags:
       IgnoreDex: true
@@ -9102,12 +9038,11 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -2
+    Range: -1
     Hit: Multi_Hit
     HitCount: -2
     Element: Dark
     Duration2: 30000
-    Status: Blind
   - Id: 339
     Name: NPC_GRANDDARKNESS
     Description: Grand cross of Darkness
@@ -9120,18 +9055,17 @@ Body:
     Flags:
       IsNpc: true
       TargetSelf: true
+    Range: 5
     Hit: Single
     HitCount: 1
     Element: Dark
     AfterCastWalkDelay: 1000
-    Duration1: 950
-    Duration2: 30000
+    Duration1: 30000
     Unit:
       Id: Dummyskill
       Layout: -1
       Interval: 300
       Target: Enemy
-    Status: Blind
   - Id: 340
     Name: NPC_DARKSTRIKE
     Description: Soul Strike of Darkness
@@ -9164,6 +9098,7 @@ Body:
       - Level: 10
         Count: 5
     Element: Dark
+    CastCancel: true
   - Id: 341
     Name: NPC_DARKTHUNDER
     Description: Darkness Jupitel
@@ -9217,6 +9152,7 @@ Body:
         Amount: 6
       - Level: 10
         Amount: 7
+    CastCancel: true
   - Id: 342
     Name: NPC_STOP
     Description: Stop
@@ -9226,21 +9162,21 @@ Body:
       NoDamage: true
     Flags:
       IsNpc: true
-    Range: -2
+    Range: 9
     Hit: Single
     Duration1: 15000
-    Status: Stop
   - Id: 343
     Name: NPC_WEAPONBRAKER
     Description: Break weapon
     MaxLevel: 10
-    TargetType: Self
+    Type: Weapon
+    TargetType: Attack
     Flags:
       IsNpc: true
+    Range: 9
     Hit: Single
     HitCount: 1
-    Duration1: 30000
-    Status: WeaponBreaker
+    Element: Weapon
   - Id: 344
     Name: NPC_ARMORBRAKE
     Description: Break armor
@@ -9249,11 +9185,10 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -2
+    Range: 9
     Hit: Single
     HitCount: 1
     Element: Weapon
-    Status: BrokenArmor
   - Id: 345
     Name: NPC_HELMBRAKE
     Description: Break helm
@@ -9262,7 +9197,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -2
+    Range: 9
     Hit: Single
     HitCount: 1
     Element: Weapon
@@ -9274,7 +9209,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -2
+    Range: 9
     Hit: Single
     HitCount: 1
     Element: Weapon
@@ -9286,7 +9221,7 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Undead
@@ -9294,20 +9229,21 @@ Body:
     Name: NPC_CHANGEUNDEAD
     Description: Undead Attribute Change
     MaxLevel: 5
-    Type: Weapon
+    Type: Magic
     TargetType: Attack
+    DamageFlags:
+      NoDamage: true
     Flags:
       IsNpc: true
-    Range: -2
-    Hit: Single
+    Range: 9
     HitCount: 1
     Element: Undead
-    Duration2: 60000
-    Status: ChangeUndead
+    Duration1: 30000
   - Id: 349
     Name: NPC_POWERUP
     Description: Power Up
-    MaxLevel: 5
+    MaxLevel: 10
+    Type: Weapon
     TargetType: Self
     DamageFlags:
       NoDamage: true
@@ -9316,19 +9252,18 @@ Body:
     Hit: Single
     Duration1:
       - Level: 1
-        Time: 5000
-      - Level: 2
         Time: 10000
-      - Level: 3
+      - Level: 2
         Time: 15000
-      - Level: 4
+      - Level: 3
         Time: 20000
-      - Level: 5
+      - Level: 4
         Time: 25000
-    Status: Powerup
+      - Level: 5
+        Time: 30000
   - Id: 350
     Name: NPC_AGIUP
-    Description: Agility Up
+    Description: Agility UP
     MaxLevel: 10
     TargetType: Self
     DamageFlags:
@@ -9340,24 +9275,13 @@ Body:
       - Level: 1
         Time: 10000
       - Level: 2
-        Time: 20000
+        Time: 15000
       - Level: 3
-        Time: 30000
+        Time: 20000
       - Level: 4
-        Time: 40000
+        Time: 25000
       - Level: 5
-        Time: 50000
-      - Level: 6
-        Time: 60000
-      - Level: 7
-        Time: 70000
-      - Level: 8
-        Time: 80000
-      - Level: 9
-        Time: 90000
-      - Level: 10
-        Time: 100000
-    Status: Agiup
+        Time: 30000
   - Id: 351
     Name: NPC_SIEGEMODE
     Description: Siege Mode
@@ -9375,6 +9299,7 @@ Body:
       NoDamage: true
     Flags:
       IsNpc: true
+    Range: 2
   - Id: 353
     Name: NPC_INVISIBLE
     Description: Invisible
@@ -9384,7 +9309,6 @@ Body:
     Flags:
       IsNpc: true
     Duration1: 30000
-    Status: Cloaking
   - Id: 354
     Name: NPC_RUN
     Description: Run
@@ -9395,6 +9319,7 @@ Body:
       NoDamage: true
     Flags:
       IsNpc: true
+    Range: 2
     Hit: Single
     AfterCastActDelay:
       - Level: 2
@@ -9463,7 +9388,6 @@ Body:
         Shotgun: true
         Grenade: true
         Huuma: true
-    Status: AuraBlade
   - Id: 356
     Name: LK_PARRYING
     Description: Parrying
@@ -9499,7 +9423,6 @@ Body:
       SpCost: 50
       Weapon:
         2hSword: true
-    Status: Parrying
   - Id: 357
     Name: LK_CONCENTRATION
     Description: Concentration
@@ -9533,7 +9456,6 @@ Body:
           Amount: 26
         - Level: 5
           Amount: 30
-    Status: Concentration
   - Id: 358
     Name: LK_TENSIONRELAX
     Description: Relax
@@ -9547,7 +9469,6 @@ Body:
     Duration1: 180000
     Requires:
       SpCost: 15
-    Status: TensionRelax
   - Id: 359
     Name: LK_BERSERK
     Description: Frenzy
@@ -9559,10 +9480,9 @@ Body:
     Hit: Single
     HitCount: 1
     Duration1: 300000
-    Duration2: 10000
+    Duration2: 15000
     Requires:
       SpCost: 200
-    Status: Berserk
   - Id: 360
     Name: LK_FURY
     Description: Fury
@@ -9586,6 +9506,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -9631,7 +9552,6 @@ Body:
           Amount: 50
         - Level: 5
           Amount: 60
-    Status: Assumptio
   - Id: 362
     Name: HP_BASILICA
     Description: Basilica
@@ -9645,6 +9565,7 @@ Body:
     HitCount: 1
     ActiveInstance: 1
     Knockback: 2
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 5000
@@ -9716,7 +9637,6 @@ Body:
       Interval: 300
       Flag:
         RangedSingleUnit: true
-    Status: Basilica
   - Id: 363
     Name: HP_MEDITATIO
     Description: Meditatio
@@ -9738,6 +9658,7 @@ Body:
     Hit: Multi_Hit
     HitCount: 1
     Element: Weapon
+    CastCancel: true
     CastTime: 300
     AfterCastActDelay: 300
     Requires:
@@ -9779,7 +9700,6 @@ Body:
           Amount: 46
         - Level: 10
           Amount: 50
-    Status: MagicPower
   - Id: 367
     Name: PA_PRESSURE
     Description: Gloria Domini
@@ -9841,7 +9761,6 @@ Body:
           Amount: 45
         - Level: 5
           Amount: 50
-    CastCancel: false
   - Id: 368
     Name: PA_SACRIFICE
     Description: Martyr's Reckoning
@@ -9854,10 +9773,10 @@ Body:
       IgnoreFlee: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 2000
     Requires:
       SpCost: 100
-    Status: Sacrifice
   - Id: 369
     Name: PA_GOSPEL
     Description: Battle Chant
@@ -9867,10 +9786,9 @@ Body:
     DamageFlags:
       NoDamage: true
       IgnoreFlee: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 60000
     Duration2: 60000
     Requires:
@@ -9901,7 +9819,6 @@ Body:
       Interval: 10000
       Flag:
         NoOverlap: true
-    Status: Gospel
   - Id: 370
     Name: CH_PALMSTRIKE
     Description: Raging Palm Strike
@@ -9913,6 +9830,7 @@ Body:
     HitCount: 1
     Element: Weapon
     Knockback: 3
+    CastCancel: true
     AfterCastActDelay: 300
     CastTimeFlags:
       IgnoreDex: true
@@ -9944,15 +9862,15 @@ Body:
     Element: Weapon
     Duration1:
       - Level: 1
-        Time: 2000
-      - Level: 2
         Time: 4000
-      - Level: 3
-        Time: 6000
-      - Level: 4
+      - Level: 2
         Time: 8000
+      - Level: 3
+        Time: 12000
+      - Level: 4
+        Time: 16000
       - Level: 5
-        Time: 10000
+        Time: 24000
     CastDelayFlags:
       IgnoreStatus: true
     Requires:
@@ -9968,7 +9886,6 @@ Body:
         - Level: 5
           Amount: 12
       SpiritSphereCost: 1
-    Status: Ankle
   - Id: 372
     Name: CH_CHAINCRUSH
     Description: Chain Crush Combo
@@ -10073,6 +9990,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 3000
     AfterCastActDelay: 5000
     Requires:
@@ -10090,6 +10008,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Cooldown:
       - Level: 1
         Time: 10000
@@ -10144,7 +10063,17 @@ Body:
         Time: 55000
       - Level: 5
         Time: 60000
-    Duration2: 60000
+    Duration2:
+      - Level: 1
+        Time: 20000
+      - Level: 2
+        Time: 30000
+      - Level: 3
+        Time: 40000
+      - Level: 4
+        Time: 50000
+      - Level: 5
+        Time: 60000
     Requires:
       SpCost:
         - Level: 1
@@ -10160,7 +10089,6 @@ Body:
       ItemCost:
         - Item: Poison_Bottle
           Amount: 1
-    Status: Edp
   - Id: 379
     Name: ASC_BREAKER
     Description: Soul Destroyer
@@ -10173,6 +10101,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Weapon
+    CastCancel: true
     CastTime: 700
     AfterCastActDelay:
       - Level: 1
@@ -10250,7 +10179,6 @@ Body:
           Amount: 40
         - Level: 10
           Amount: 40
-    Status: TrueSight
   - Id: 381
     Name: SN_FALCONASSAULT
     Description: Falcon Assault
@@ -10262,6 +10190,7 @@ Body:
     Range: 9
     Hit: Multi_Hit
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 3000
     Requires:
@@ -10293,6 +10222,7 @@ Body:
     Element: Weapon
     SplashArea: 1
     ActiveInstance: 14
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1500
     Requires:
@@ -10324,6 +10254,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -10389,7 +10320,6 @@ Body:
           Amount: 94
         - Level: 10
           Amount: 100
-    Status: WindWalk
   - Id: 384
     Name: WS_MELTDOWN
     Description: Shattering Strike
@@ -10401,6 +10331,7 @@ Body:
     Flags:
       AllowOnMado: true
     HitCount: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 500
@@ -10466,7 +10397,6 @@ Body:
           Amount: 90
         - Level: 10
           Amount: 90
-    Status: Meltdown
   - Id: 385
     Name: WS_CREATECOIN
     Description: Create Coins
@@ -10475,6 +10405,7 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 5
   - Id: 386
@@ -10485,6 +10416,7 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 5
   - Id: 387
@@ -10503,7 +10435,6 @@ Body:
     Requires:
       SpCost: 20
       State: Cart
-    Status: CartBoost
   - Id: 388
     Name: WS_SYSTEMCREATE
     Description: Auto Attack System
@@ -10528,7 +10459,6 @@ Body:
       NoDamage: true
     Flags:
       IgnoreKagehumi: true
-      Toggleable: true
     Hit: Single
     HitCount: 1
     CastTime: 1200
@@ -10536,7 +10466,6 @@ Body:
     Duration2: 30000
     Requires:
       SpCost: 10
-    Status: ChaseWalk
   - Id: 390
     Name: ST_REJECTSWORD
     Description: Counter Instinct
@@ -10546,6 +10475,7 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
     Duration1: 300000
     Requires:
       SpCost:
@@ -10559,7 +10489,6 @@ Body:
           Amount: 25
         - Level: 5
           Amount: 30
-    Status: RejectSword
   - Id: 392
     Name: CR_ALCHEMY
     Description: Alchemy
@@ -10568,6 +10497,7 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
   - Id: 393
     Name: CR_SYNTHESISPOTION
     Description: Potion Synthesis
@@ -10576,6 +10506,7 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
   - Id: 394
     Name: CG_ARROWVULCAN
     Description: Vulcan Arrow
@@ -10586,6 +10517,7 @@ Body:
     Hit: Multi_Hit
     HitCount: -9
     Element: Weapon
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -10672,6 +10604,7 @@ Body:
     HitCount: 1
     SplashArea: 3
     Knockback: 2
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 20000
@@ -10718,10 +10651,10 @@ Body:
     Range: 7
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 1000
     Requires:
       SpCost: 100
-    Status: Marionette
   - Id: 397
     Name: LK_SPIRALPIERCE
     Description: Spiral Pierce
@@ -10732,7 +10665,7 @@ Body:
       IgnoreDefense: true
     Flags:
       TargetTrap: true
-    Range: 4
+    Range: 5
     Hit: Multi_Hit
     HitCount: 5
     Element: Weapon
@@ -10774,8 +10707,6 @@ Body:
       Weapon:
         1hSpear: true
         2hSpear: true
-    Status: Ankle
-    CastCancel: false
   - Id: 398
     Name: LK_HEADCRUSH
     Description: Traumatic Blow
@@ -10790,7 +10721,6 @@ Body:
     Duration2: 120000
     Requires:
       SpCost: 23
-    Status: Bleeding
   - Id: 399
     Name: LK_JOINTBEAT
     Description: Vital Strike
@@ -10848,7 +10778,6 @@ Body:
       Weapon:
         1hSpear: true
         2hSpear: true
-    Status: JointBeat
   - Id: 400
     Name: HW_NAPALMVULCAN
     Description: Napalm Vulcan
@@ -10875,6 +10804,7 @@ Body:
         Count: 5
     Element: Ghost
     SplashArea: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration2: 30000
@@ -10890,7 +10820,6 @@ Body:
           Amount: 55
         - Level: 5
           Amount: 70
-    Status: Curse
   - Id: 401
     Name: CH_SOULCOLLECT
     Description: Zen
@@ -10900,6 +10829,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Duration1: 600000
     Requires:
@@ -10938,7 +10868,6 @@ Body:
           Amount: 21
         - Level: 5
           Amount: 24
-    Status: MindBreaker
   - Id: 403
     Name: PF_MEMORIZE
     Description: Foresight
@@ -10948,13 +10877,13 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
     CastTime: 5000
     CastTimeFlags:
       IgnoreDex: true
       IgnoreStatus: true
     Requires:
       SpCost: 1
-    Status: Memorize
   - Id: 404
     Name: PF_FOGWALL
     Description: Blinding Mist
@@ -10971,6 +10900,7 @@ Body:
     HitCount: 1
     Element: Earth
     ActiveInstance: 2
+    CastCancel: true
     Duration1: 20000
     Duration2: 10000
     Requires:
@@ -10981,7 +10911,6 @@ Body:
       Interval: -1
       Flag:
         RemovedByFireRain: true
-    Status: FogWall
   - Id: 405
     Name: PF_SPIDERWEB
     Description: Fiber Lock
@@ -10990,7 +10919,7 @@ Body:
     TargetType: Attack
     DamageFlags:
       NoDamage: true
-    Range: 9
+    Range: 7
     Hit: Single
     HitCount: 1
     ActiveInstance: 3
@@ -11007,7 +10936,6 @@ Body:
       Target: Enemy
       Flag:
         RemovedByFireRain: true
-    Status: SpiderWeb
   - Id: 406
     Name: ASC_METEORASSAULT
     Description: Meteor Assault
@@ -11079,6 +11007,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 3000
     Duration1: 300000
     CastTimeFlags:
@@ -11086,7 +11015,6 @@ Body:
     Requires:
       SpCost: 1
       SpRateCost: -10
-    Status: ProtectExp
   - Id: 409
     Name: WE_CALLPARENT
     Description: Call Parent
@@ -11101,6 +11029,7 @@ Body:
     HitCount: 1
     SplashArea: 3
     ActiveInstance: 1
+    CastCancel: true
     Duration1: 20000
     CastTimeFlags:
       IgnoreDex: true
@@ -11124,6 +11053,7 @@ Body:
     HitCount: 1
     SplashArea: 3
     ActiveInstance: 1
+    CastCancel: true
     Duration1: 20000
     CastTimeFlags:
       IgnoreDex: true
@@ -11141,11 +11071,10 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Knockback: 4
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 6000
@@ -11184,7 +11113,6 @@ Body:
         - Level: 10
           Amount: 10
       State: Move_Enable
-    Status: Run
   - Id: 412
     Name: TK_READYSTORM
     Description: Tornado Stance
@@ -11193,13 +11121,10 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Requires:
       SpCost: 1
-    Status: ReadyStorm
   - Id: 413
     Name: TK_STORMKICK
     Description: Tornado Kick
@@ -11240,13 +11165,10 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Requires:
       SpCost: 1
-    Status: ReadyDown
   - Id: 415
     Name: TK_DOWNKICK
     Description: Heel Drop
@@ -11276,7 +11198,6 @@ Body:
           Amount: 4
         - Level: 7
           Amount: 2
-    Status: Stun
   - Id: 416
     Name: TK_READYTURN
     Description: Roundhouse Stance
@@ -11285,13 +11206,10 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Requires:
       SpCost: 1
-    Status: ReadyTurn
   - Id: 417
     Name: TK_TURNKICK
     Description: Roundhouse Kick
@@ -11308,7 +11226,6 @@ Body:
     Element: Weapon
     SplashArea: 1
     Knockback: 2
-    Duration1: 5000
     Duration2: 2000
     Requires:
       SpCost:
@@ -11334,13 +11251,10 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Requires:
       SpCost: 1
-    Status: ReadyCounter
   - Id: 419
     Name: TK_COUNTER
     Description: Counter Kick
@@ -11383,13 +11297,12 @@ Body:
     HitCount: 1
     Requires:
       SpCost: 1
-    Status: Dodge
   - Id: 421
     Name: TK_JUMPKICK
     Description: Flying Kick
     MaxLevel: 7
     Type: Weapon
-    TargetType: Attack
+    TargetType: Support
     DamageFlags:
       NoDamage: true
     Range: 9
@@ -11427,7 +11340,6 @@ Body:
     MaxLevel: 10
     SplashArea: 1
     Duration1: 1800000
-    Status: EarthScroll
   - Id: 424
     Name: TK_POWER
     Description: Kihop
@@ -11475,7 +11387,6 @@ Body:
           Amount: 50
         - Level: 7
           Amount: 50
-    Status: SevenWind
   - Id: 426
     Name: TK_HIGHJUMP
     Description: Taekwon Jump
@@ -11499,7 +11410,6 @@ Body:
         Time: 1000
     Requires:
       SpCost: 50
-    CastCancel: false
   - Id: 427
     Name: SG_FEEL
     Description: Feeling the Sun Moon and Stars
@@ -11510,6 +11420,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     Requires:
       SpCost: 100
@@ -11530,6 +11441,8 @@ Body:
     Element: Weapon
     SplashArea: 1
     Knockback: 2
+    CastCancel: true
+    AfterCastActDelay: 1000
     Duration1:
       - Level: 1
         Time: 10000
@@ -11542,9 +11455,8 @@ Body:
     Unit:
       Id: Dummyskill
       Range: 1
-      Interval: 20
+      Interval: 100
       Target: Enemy
-    Status: Warm
   - Id: 429
     Name: SG_MOON_WARM
     Description: Warmth of the Moon
@@ -11562,6 +11474,8 @@ Body:
     Element: Weapon
     SplashArea: 1
     Knockback: 2
+    CastCancel: true
+    AfterCastActDelay: 1000
     Duration1:
       - Level: 1
         Time: 10000
@@ -11574,9 +11488,8 @@ Body:
     Unit:
       Id: Dummyskill
       Range: 1
-      Interval: 20
+      Interval: 100
       Target: Enemy
-    Status: Warm
   - Id: 430
     Name: SG_STAR_WARM
     Description: Warmth of the Stars
@@ -11594,6 +11507,8 @@ Body:
     Element: Weapon
     SplashArea: 1
     Knockback: 2
+    CastCancel: true
+    AfterCastActDelay: 1000
     Duration1:
       - Level: 1
         Time: 10000
@@ -11606,9 +11521,8 @@ Body:
     Unit:
       Id: Dummyskill
       Range: 1
-      Interval: 20
+      Interval: 100
       Target: Enemy
-    Status: Warm
   - Id: 431
     Name: SG_SUN_COMFORT
     Description: Comfort of the Sun
@@ -11618,6 +11532,7 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 1000
     Duration1:
       - Level: 1
@@ -11638,7 +11553,6 @@ Body:
           Amount: 50
         - Level: 4
           Amount: 40
-    Status: Sun_Comfort
   - Id: 432
     Name: SG_MOON_COMFORT
     Description: Comfort of the Moon
@@ -11648,6 +11562,7 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 1000
     Duration1:
       - Level: 1
@@ -11668,7 +11583,6 @@ Body:
           Amount: 50
         - Level: 4
           Amount: 40
-    Status: Moon_Comfort
   - Id: 433
     Name: SG_STAR_COMFORT
     Description: Comfort of the Stars
@@ -11678,6 +11592,7 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 1000
     Duration1:
       - Level: 1
@@ -11698,7 +11613,6 @@ Body:
           Amount: 50
         - Level: 4
           Amount: 40
-    Status: Star_Comfort
   - Id: 434
     Name: SG_HATE
     Description: Hatred of the Sun Moon and Stars
@@ -11710,6 +11624,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     Requires:
       SpCost: 100
@@ -11746,13 +11661,11 @@ Body:
     Description: Friend of the Sun Moon and Stars
     MaxLevel: 3
     Duration1: 10000
-    Status: SkillRate_Up
   - Id: 443
     Name: SG_KNOWLEDGE
     Description: Knowledge of the Sun Moon and Stars
     MaxLevel: 10
     Duration1: 600000
-    Status: Knowledge
   - Id: 444
     Name: SG_FUSION
     Description: Union of the Sun Moon and Stars
@@ -11761,15 +11674,12 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     AfterCastActDelay: 1000
     Duration1: 600000
     Requires:
       SpCost: 100
-    Status: Fusion
   - Id: 445
     Name: SL_ALCHEMIST
     Description: Spirit of the Alchemist
@@ -11783,6 +11693,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -11808,7 +11719,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 446
     Name: AM_BERSERKPITCHER
     Description: Aid Berserk Potion
@@ -11823,6 +11733,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 500
     Requires:
       SpCost: 10
@@ -11843,6 +11754,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -11868,7 +11780,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 448
     Name: SL_STAR
     Description: Spirit of the Star Gladiator
@@ -11882,6 +11793,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -11907,7 +11819,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 449
     Name: SL_SAGE
     Description: Spirit of the Sage
@@ -11921,6 +11832,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -11946,7 +11858,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 450
     Name: SL_CRUSADER
     Description: Spirit of the Crusader
@@ -11960,6 +11871,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -11985,7 +11897,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 451
     Name: SL_SUPERNOVICE
     Description: Spirit of the Supernovice
@@ -11999,6 +11910,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12024,7 +11936,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 452
     Name: SL_KNIGHT
     Description: Spirit of the Knight
@@ -12038,6 +11949,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12063,7 +11975,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 453
     Name: SL_WIZARD
     Description: Spirit of the Wizard
@@ -12077,6 +11988,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12102,7 +12014,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 454
     Name: SL_PRIEST
     Description: Spirit of the Priest
@@ -12116,6 +12027,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12141,7 +12053,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 455
     Name: SL_BARDDANCER
     Description: Spirit of the Artist
@@ -12155,6 +12066,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12180,7 +12092,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 456
     Name: SL_ROGUE
     Description: Spirit of the Rogue
@@ -12194,6 +12105,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12219,7 +12131,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 457
     Name: SL_ASSASIN
     Description: Spirit of the Assasin
@@ -12233,6 +12144,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12258,7 +12170,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 458
     Name: SL_BLACKSMITH
     Description: Spirit of the Blacksmith
@@ -12272,6 +12183,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12297,7 +12209,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 459
     Name: BS_ADRENALINE2
     Description: Advanced Adrenaline Rush
@@ -12333,7 +12244,6 @@ Body:
         Whip: true
         Book: true
         Katar: true
-    Status: Adrenaline2
   - Id: 460
     Name: SL_HUNTER
     Description: Spirit of the Hunter
@@ -12347,6 +12257,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12372,7 +12283,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 461
     Name: SL_SOULLINKER
     Description: Spirit of the Soul Linker
@@ -12386,6 +12296,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -12411,7 +12322,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 462
     Name: SL_KAIZEL
     Description: Kaizel
@@ -12423,6 +12333,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 4500
@@ -12458,7 +12369,6 @@ Body:
           Amount: 70
         - Level: 7
           Amount: 60
-    Status: Kaizel
   - Id: 463
     Name: SL_KAAHI
     Description: Kaahi
@@ -12470,11 +12380,11 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 500
     Duration1: 350000
     Requires:
       SpCost: 30
-    Status: Kaahi
   - Id: 464
     Name: SL_KAUPE
     Description: Kaupe
@@ -12486,6 +12396,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 500
     AfterCastActDelay: 500
     Duration1: 600000
@@ -12497,7 +12408,6 @@ Body:
           Amount: 30
         - Level: 3
           Amount: 40
-    Status: Kaupe
   - Id: 465
     Name: SL_KAITE
     Description: Kaite
@@ -12509,6 +12419,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 6000
@@ -12541,12 +12452,12 @@ Body:
         Time: 600000
     Requires:
       SpCost: 70
-    Status: Kaite
   - Id: 466
     Name: SL_KAINA
     Description: Kaina
     MaxLevel: 7
     Type: Magic
+    CastCancel: true
   - Id: 467
     Name: SL_STIN
     Description: Estin
@@ -12605,7 +12516,6 @@ Body:
           Amount: 28
         - Level: 7
           Amount: 30
-    Status: Stun
   - Id: 469
     Name: SL_SMA
     Description: Esma
@@ -12636,6 +12546,7 @@ Body:
       - Level: 10
         Count: 10
     Element: Endowed
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 500
     Duration1: 3000
@@ -12661,7 +12572,6 @@ Body:
           Amount: 72
         - Level: 10
           Amount: 80
-    Status: Sma
   - Id: 470
     Name: SL_SWOO
     Description: Eswoo
@@ -12706,7 +12616,6 @@ Body:
           Amount: 25
         - Level: 7
           Amount: 15
-    Status: Swoo
   - Id: 471
     Name: SL_SKE
     Description: Eske
@@ -12742,7 +12651,6 @@ Body:
           Amount: 35
         - Level: 3
           Amount: 15
-    Status: Ske
   - Id: 472
     Name: SL_SKA
     Description: Eska
@@ -12777,7 +12685,6 @@ Body:
           Amount: 80
         - Level: 3
           Amount: 60
-    Status: Ska
   - Id: 473
     Name: SM_SELFPROVOKE
     Description: Provoke Self
@@ -12788,7 +12695,6 @@ Body:
     Hit: Single
     HitCount: 1
     Duration1: 30000
-    Status: Provoke
   - Id: 474
     Name: NPC_EMOTION_ON
     Description: Emotion ON
@@ -12799,7 +12705,6 @@ Body:
     Flags:
       IsNpc: true
     HitCount: 1
-    Status: ModeChange
   - Id: 475
     Name: ST_PRESERVE
     Description: Preserve
@@ -12808,11 +12713,11 @@ Body:
     DamageFlags:
       NoDamage: true
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     Duration1: 600000
     Requires:
       SpCost: 30
-    Status: Preserve
   - Id: 476
     Name: ST_FULLSTRIP
     Description: Divest All
@@ -12824,6 +12729,7 @@ Body:
     Range: 1
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 1000
     Duration1:
       - Level: 1
@@ -12910,6 +12816,7 @@ Body:
     Range: 1
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -12981,7 +12888,6 @@ Body:
           Amount: 55
         - Level: 5
           Amount: 60
-    Status: DoubleCast
   - Id: 483
     Name: HW_GANBANTEIN
     Description: Ganbantein
@@ -13004,7 +12910,7 @@ Body:
       - Level: 5
         Area: 5
     CastTime: 3000
-    AfterCastActDelay: 5000
+    AfterCastActDelay: 2000
     Requires:
       SpCost: 40
       ItemCost:
@@ -13033,18 +12939,9 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Earth
+    CastCancel: true
     CastTime: 5000
-    AfterCastActDelay:
-      - Level: 1
-        Time: 5000
-      - Level: 2
-        Time: 6000
-      - Level: 3
-        Time: 7000
-      - Level: 4
-        Time: 8000
-      - Level: 5
-        Time: 9000
+    AfterCastActDelay: 2000
     Duration1:
       - Level: 1
         Time: 5000
@@ -13081,7 +12978,6 @@ Body:
         PathCheck: true
         DualMode: true
         RemovedByFireRain: true
-    Status: Gravitation
   - Id: 485
     Name: WS_CARTTERMINATION
     Description: Cart Termination
@@ -13147,7 +13043,6 @@ Body:
         Huuma: true
       Status:
         Cartboost: true
-    Status: Stun
   - Id: 486
     Name: WS_OVERTHRUSTMAX
     Description: Maximum Power Thrust
@@ -13197,7 +13092,6 @@ Body:
         Shotgun: true
         Grenade: true
         Huuma: true
-    Status: MaxOverThrust
   - Id: 487
     Name: CG_LONGINGFREEDOM
     Description: Longing for Freedom
@@ -13212,7 +13106,6 @@ Body:
     Duration1: 180000
     Requires:
       SpCost: 15
-    Status: Longing
   - Id: 488
     Name: CG_HERMODE
     Description: Wand of Hermode
@@ -13270,7 +13163,6 @@ Body:
       Interval: -1
       Flag:
         Ensemble: true
-    Status: Hermode
   - Id: 489
     Name: CG_TAROTCARD
     Description: Tarot Card of Fate
@@ -13288,7 +13180,6 @@ Body:
     Duration2: 30000
     Requires:
       SpCost: 40
-    Status: TarotCard
   - Id: 490
     Name: CR_ACIDDEMONSTRATION
     Description: Acid Demonstration
@@ -13320,6 +13211,7 @@ Body:
         Count: 9
       - Level: 10
         Count: 10
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Requires:
@@ -13382,7 +13274,6 @@ Body:
     Duration1: 180000
     Requires:
       SpCost: 1
-    Status: EnchantArms
   - Id: 493
     Name: TK_MISSION
     Description: Taekwon Mission
@@ -13406,6 +13297,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -13431,7 +13323,6 @@ Body:
           Amount: 160
         - Level: 5
           Amount: 60
-    Status: Spirit
   - Id: 495
     Name: KN_ONEHAND
     Description: Onehand Quicken
@@ -13449,7 +13340,6 @@ Body:
       SpCost: 100
       Weapon:
         1hSword: true
-    Status: OneHand
   - Id: 496
     Name: AM_TWILIGHT1
     Description: Twilight Alchemy 1
@@ -13560,7 +13450,6 @@ Body:
     Requires:
       SpCost: 10
       SpiritSphereCost: 5
-    Status: Fling
   - Id: 502
     Name: GS_TRIPLEACTION
     Description: Triple Action
@@ -13631,10 +13520,9 @@ Body:
     Requires:
       SpCost: 30
       SpiritSphereCost: 4
-    Status: MadnessCancel
   - Id: 505
     Name: GS_ADJUSTMENT
-    Description: Adjustment
+    Description: AdJustment
     MaxLevel: 1
     Type: Weapon
     TargetType: Self
@@ -13648,7 +13536,6 @@ Body:
     Requires:
       SpCost: 15
       SpiritSphereCost: 2
-    Status: Adjustment
   - Id: 506
     Name: GS_INCREASING
     Description: Increasing Accuracy
@@ -13664,7 +13551,6 @@ Body:
     Requires:
       SpCost: 30
       SpiritSphereCost: 4
-    Status: Increasing
   - Id: 507
     Name: GS_MAGICALBULLET
     Description: Magical Bullet
@@ -13706,7 +13592,6 @@ Body:
         Throwweapon: true
       AmmoAmount: 1
       SpiritSphereCost: 1
-    Status: Stun
   - Id: 509
     Name: GS_SINGLEACTION
     Description: Single Action
@@ -13720,6 +13605,8 @@ Body:
     Description: Chain Action
     MaxLevel: 10
     Type: Weapon
+    DamageFlags:
+      Critical: true
     Range: -9
     Hit: Multi_Hit
     HitCount: 2
@@ -13734,6 +13621,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Weapon
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1200
@@ -13815,7 +13703,6 @@ Body:
       Ammo:
         Bullet: true
       AmmoAmount: 1
-    Status: StripWeapon
   - Id: 514
     Name: GS_PIERCINGSHOT
     Description: Piercing Shot
@@ -13850,7 +13737,6 @@ Body:
       Ammo:
         Bullet: true
       AmmoAmount: 1
-    Status: Bleeding
   - Id: 515
     Name: GS_RAPIDSHOWER
     Description: Rapid Shower
@@ -13946,8 +13832,6 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Element: Weapon
@@ -13996,7 +13880,6 @@ Body:
           Amount: 48
       Weapon:
         Gatling: true
-    Status: GatlingFever
   - Id: 518
     Name: GS_DUST
     Description: Dust
@@ -14049,6 +13932,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Weapon
+    CastCancel: true
     AfterCastActDelay:
       - Level: 1
         Time: 1200
@@ -14189,7 +14073,6 @@ Body:
     TargetType: Ground
     DamageFlags:
       Splash: true
-      IgnoreAtkCard: true
       IgnoreFlee: true
     Flags:
       AlterRangeSnakeEye: true
@@ -14275,7 +14158,7 @@ Body:
     Type: Weapon
     TargetType: Attack
     DamageFlags:
-      IgnoreAtkCard: true
+      IgnoreFlee: true
     Range: 9
     Hit: Single
     HitCount: 1
@@ -14293,6 +14176,7 @@ Body:
     TargetType: Attack
     DamageFlags:
       IgnoreAtkCard: true
+      IgnoreFlee: true
     Range: 9
     Hit: Multi_Hit
     HitCount: 3
@@ -14339,6 +14223,7 @@ Body:
         Count: -5
     Element: Weapon
     SplashArea: 1
+    CastCancel: true
     CastTime: 3000
     AfterCastActDelay: 2000
     Requires:
@@ -14367,7 +14252,7 @@ Body:
     Flags:
       IgnoreBgReduction: true
       IgnoreGvgReduction: true
-    Range: 7
+    Range: 9
     Hit: Single
     HitCount: 1
     CopyFlags:
@@ -14404,8 +14289,6 @@ Body:
     MaxLevel: 5
     Type: Weapon
     TargetType: Self
-    DamageFlags:
-      IgnoreAtkCard: true
     Hit: Single
     HitCount: 1
     Element: Weapon
@@ -14427,7 +14310,6 @@ Body:
       Flag:
         NoOverlap: true
         PathCheck: true
-    Status: Tatamigaeshi
   - Id: 528
     Name: NJ_KASUMIKIRI
     Description: Vanishing Slash
@@ -14598,7 +14480,6 @@ Body:
           Amount: 21
         - Level: 5
           Amount: 24
-    Status: Utsusemi
   - Id: 532
     Name: NJ_BUNSINJYUTSU
     Description: Mirror Image
@@ -14609,6 +14490,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 4000
@@ -14677,7 +14559,6 @@ Body:
       ItemCost:
         - Item: Shadow_Orb
           Amount: 1
-    Status: Bunsinjyutsu
   - Id: 533
     Name: NJ_NINPOU
     Description: Spirit of the Blade
@@ -14718,6 +14599,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 700
@@ -14774,6 +14656,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 6000
@@ -14824,6 +14707,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 3000
     AfterCastActDelay: 2000
     Duration1: 100
@@ -14883,6 +14767,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 700
@@ -14940,6 +14825,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Water
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -15035,7 +14921,6 @@ Body:
       Flag:
         PathCheck: true
         RemovedByFireRain: true
-    Status: Suiton
   - Id: 539
     Name: NJ_HYOUSYOURAKU
     Description: Ice Meteor
@@ -15049,6 +14934,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -15095,7 +14981,6 @@ Body:
       Target: Enemy
       Flag:
         PathCheck: true
-    Status: Freeze
   - Id: 540
     Name: NJ_HUUJIN
     Description: Wind Blade
@@ -15130,6 +15015,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -15188,6 +15074,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 4000
     Duration1: 100
     Requires:
@@ -15260,6 +15147,7 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 4000
     Requires:
       SpCost:
@@ -15285,6 +15173,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 5000
@@ -15320,7 +15209,6 @@ Body:
         - Level: 5
           Amount: 60
       HpRateCost: -5
-    Status: Nen
   - Id: 544
     Name: NJ_ISSEN
     Description: Final Strike
@@ -15486,6 +15374,8 @@ Body:
           Size: 13
       Interval: 300
       Target: Enemy
+      Flag:
+        PathCheck: true
   - Id: 654
     Name: NPC_FIREBREATH
     Description: Fire Breath
@@ -15515,7 +15405,6 @@ Body:
     SplashArea: 3
     ActiveInstance: 14
     Duration2: 12000
-    Status: Freeze
   - Id: 656
     Name: NPC_THUNDERBREATH
     Description: Thunder Breath
@@ -15545,7 +15434,6 @@ Body:
     SplashArea: 3
     ActiveInstance: 14
     Duration2: 60000
-    Status: Poison
   - Id: 658
     Name: NPC_DARKNESSBREATH
     Description: Darkness Breath
@@ -15606,7 +15494,6 @@ Body:
     HitCount: 1
     Element: Weapon
     Duration2: 120000
-    Status: Bleeding
   - Id: 661
     Name: NPC_PULSESTRIKE
     Description: Pulse Strike
@@ -15623,7 +15510,6 @@ Body:
     HitCount: 1
     SplashArea: 7
     Knockback: 7
-    Status: Bleeding
   - Id: 662
     Name: NPC_HELLJUDGEMENT
     Description: Hell's Judgement
@@ -15640,7 +15526,6 @@ Body:
     HitCount: 1
     SplashArea: 14
     Duration2: 30000
-    Status: Curse
   - Id: 663
     Name: NPC_WIDESILENCE
     Description: Wide Silence
@@ -15666,7 +15551,6 @@ Body:
       - Level: 5
         Area: 14
     Duration2: 30000
-    Status: Silence
   - Id: 664
     Name: NPC_WIDEFREEZE
     Description: Wide Freeze
@@ -15692,7 +15576,6 @@ Body:
       - Level: 5
         Area: 14
     Duration2: 12000
-    Status: Freeze
   - Id: 665
     Name: NPC_WIDEBLEEDING
     Description: Wide Bleeding
@@ -15718,7 +15601,6 @@ Body:
       - Level: 5
         Area: 14
     Duration2: 120000
-    Status: Bleeding
   - Id: 666
     Name: NPC_WIDESTONE
     Description: Wide Petrify
@@ -15743,9 +15625,7 @@ Body:
         Area: 11
       - Level: 5
         Area: 14
-    Duration1: 100
     Duration2: 20000
-    Status: StoneWait
   - Id: 667
     Name: NPC_WIDECONFUSE
     Description: Wide Confusion
@@ -15771,7 +15651,6 @@ Body:
       - Level: 5
         Area: 14
     Duration2: 30000
-    Status: Confusion
   - Id: 668
     Name: NPC_WIDESLEEP
     Description: Wide Sleep
@@ -15797,7 +15676,6 @@ Body:
       - Level: 5
         Area: 14
     Duration2: 30000
-    Status: Sleep
   - Id: 669
     Name: NPC_WIDESIGHT
     Description: Wide Sight
@@ -15815,7 +15693,6 @@ Body:
     Element: Fire
     SplashArea: 5
     Duration1: 10000
-    Status: Sight
   - Id: 670
     Name: NPC_EVILLAND
     Description: Evil Land
@@ -15883,7 +15760,6 @@ Body:
       Interval: 1000
       Flag:
         NoOverlap: true
-    Status: Blind
   - Id: 671
     Name: NPC_MAGICMIRROR
     Description: Magic Mirror
@@ -15917,7 +15793,6 @@ Body:
         Time: 2000
       - Level: 10
         Time: 2000
-    Status: MagicMirror
   - Id: 672
     Name: NPC_SLOWCAST
     Description: Slow Cast
@@ -15943,7 +15818,6 @@ Body:
       - Level: 5
         Area: 14
     Duration2: 30000
-    Status: SlowCast
   - Id: 673
     Name: NPC_CRITICALWOUND
     Description: Critical Wounds
@@ -15952,12 +15826,11 @@ Body:
     TargetType: Attack
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
     Duration2: 30000
-    Status: CriticalWound
   - Id: 674
     Name: NPC_EXPULSION
     Description: Expulsion
@@ -15967,7 +15840,7 @@ Body:
       NoDamage: true
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     Hit: Single
     HitCount: 1
     Element: Weapon
@@ -16004,7 +15877,6 @@ Body:
         Time: 2000
       - Level: 10
         Time: 2000
-    Status: ArmorChange
   - Id: 676
     Name: NPC_ANTIMAGIC
     Description: Anti Magic
@@ -16038,7 +15910,6 @@ Body:
         Time: 2000
       - Level: 10
         Time: 2000
-    Status: ArmorChange
   - Id: 677
     Name: NPC_WIDECURSE
     Description: Wide Curse
@@ -16064,7 +15935,6 @@ Body:
       - Level: 5
         Area: 14
     Duration2: 30000
-    Status: Curse
   - Id: 678
     Name: NPC_WIDESTUN
     Description: Wide Stun
@@ -16090,7 +15960,6 @@ Body:
       - Level: 5
         Area: 14
     Duration2: 5000
-    Status: Stun
   - Id: 679
     Name: NPC_VAMPIRE_GIFT
     Description: Vampire Gift
@@ -16184,10 +16053,9 @@ Body:
       NoDamage: true
     Flags:
       IsNpc: true
-    Range: -7
+    Range: -9
     HitCount: 1
     Duration2: 180000
-    Status: HellPower
   - Id: 684
     Name: NPC_WIDEHELLDIGNITY
     Description: Hell Dignity
@@ -16202,7 +16070,6 @@ Body:
     HitCount: 1
     SplashArea: -1
     Duration2: 180000
-    Status: HellPower
   - Id: 685
     Name: NPC_INVINCIBLE
     Description: Invincible
@@ -16213,8 +16080,7 @@ Body:
     Flags:
       IsNpc: true
     HitCount: 1
-    Duration1: 300000
-    Status: Invincible
+    Duration1: -1
   - Id: 686
     Name: NPC_INVINCIBLEOFF
     Description: Invincible off
@@ -16225,6 +16091,7 @@ Body:
     Flags:
       IsNpc: true
     HitCount: 1
+    Duration1: 60000
   - Id: 687
     Name: NPC_ALLHEAL
     Description: Full Heal
@@ -16236,6 +16103,7 @@ Body:
       IsNpc: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
   - Id: 688
     Name: GM_SANDMAN
     Description: GM Sandman
@@ -16264,6 +16132,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 60000
@@ -16285,7 +16154,6 @@ Body:
         Time: 220000
       - Level: 10
         Time: 240000
-    Status: Blessing
   - Id: 690
     Name: CASH_INCAGI
     Description: Party Increase AGI
@@ -16301,6 +16169,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 60000
@@ -16322,7 +16191,6 @@ Body:
         Time: 220000
       - Level: 10
         Time: 240000
-    Status: IncreaseAgi
   - Id: 691
     Name: CASH_ASSUMPTIO
     Description: Party Assumptio
@@ -16337,6 +16205,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 20000
@@ -16348,7 +16217,6 @@ Body:
         Time: 80000
       - Level: 5
         Time: 100000
-    Status: Assumptio
   - Id: 692
     Name: ALL_CATCRY
     Description: Cat Cry
@@ -16370,8 +16238,8 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     Cooldown: 300000
-    Status: PartyFlee
   - Id: 695
     Name: ALL_DREAM_SUMMERNIGHT
     Description: Summer Night Dream
@@ -16392,7 +16260,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
-    Status: Orcish
+    CastCancel: true
   - Id: 698
     Name: ALL_WEWISH
     Description: Christmas Carol
@@ -16462,7 +16330,6 @@ Body:
       IsNpc: true
     Hit: Single
     Duration1: 10000
-    Status: MaxPain
   - Id: 717
     Name: NPC_MAXPAIN_ATK
     Description: Max Pain Attack
@@ -16613,6 +16480,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Poison
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 8000
@@ -16679,6 +16547,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Neutral
+    CastCancel: true
   - Id: 742
     Name: NPC_POISON_BUSTER
     Description: Poison Buster
@@ -16693,6 +16562,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Poison
+    CastCancel: true
     SplashArea: 1
   - Id: 743
     Name: NPC_HALLUCINATIONWALK
@@ -16705,6 +16575,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 20000
   - Id: 744
     Name: NPC_ELECTRICWALK
@@ -16729,6 +16600,7 @@ Body:
         Max: 14
       - Level: 5
         Max: 16
+    CastCancel: true
     Duration1: 12000
     Unit:
       Id: Electricwalk
@@ -16760,6 +16632,7 @@ Body:
         Max: 14
       - Level: 5
         Max: 16
+    CastCancel: true
     Duration1: 12000
     Unit:
       Id: Firewalk
@@ -16797,14 +16670,12 @@ Body:
       NoDamage: true
     Flags:
       IsQuest: true
-      Toggleable: true
     Hit: Single
     Knockback: 2
     Duration1: 300000
     Requires:
       SpCost: 15
       State: Shield
-    Status: Shrink
   - Id: 1003
     Name: AS_SONICACCEL
     Description: Sonic Acceleration
@@ -16831,13 +16702,32 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
-    Duration2: 60000
+    Duration2:
+      - Level: 1
+        Time: 15000
+      - Level: 2
+        Time: 20000
+      - Level: 3
+        Time: 25000
+      - Level: 4
+        Time: 30000
+      - Level: 5
+        Time: 35000
+      - Level: 6
+        Time: 40000
+      - Level: 7
+        Time: 45000
+      - Level: 8
+        Time: 50000
+      - Level: 9
+        Time: 55000
+      - Level: 10
+        Time: 60000
     Requires:
       SpCost: 15
       Ammo:
         Dagger: true
       AmmoAmount: 1
-    Status: Poison
   - Id: 1005
     Name: RG_CLOSECONFINE
     Description: Close Confine
@@ -16854,7 +16744,6 @@ Body:
     Duration1: 10000
     Requires:
       SpCost: 25
-    Status: CloseConfine2
   - Id: 1006
     Name: WZ_SIGHTBLASTER
     Description: Sight Blaster
@@ -16873,11 +16762,11 @@ Body:
       Skill:
         Plagiarism: true
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     Duration1: 120000
     Requires:
       SpCost: 40
-    Status: SightBlaster
   - Id: 1007
     Name: SA_CREATECON
     Description: Create Elemental Converter
@@ -16904,6 +16793,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Water
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1: 1800000
@@ -16912,7 +16802,6 @@ Body:
       ItemCost:
         - Item: Elemental_Water
           Amount: 1
-    Status: ElementalChange
   - Id: 1009
     Name: HT_PHANTASMIC
     Description: Phantasmic Arrow
@@ -16948,7 +16837,7 @@ Body:
     Hit: Single
     CastTime: 1000
     AfterCastActDelay: 2000
-    Duration1: 30000
+    Duration1: 17000
     Requires:
       SpCost: 20
   - Id: 1011
@@ -16965,11 +16854,10 @@ Body:
     Hit: Single
     CastTime: 1000
     AfterCastActDelay: 2000
-    Duration1: 30000
-    Duration2: 10000
+    Duration1: 10000
+    Duration2: 17000
     Requires:
       SpCost: 40
-    Status: WinkCharm
   - Id: 1012
     Name: BS_UNFAIRLYTRICK
     Description: Unfair Trick
@@ -17009,6 +16897,7 @@ Body:
     Hit: Single
     Element: Holy
     SplashArea: 14
+    CastCancel: true
     CastTime: 4000
     CastTimeFlags:
       IgnoreDex: true
@@ -17046,7 +16935,6 @@ Body:
     TargetType: Attack
     DamageFlags:
       Splash: true
-      IgnoreAtkCard: true
     Flags:
       IsQuest: true
     Range: -1
@@ -17060,7 +16948,6 @@ Body:
     Requires:
       HpCost: 10
       SpCost: 20
-    Status: Stun
   - Id: 1017
     Name: SA_ELEMENTGROUND
     Description: Elemental Change Earth
@@ -17075,6 +16962,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Earth
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1: 1800000
@@ -17083,7 +16971,6 @@ Body:
       ItemCost:
         - Item: Elemental_Earth
           Amount: 1
-    Status: ElementalChange
   - Id: 1018
     Name: SA_ELEMENTFIRE
     Description: Elemental Change Fire
@@ -17098,6 +16985,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Fire
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1: 1800000
@@ -17106,7 +16994,6 @@ Body:
       ItemCost:
         - Item: Elemental_Fire
           Amount: 1
-    Status: ElementalChange
   - Id: 1019
     Name: SA_ELEMENTWIND
     Description: Elemental Change Wind
@@ -17121,6 +17008,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Wind
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1: 1800000
@@ -17129,7 +17017,6 @@ Body:
       ItemCost:
         - Item: Elemental_Wind
           Amount: 1
-    Status: ElementalChange
   - Id: 2001
     Name: RK_ENCHANTBLADE
     Description: Enchant Blade
@@ -17140,6 +17027,7 @@ Body:
     Range: 1
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     Duration1: 300000
     Requires:
@@ -17295,7 +17183,6 @@ Body:
       Weapon:
         1hSpear: true
         2hSpear: true
-    CastCancel: false
   - Id: 2005
     Name: RK_WINDCUTTER
     Description: Wind Cutter
@@ -17368,7 +17255,6 @@ Body:
         2hSword: true
         1hSpear: true
         2hSpear: true
-    CastCancel: false
   - Id: 2007
     Name: RK_DRAGONTRAINING
     Description: Dragon Training
@@ -17449,7 +17335,6 @@ Body:
         - Level: 10
           Amount: 75
       State: Ridingdragon
-    CastCancel: false
   - Id: 2009
     Name: RK_DRAGONHOWLING
     Description: Dragon Howling
@@ -17503,6 +17388,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Weapon
+    CastCancel: true
     Duration1: 30000
     Duration2: 30000
     CastTimeFlags:
@@ -17520,6 +17406,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 60000
     Duration2: 120000
     CastTimeFlags:
@@ -17537,6 +17424,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 180000
     CastTimeFlags:
       IgnoreDex: true
@@ -17553,6 +17441,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 180000
     Duration2: 10000
     CastTimeFlags:
@@ -17570,6 +17459,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 180000
     Requires:
       SpCost: 1
@@ -17592,7 +17482,6 @@ Body:
     AfterCastActDelay: 1000
     Requires:
       SpCost: 1
-    CastCancel: false
   - Id: 2018
     Name: RK_FIGHTINGSPIRIT
     Description: Fighting Spirit
@@ -17604,6 +17493,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     Duration1: 180000
     Requires:
       SpCost: 1
@@ -17618,6 +17508,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Holy
+    CastCancel: true
     Duration1: 180000
     Requires:
       SpCost: 1
@@ -17669,6 +17560,7 @@ Body:
     Range: 11
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 6000
@@ -17722,6 +17614,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 500
     Requires:
@@ -17763,6 +17656,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -17814,6 +17708,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -17862,6 +17757,7 @@ Body:
     Range: 11
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2500
     AfterCastActDelay: 1000
     Duration1: 25000
@@ -17887,6 +17783,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -17949,6 +17846,7 @@ Body:
         Area: 3
       - Level: 5
         Area: 3
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 2000
     Duration1:
@@ -18003,6 +17901,7 @@ Body:
         Area: 12
       - Level: 5
         Area: 13
+    CastCancel: true
     CastTime: 3000
     AfterCastActDelay: 2000
     Duration1:
@@ -18053,6 +17952,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 4000
     Cooldown: 2000
     Requires:
@@ -18086,6 +17986,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 5000
     AfterCastActDelay: 2000
     Duration1: 5000
@@ -18117,6 +18018,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 3000
     AfterCastActDelay: 1000
     Duration1: 15000
@@ -18150,6 +18052,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 10000
@@ -18186,6 +18089,7 @@ Body:
       Interval: 1000
       Target: Enemy
       Flag:
+        NoOverlap: true
         PathCheck: true
   - Id: 2214
     Name: WL_CHAINLIGHTNING
@@ -18203,6 +18107,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 3500
@@ -18268,6 +18173,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -18349,7 +18255,8 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
-    CastTime:
+    CastCancel: true
+    CastTime: # !TODO: Confirm cast time
       - Level: 1
         Time: 5000
       - Level: 2
@@ -18468,6 +18375,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -18506,6 +18414,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -18544,6 +18453,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -18646,6 +18556,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -18681,6 +18592,7 @@ Body:
     Range: 11
     Hit: Multi_Hit
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost:
         - Level: 1
@@ -18697,6 +18609,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 5000
     AfterCastActDelay: 500
     Duration1: 30000
@@ -19010,6 +18923,7 @@ Body:
     Hit: Single
     HitCount: 1
     ActiveInstance: 1
+    CastCancel: true
     AfterCastActDelay: 2000
     Duration1:
       - Level: 1
@@ -19179,6 +19093,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 500
     Requires:
@@ -19213,6 +19128,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Requires:
@@ -19257,6 +19173,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 500
     Duration1:
@@ -19345,6 +19262,7 @@ Body:
         Area: 7
       - Level: 3
         Area: 15
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -19379,6 +19297,7 @@ Body:
         Area: 7
       - Level: 3
         Area: 15
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -19414,6 +19333,7 @@ Body:
         Area: 7
       - Level: 3
         Area: 15
+    CastCancel: true
     CastTime: 3000
     Cooldown: 2000
     Requires:
@@ -19438,6 +19358,7 @@ Body:
     Element: Holy
     SplashArea: 2
     ActiveInstance: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -19488,6 +19409,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: 15
+    CastCancel: true
     CastTime: 2000
     Duration1: 120000
     Cooldown:
@@ -19546,6 +19468,7 @@ Body:
     HitCount: 1
     Element: Holy
     SplashArea: 15
+    CastCancel: true
     CastTime: 4000
     Duration1: 30000
     Cooldown: 2000
@@ -19584,6 +19507,7 @@ Body:
     HitCount: 1
     Element: Holy
     SplashArea: 15
+    CastCancel: true
     CastTime: 1000
     Duration1: 60000
     Cooldown: 3000
@@ -19610,6 +19534,7 @@ Body:
     HitCount: 1
     Element: Holy
     SplashArea: 15
+    CastCancel: true
     CastTime: 1000
     Duration1: 60000
     Cooldown: 3000
@@ -19643,6 +19568,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -19679,6 +19605,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Cooldown: 3000
@@ -19708,6 +19635,7 @@ Body:
     Range: 11
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 4000
     Cooldown: 10000
     Requires:
@@ -19733,6 +19661,7 @@ Body:
     Range: 11
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     Duration1:
       - Level: 1
@@ -19770,6 +19699,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1:
@@ -19867,6 +19797,7 @@ Body:
         Area: 7
       - Level: 5
         Area: 8
+    CastCancel: true
     CastTime: 4000
     Duration1:
       - Level: 1
@@ -19903,6 +19834,7 @@ Body:
     Range: 11
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -19966,6 +19898,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -20042,6 +19975,7 @@ Body:
     TargetType: Self
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Duration1:
       - Level: 1
@@ -20091,6 +20025,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 4000
     AfterCastActDelay: 500
     Cooldown: 1000
@@ -20641,7 +20576,6 @@ Body:
         - Level: 5
           Amount: 15
       State: Mado
-    CastCancel: false
   - Id: 2257
     Name: NC_PILEBUNKER
     Description: Pile Bunker
@@ -20742,7 +20676,6 @@ Body:
           Amount: 0
         - Item: Magic_Gear_Fuel
           Amount: 1
-    CastCancel: false
   - Id: 2260
     Name: NC_COLDSLOWER
     Description: Cold Slower
@@ -20789,7 +20722,6 @@ Body:
           Amount: 1
         - Item: Liquid_Condensed_Bullet
           Amount: 1
-    CastCancel: false
   - Id: 2261
     Name: NC_ARMSCANNON
     Description: Arm Cannon
@@ -20859,7 +20791,6 @@ Body:
       ItemCost:
         - Item: Magic_Gear_Fuel
           Amount: 1
-    CastCancel: false
   - Id: 2262
     Name: NC_ACCELERATION
     Description: Acceleration
@@ -20996,7 +20927,6 @@ Body:
           Amount: 3
       Equipment:
         Suicidal_Device: true
-    CastCancel: false
   - Id: 2268
     Name: NC_SHAPESHIFT
     Description: Shape Shift
@@ -21008,6 +20938,7 @@ Body:
       AllowOnMado: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 2000
     Duration1: 300000
     CastTimeFlags:
@@ -21070,6 +21001,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: 7
+    CastCancel: true
     AfterCastActDelay: 500
     Duration1: 3000
     Cooldown: 3000
@@ -21088,6 +21020,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 1000
     Duration1: 20000
     CastTimeFlags:
@@ -21250,6 +21183,7 @@ Body:
         Size: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 200
@@ -21487,6 +21421,7 @@ Body:
     Hit: Single
     HitCount: 1
     ActiveInstance: 2
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 20000
@@ -21523,7 +21458,6 @@ Body:
           Amount: 1
         - Item: Steel
           Amount: 2
-    CastCancel: false
   - Id: 2282
     Name: NC_MAGICDECOY
     Description: FAW - Magic Decoy
@@ -21537,6 +21471,7 @@ Body:
     Hit: Single
     HitCount: 1
     ActiveInstance: 2
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 20000
@@ -21573,7 +21508,6 @@ Body:
           Amount: 2
         - Item: Brigan
           Amount: 1
-    CastCancel: false
   - Id: 2283
     Name: NC_DISJOINT
     Description: FAW Removal
@@ -21693,6 +21627,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 4000
@@ -21828,6 +21763,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Requires:
@@ -21908,6 +21844,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Cooldown:
@@ -21967,6 +21904,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1:
@@ -22000,6 +21938,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1:
@@ -22033,6 +21972,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1:
@@ -22066,6 +22006,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1:
@@ -22099,6 +22040,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1:
@@ -22132,6 +22074,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1:
@@ -22165,6 +22108,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -22202,6 +22146,7 @@ Body:
     Hit: Single
     HitCount: 1
     ActiveInstance: 3
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 2000
     Duration1:
@@ -22251,6 +22196,7 @@ Body:
     Hit: Single
     HitCount: 1
     ActiveInstance: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 2000
     Duration1:
@@ -22296,6 +22242,7 @@ Body:
     NoNearNPC:
       Type:
         WarpPortal: true
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 2000
     Duration1:
@@ -22352,6 +22299,7 @@ Body:
     NoNearNPC:
       Type:
         WarpPortal: true
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 2000
     Duration1:
@@ -22392,6 +22340,7 @@ Body:
     Range: 7
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 2000
     Duration1:
@@ -22498,7 +22447,6 @@ Body:
       Flag:
         NoOverlap: true
         PathCheck: true
-    CastCancel: false
   - Id: 2307
     Name: LG_CANNONSPEAR
     Description: Cannon Spear
@@ -22670,6 +22618,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 1000
     Duration1: 300000
     CastTimeFlags:
@@ -22717,6 +22666,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -22742,6 +22692,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 5000
@@ -22779,6 +22730,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Weapon
+    CastCancel: true
     CastTime: 500
     AfterCastActDelay: 2000
     Requires:
@@ -22805,6 +22757,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     Duration1:
       - Level: 1
@@ -22887,6 +22840,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1: 1000
@@ -22929,6 +22883,7 @@ Body:
     HitCount: -7
     Element: Holy
     SplashArea: 5
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -23007,6 +22962,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 3000
@@ -23071,6 +23027,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -23118,6 +23075,7 @@ Body:
     Hit: Multi_Hit
     HitCount: 3
     Element: Weapon
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 3000
     Cooldown: 20000
@@ -23145,6 +23103,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 2000
     Duration1:
@@ -23207,6 +23166,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
   - Id: 2520
     Name: LG_OVERBRAND_PLUSATK
     Description: Overbrand Plus Attack
@@ -23456,6 +23416,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1100
@@ -23783,6 +23744,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Cooldown: 3000
@@ -23858,6 +23820,7 @@ Body:
     Range: 3
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1500
     Requires:
       SpCost: 50
@@ -23890,6 +23853,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -23935,7 +23899,6 @@ Body:
     Requires:
       SpCost: 100
       SpiritSphereCost: 2
-    CastCancel: false
   - Id: 2344
     Name: SR_GENTLETOUCH_QUIET
     Description: Gentle Touch - Quiet
@@ -24028,6 +23991,7 @@ Body:
     Range: 1
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1: 240000
@@ -24066,6 +24030,7 @@ Body:
     Range: 2
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1: 240000
@@ -24104,6 +24069,7 @@ Body:
     Range: 2
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1: 240000
@@ -24182,7 +24148,6 @@ Body:
           Amount: 4
         - Level: 5
           Amount: 5
-    CastCancel: false
   - Id: 2518
     Name: SR_RIDEINLIGHTNING
     Description: Ride In Lightening
@@ -24265,6 +24230,7 @@ Body:
         Area: 10
       - Level: 5
         Area: 11
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 2000
     Duration1: 60000
@@ -24304,6 +24270,7 @@ Body:
         Area: 10
       - Level: 5
         Area: 11
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 2000
     Duration1: 60000
@@ -24343,6 +24310,7 @@ Body:
         Area: 10
       - Level: 5
         Area: 11
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 2000
     Duration1: 60000
@@ -24382,6 +24350,7 @@ Body:
         Area: 10
       - Level: 5
         Area: 11
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 2000
     Duration1: 60000
@@ -24421,6 +24390,7 @@ Body:
         Area: 10
       - Level: 5
         Area: 11
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 2000
     Duration1: 60000
@@ -24451,6 +24421,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1: 60000
@@ -24487,6 +24458,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -24569,6 +24541,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1100
@@ -24674,6 +24647,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1500
@@ -24739,6 +24713,7 @@ Body:
     HitCount: 1
     SplashArea: 1
     ActiveInstance: 5
+    CastCancel: true
     CastTime: 3000
     Duration1:
       - Level: 1
@@ -24809,6 +24784,7 @@ Body:
         Area: 5
       - Level: 5
         Area: 6
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -24858,6 +24834,7 @@ Body:
     Range: 7
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 3000
@@ -24909,6 +24886,7 @@ Body:
         Area: 8
       - Level: 5
         Area: 9
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1:
@@ -24959,6 +24937,7 @@ Body:
         Area: 6
       - Level: 5
         Area: 7
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Duration1: 60000
@@ -24989,6 +24968,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 1000
     Cooldown: 3000
     Requires:
@@ -25016,6 +24996,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -25069,6 +25050,7 @@ Body:
         Area: 4
       - Level: 5
         Area: 4
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2000
@@ -25120,6 +25102,7 @@ Body:
         Area: 8
       - Level: 5
         Area: 9
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -25172,6 +25155,7 @@ Body:
         Area: 8
       - Level: 5
         Area: 9
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1500
@@ -25235,6 +25219,7 @@ Body:
         Area: 5
       - Level: 5
         Area: 6
+    CastCancel: true
     CastTime:
       - Level: 2
         Time: 500
@@ -25294,6 +25279,7 @@ Body:
         Area: 6
       - Level: 5
         Area: 7
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -25367,6 +25353,7 @@ Body:
         Area: 6
       - Level: 5
         Area: 7
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -25419,6 +25406,7 @@ Body:
         Area: 6
       - Level: 5
         Area: 7
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -25471,6 +25459,7 @@ Body:
         Area: 6
       - Level: 5
         Area: 7
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -25523,6 +25512,7 @@ Body:
         Area: 6
       - Level: 5
         Area: 7
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -25603,6 +25593,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1: 30000
@@ -25651,6 +25642,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1: 30000
@@ -25743,6 +25735,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2200
@@ -25811,6 +25804,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 5000
@@ -25864,6 +25858,7 @@ Body:
       Interval: 1000
       Target: Enemy
       Flag:
+        NoOverlap: true
         PathCheck: true
   - Id: 2448
     Name: SO_POISON_BUSTER
@@ -25891,6 +25886,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2200
@@ -25928,6 +25924,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 8000
@@ -25995,6 +25992,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2300
@@ -26063,6 +26061,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1: 60000
@@ -26091,6 +26090,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Fire
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2200
@@ -26158,6 +26158,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -26249,6 +26250,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1800
@@ -26348,6 +26350,7 @@ Body:
         Area: 2
       - Level: 5
         Area: 3
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 2200
@@ -26406,6 +26409,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     Cooldown: 5000
     Requires:
@@ -26421,6 +26425,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Fire
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -26464,6 +26469,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Water
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -26507,6 +26513,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Wind
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -26550,6 +26557,7 @@ Body:
     Hit: Single
     HitCount: 1
     Element: Earth
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -26606,6 +26614,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTimeFlags:
       IgnoreDex: true
       IgnoreStatus: true
@@ -26629,6 +26638,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1000
     Requires:
@@ -26647,6 +26657,7 @@ Body:
     HitCount: 1
     Element: Fire
     ActiveInstance: 1
+    CastCancel: true
     CastTime: 1000
     Duration1: 60000
     Cooldown: 60000
@@ -26688,6 +26699,7 @@ Body:
     HitCount: 1
     Element: Water
     ActiveInstance: 1
+    CastCancel: true
     CastTime: 1000
     Duration1: 60000
     Cooldown: 60000
@@ -26729,6 +26741,7 @@ Body:
     HitCount: 1
     Element: Wind
     ActiveInstance: 1
+    CastCancel: true
     CastTime: 1000
     Duration1: 60000
     Cooldown: 60000
@@ -26770,6 +26783,7 @@ Body:
     HitCount: 1
     Element: Earth
     ActiveInstance: 1
+    CastCancel: true
     CastTime: 1000
     Duration1: 60000
     Cooldown: 60000
@@ -26860,6 +26874,7 @@ Body:
         Area: 2
       - Level: 5
         Area: 3
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -26897,6 +26912,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1500
     AfterCastActDelay: 500
     Duration1: 90000
@@ -26928,6 +26944,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1500
     AfterCastActDelay: 500
     Duration1:
@@ -26981,6 +26998,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1500
     AfterCastActDelay: 500
     Duration1:
@@ -27045,6 +27063,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1500
     AfterCastActDelay: 500
     Cooldown: 5000
@@ -27092,6 +27111,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime: 1500
     AfterCastActDelay: 500
     Duration1:
@@ -27148,6 +27168,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 3000
@@ -27235,6 +27256,7 @@ Body:
     HitCount: 1
     Element: Fire
     ActiveInstance: 1
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 3000
@@ -27303,6 +27325,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 500
     Requires:
@@ -27432,6 +27455,7 @@ Body:
     CopyFlags:
       Skill:
         Reproduce: true
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 3000
@@ -27516,6 +27540,7 @@ Body:
         Area: 7
       - Level: 5
         Area: 7
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 500
     Duration1:
@@ -27636,6 +27661,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 10000
     Cooldown: 300000
     Requires:
@@ -27702,6 +27728,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1: 60000
     CastDelayFlags:
       IgnoreDex: true
@@ -29062,6 +29089,7 @@ Body:
     DamageFlags:
       NoDamage: true
     Hit: Single
+    CastCancel: true
     CastTime: 3000
     Duration1: 10000
     Cooldown: 10000
@@ -29300,9 +29328,9 @@ Body:
     Range: 7
     Hit: Single
     HitCount: 1
+    CastCancel: true
     AfterCastActDelay: 1000
-    Duration1: 100
-    Duration2: 10000
+    Duration1: 10000
     Requires:
       SpCost: 30
     Unit:
@@ -29875,7 +29903,6 @@ Body:
         - Level: 10
           Amount: 75
       State: Ridingdragon
-    CastCancel: false
   - Id: 5005
     Name: RK_LUXANIMA
     Description: Lux Anima
@@ -29944,7 +29971,6 @@ Body:
       Flag:
         NoOverlap: true
         PathCheck: true
-    CastCancel: false
   - Id: 5007
     Name: WM_FRIGG_SONG
     Description: Frigg's Song
@@ -30449,8 +30475,10 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
+    Range: 9
+    Hit: Single
+    HitCount: 1
     AfterCastActDelay: 2000
-    AfterCastWalkDelay: 1000
     Requires:
       SpCost:
         - Level: 1
@@ -30473,8 +30501,11 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
+      Splash: true
+    Hit: Single
+    HitCount: 1
+    SplashArea: -1
     AfterCastActDelay: 35000
-    AfterCastWalkDelay: 1000
     Duration1:
       - Level: 1
         Time: 40000
@@ -30498,11 +30529,11 @@ Body:
           Amount: 35
         - Level: 5
           Amount: 40
-    Status: Avoid
   - Id: 8003
     Name: HLIF_BRAIN
     Description: Brain Surgery
     MaxLevel: 5
+    SplashArea: 1
   - Id: 8004
     Name: HLIF_CHANGE
     Description: Change
@@ -30510,14 +30541,7 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    AfterCastActDelay:
-      - Level: 1
-        Time: 600000
-      - Level: 2
-        Time: 900000
-      - Level: 3
-        Time: 1200000
-    AfterCastWalkDelay: 1000
+    Hit: Single
     Duration1:
       - Level: 1
         Time: 60000
@@ -30525,9 +30549,15 @@ Body:
         Time: 180000
       - Level: 3
         Time: 300000
+    Duration2:
+      - Level: 1
+        Time: 600000
+      - Level: 2
+        Time: 900000
+      - Level: 3
+        Time: 1200000
     Requires:
       SpCost: 100
-    Status: Change
   - Id: 8005
     Name: HAMI_CASTLE
     Description: Castling
@@ -30535,8 +30565,8 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    AfterCastActDelay: 1000
-    AfterCastWalkDelay: 1000
+    Hit: Single
+    Duration2: 1000
     Requires:
       SpCost: 10
   - Id: 8006
@@ -30546,8 +30576,8 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
+    Hit: Single
     AfterCastActDelay: 30000
-    AfterCastWalkDelay: 1000
     Duration1:
       - Level: 1
         Time: 40000
@@ -30571,11 +30601,12 @@ Body:
           Amount: 35
         - Level: 5
           Amount: 40
-    Status: Defence
   - Id: 8007
     Name: HAMI_SKIN
     Description: Adamantium Skin
     MaxLevel: 5
+    DamageFlags:
+      NoDamage: true
   - Id: 8008
     Name: HAMI_BLOODLUST
     Description: Bloodlust
@@ -30583,14 +30614,7 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    AfterCastActDelay:
-      - Level: 1
-        Time: 300000
-      - Level: 2
-        Time: 600000
-      - Level: 3
-        Time: 900000
-    AfterCastWalkDelay: 1000
+    Hit: Single
     Duration1:
       - Level: 1
         Time: 60000
@@ -30598,16 +30622,22 @@ Body:
         Time: 180000
       - Level: 3
         Time: 300000
+    Duration2:
+      - Level: 1
+        Time: 300000
+      - Level: 2
+        Time: 600000
+      - Level: 3
+        Time: 900000
     Requires:
       SpCost: 120
-    Status: Bloodlust
   - Id: 8009
     Name: HFLI_MOON
     Description: Moonlight
     MaxLevel: 5
     Type: Weapon
     TargetType: Attack
-    Range: 15
+    Range: 1
     Hit: Multi_Hit
     HitCount:
       - Level: 1
@@ -30620,6 +30650,7 @@ Body:
         Count: -2
       - Level: 5
         Count: -3
+    AfterCastWalkDelay: 2000
     Requires:
       SpCost:
         - Level: 1
@@ -30640,18 +30671,6 @@ Body:
     DamageFlags:
       NoDamage: true
     Hit: Single
-    AfterCastActDelay:
-      - Level: 1
-        Time: 60000
-      - Level: 2
-        Time: 70000
-      - Level: 3
-        Time: 80000
-      - Level: 4
-        Time: 90000
-      - Level: 5
-        Time: 120000
-    AfterCastWalkDelay: 1000
     Duration1:
       - Level: 1
         Time: 60000
@@ -30663,6 +30682,17 @@ Body:
         Time: 45000
       - Level: 5
         Time: 40000
+    Duration2:
+      - Level: 1
+        Time: 60000
+      - Level: 2
+        Time: 70000
+      - Level: 3
+        Time: 80000
+      - Level: 4
+        Time: 90000
+      - Level: 5
+        Time: 120000
     Requires:
       SpCost:
         - Level: 1
@@ -30675,7 +30705,6 @@ Body:
           Amount: 60
         - Level: 5
           Amount: 70
-    Status: Fleet
   - Id: 8011
     Name: HFLI_SPEED
     Description: Speed
@@ -30685,18 +30714,7 @@ Body:
     DamageFlags:
       NoDamage: true
     Hit: Single
-    AfterCastActDelay:
-      - Level: 1
-        Time: 60000
-      - Level: 2
-        Time: 70000
-      - Level: 3
-        Time: 80000
-      - Level: 4
-        Time: 90000
-      - Level: 5
-        Time: 120000
-    AfterCastWalkDelay: 1000
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 60000
@@ -30708,6 +30726,17 @@ Body:
         Time: 45000
       - Level: 5
         Time: 40000
+    Duration2:
+      - Level: 1
+        Time: 60000
+      - Level: 2
+        Time: 70000
+      - Level: 3
+        Time: 80000
+      - Level: 4
+        Time: 90000
+      - Level: 5
+        Time: 120000
     Requires:
       SpCost:
         - Level: 1
@@ -30720,16 +30749,16 @@ Body:
           Amount: 60
         - Level: 5
           Amount: 70
-    Status: Speed
   - Id: 8012
     Name: HFLI_SBR44
     Description: S.B.R.44
     MaxLevel: 3
     Type: Weapon
     TargetType: Attack
-    Range: 15
+    Range: 1
     Hit: Single
     HitCount: 1
+    AfterCastActDelay: 1000
     Requires:
       SpCost: 1
   - Id: 8013
@@ -30739,6 +30768,29 @@ Body:
     Type: Magic
     TargetType: Attack
     Range: 9
+    Hit: Single
+    HitCount:
+      - Level: 1
+        Count: 1
+      - Level: 2
+        Count: 2
+      - Level: 3
+        Count: 3
+      - Level: 4
+        Count: 4
+      - Level: 5
+        Count: 5
+    AfterCastActDelay:
+      - Level: 1
+        Time: 2000
+      - Level: 2
+        Time: 2200
+      - Level: 3
+        Time: 2400
+      - Level: 4
+        Time: 2600
+      - Level: 5
+        Time: 2800
     Requires:
       SpCost:
         - Level: 1
@@ -30755,17 +30807,20 @@ Body:
     Name: HVAN_CHAOTIC
     Description: Benediction of Chaos
     MaxLevel: 5
-    Type: Magic
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    AfterCastWalkDelay: 1500
+    Hit: Single
+    AfterCastActDelay: 3000
+    AfterCastWalkDelay: 3000
     Requires:
       SpCost: 40
   - Id: 8015
     Name: HVAN_INSTRUCT
     Description: Instruct
     MaxLevel: 5
+    DamageFlags:
+      NoDamage: true
   - Id: 8016
     Name: HVAN_EXPLOSION
     Description: Bio Explosion
@@ -30777,13 +30832,12 @@ Body:
       IgnoreElement: true
       IgnoreFlee: true
       IgnoreDefCard: true
-    Flags:
-      TargetTrap: true
+    Range: 4
     Hit: Single
     HitCount: 1
-    Element: Neutral
-    SplashArea: 5
-    Duration1: 1500
+    Element: Weapon
+    SplashArea: 4
+    AfterCastWalkDelay: 1000
     Requires:
       SpCost: 1
   - Id: 8018
@@ -31078,6 +31132,7 @@ Body:
         Element: Neutral
       - Level: 5
         Element: Wind
+    CastCancel: true
     CastTime:
       - Level: 1
         Time: 1000
@@ -31447,7 +31502,6 @@ Body:
       Flag:
         NoEnemy: true
         NoReiteration: true
-    Status: Safetywall
   - Id: 8034
     Name: MH_HEILIGE_STANGE
     Description: Holy Pole
@@ -31976,7 +32030,6 @@ Body:
         - Level: 10
           Amount: 16
       SpCost: 30
-    Status: Sub_Weaponproperty
   - Id: 8203
     Name: MS_BOWLINGBASH
     Description: Bowling_Bash
@@ -32016,7 +32069,6 @@ Body:
           Amount: 21
         - Level: 10
           Amount: 22
-    CastCancel: false
   - Id: 8204
     Name: MS_PARRYING
     Description: Parry
@@ -32050,7 +32102,6 @@ Body:
         Time: 60000
     Requires:
       SpCost: 50
-    Status: Parrying
   - Id: 8205
     Name: MS_REFLECTSHIELD
     Description: Shield_Reflect
@@ -32084,7 +32135,6 @@ Body:
           Amount: 75
         - Level: 10
           Amount: 80
-    Status: ReflectShield
   - Id: 8206
     Name: MS_BERSERK
     Description: Frenzy
@@ -32096,10 +32146,9 @@ Body:
     Hit: Single
     HitCount: 1
     Duration1: 300000
-    Duration2: 10000
+    Duration2: 15000
     Requires:
-      SpCost: 200
-    Status: Berserk
+      SpCost: 100
   - Id: 8207
     Name: MA_DOUBLE
     Description: Double_Strafe
@@ -32228,7 +32277,6 @@ Body:
       Flag:
         NoReiteration: true
         NoFootSet: true
-    Status: Stun
   - Id: 8211
     Name: MA_SANDMAN
     Description: Sandman
@@ -32257,7 +32305,17 @@ Body:
         Time: 60000
       - Level: 5
         Time: 30000
-    Duration2: 30000
+    Duration2:
+      - Level: 1
+        Time: 12000
+      - Level: 2
+        Time: 14000
+      - Level: 3
+        Time: 16000
+      - Level: 4
+        Time: 18000
+      - Level: 5
+        Time: 20000
     Requires:
       SpCost: 12
     Unit:
@@ -32268,7 +32326,6 @@ Body:
       Flag:
         NoReiteration: true
         NoFootSet: true
-    Status: Sleep
   - Id: 8212
     Name: MA_FREEZINGTRAP
     Description: Freezing_Trap
@@ -32277,7 +32334,7 @@ Body:
     TargetType: Ground
     DamageFlags:
       Splash: true
-      IgnoreAtkCard: true
+      IgnoreFlee: true
     Flags:
       IsTrap: true
       AlterRangeResearchTrap: true
@@ -32320,7 +32377,6 @@ Body:
       Flag:
         NoReiteration: true
         NoFootSet: true
-    Status: Freeze
   - Id: 8213
     Name: MA_REMOVETRAP
     Description: Remove_Trap
@@ -32362,7 +32418,6 @@ Body:
       Ammo:
         Arrow: true
       AmmoAmount: 1
-    CastCancel: false
   - Id: 8215
     Name: MA_SHARPSHOOTING
     Description: Focused_Arrow_Strike
@@ -32379,6 +32434,7 @@ Body:
     Element: Weapon
     SplashArea: 1
     ActiveInstance: 14
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 1500
     CastTimeFlags:
@@ -32434,7 +32490,6 @@ Body:
       IgnoreItemBonus: true
     Requires:
       SpCost: 12
-    CastCancel: false
   - Id: 8218
     Name: ML_SPIRALPIERCE
     Description: Spiral_Pierce
@@ -32445,7 +32500,7 @@ Body:
       IgnoreDefense: true
     Flags:
       TargetTrap: true
-    Range: 4
+    Range: 5
     Hit: Multi_Hit
     HitCount: 5
     Element: Weapon
@@ -32488,8 +32543,6 @@ Body:
           Amount: 27
         - Level: 5
           Amount: 30
-    Status: Ankle
-    CastCancel: false
   - Id: 8219
     Name: ML_DEFENDER
     Description: Defending_Aura
@@ -32498,8 +32551,6 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     AfterCastActDelay: 800
@@ -32507,7 +32558,6 @@ Body:
     Requires:
       SpCost: 30
       State: Shield
-    Status: Defender
   - Id: 8220
     Name: ML_AUTOGUARD
     Description: Guard
@@ -32516,8 +32566,6 @@ Body:
     TargetType: Self
     DamageFlags:
       NoDamage: true
-    Flags:
-      Toggleable: true
     Hit: Single
     HitCount: 1
     Duration1: 300000
@@ -32543,7 +32591,6 @@ Body:
           Amount: 28
         - Level: 10
           Amount: 30
-    Status: AutoGuard
   - Id: 8221
     Name: ML_DEVOTION
     Description: Sacrifice
@@ -32567,6 +32614,7 @@ Body:
         Size: 11
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 3000
     Duration2:
       - Level: 1
@@ -32585,7 +32633,6 @@ Body:
       IgnoreItemBonus: true
     Requires:
       SpCost: 25
-    Status: Devotion
   - Id: 8222
     Name: MER_MAGNIFICAT
     Description: Magnificat
@@ -32598,6 +32645,7 @@ Body:
     Hit: Single
     HitCount: 1
     SplashArea: -1
+    CastCancel: true
     CastTime: 4000
     AfterCastActDelay: 2000
     Duration1:
@@ -32617,7 +32665,6 @@ Body:
       IgnoreItemBonus: true
     Requires:
       SpCost: 40
-    Status: Magnificat
   - Id: 8223
     Name: MER_QUICKEN
     Description: Two-Hand_Quicken
@@ -32671,7 +32718,6 @@ Body:
           Amount: 46
         - Level: 10
           Amount: 50
-    Status: Merc_Quicken
   - Id: 8224
     Name: MER_SIGHT
     Description: Sight
@@ -32685,10 +32731,10 @@ Body:
     HitCount: 1
     Element: Fire
     SplashArea: 3
+    CastCancel: true
     Duration1: 10000
     Requires:
       SpCost: 10
-    Status: Sight
   - Id: 8225
     Name: MER_CRASH
     Description: Crash
@@ -32696,8 +32742,8 @@ Body:
     Type: Weapon
     TargetType: Attack
     Range: 1
-    Hit: Single
-    HitCount: 1
+    Hit: Multi_Hit
+    HitCount: 3
     Element: Weapon
     CastTime: 1000
     AfterCastActDelay: 2000
@@ -32708,7 +32754,6 @@ Body:
       IgnoreItemBonus: true
     Requires:
       SpCost: 10
-    Status: Stun
   - Id: 8226
     Name: MER_REGAIN
     Description: Regain
@@ -32722,6 +32767,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 10
   - Id: 8227
@@ -32737,6 +32783,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 10
   - Id: 8228
@@ -32752,6 +32799,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 10
   - Id: 8229
@@ -32767,6 +32815,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 10
   - Id: 8230
@@ -32782,6 +32831,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 10
   - Id: 8231
@@ -32797,6 +32847,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 10
   - Id: 8232
@@ -32832,7 +32883,6 @@ Body:
           Amount: 12
         - Level: 10
           Amount: 13
-    Status: Provoke
   - Id: 8233
     Name: MER_AUTOBERSERK
     Description: Berserk
@@ -32845,7 +32895,6 @@ Body:
     HitCount: 1
     Requires:
       SpCost: 5
-    Status: AutoBerserk
   - Id: 8234
     Name: MER_DECAGI
     Description: Decrease_AGI
@@ -32857,6 +32906,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -32906,7 +32956,6 @@ Body:
           Amount: 31
         - Level: 10
           Amount: 33
-    Status: DecreaseAgi
   - Id: 8235
     Name: MER_SCAPEGOAT
     Description: Scapegoat
@@ -32916,6 +32965,7 @@ Body:
       NoDamage: true
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 3000
     CastTimeFlags:
       IgnoreDex: true
@@ -32933,6 +32983,7 @@ Body:
       NoDamage: true
     Range: 5
     Hit: Single
+    CastCancel: true
     AfterCastActDelay: 3000
     Duration2:
       - Level: 1
@@ -32977,7 +33028,6 @@ Body:
           Amount: 12
         - Level: 10
           Amount: 10
-    Status: Silence
   - Id: 8237
     Name: MER_ESTIMATION
     Description: Sense
@@ -32989,6 +33039,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Requires:
       SpCost: 10
   - Id: 8238
@@ -33002,6 +33053,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 2000
     AfterCastActDelay: 2000
     Duration1: 120000
@@ -33031,7 +33083,6 @@ Body:
           Amount: 30
         - Level: 10
           Amount: 35
-    Status: Kyrie
   - Id: 8239
     Name: MER_BLESSING
     Description: Blessing
@@ -33045,6 +33096,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     Duration1:
       - Level: 1
         Time: 60000
@@ -33088,7 +33140,6 @@ Body:
           Amount: 60
         - Level: 10
           Amount: 64
-    Status: Blessing
   - Id: 8240
     Name: MER_INCAGI
     Description: Increase Agility
@@ -33102,6 +33153,7 @@ Body:
     Range: 9
     Hit: Single
     HitCount: 1
+    CastCancel: true
     CastTime: 1000
     AfterCastActDelay: 1000
     Duration1:
@@ -33152,7 +33204,6 @@ Body:
           Amount: 42
         - Level: 10
           Amount: 45
-    Status: IncreaseAgi
   - Id: 8241
     Name: MER_INVINCIBLEOFF2
     Description: Mind Blaster
@@ -33774,7 +33825,6 @@ Body:
       Target: SameGuild
       Flag:
         NoMob: true
-    Status: Leadership
   - Id: 10007
     Name: GD_GLORYWOUNDS
     Description: Glorious Wounds
@@ -33790,7 +33840,6 @@ Body:
       Target: SameGuild
       Flag:
         NoMob: true
-    Status: GloryWounds
   - Id: 10008
     Name: GD_SOULCOLD
     Description: Cold Heart
@@ -33806,7 +33855,6 @@ Body:
       Target: SameGuild
       Flag:
         NoMob: true
-    Status: SoulCold
   - Id: 10009
     Name: GD_HAWKEYES
     Description: Sharp Gaze
@@ -33822,7 +33870,6 @@ Body:
       Target: SameGuild
       Flag:
         NoMob: true
-    Status: HawkEyes
   - Id: 10010
     Name: GD_BATTLEORDER
     Description: Battle Orders
@@ -33834,6 +33881,7 @@ Body:
     Flags:
       IsGuild: true
     SplashArea: 15
+    CastCancel: true
     Duration1: 180000
     Duration2: 300000
     CastTimeFlags:
@@ -33841,7 +33889,6 @@ Body:
       IgnoreStatus: true
     Requires:
       SpCost: 1
-    Status: BattleOrders
   - Id: 10011
     Name: GD_REGENERATION
     Description: Regeneration
@@ -33853,6 +33900,7 @@ Body:
     Flags:
       IsGuild: true
     SplashArea: 15
+    CastCancel: true
     Duration1: 60000
     Duration2: 300000
     CastTimeFlags:
@@ -33860,7 +33908,6 @@ Body:
       IgnoreStatus: true
     Requires:
       SpCost: 1
-    Status: Regeneration
   - Id: 10012
     Name: GD_RESTORE
     Description: Restoration
@@ -33872,6 +33919,7 @@ Body:
     Flags:
       IsGuild: true
     SplashArea: 15
+    CastCancel: true
     CastTime: 10000
     Duration2: 300000
     CastTimeFlags:
@@ -33890,6 +33938,7 @@ Body:
     Flags:
       IsGuild: true
       IgnoreKagehumi: true
+    CastCancel: true
     CastTime: 5000
     Duration2: 300000
     CastTimeFlags:
@@ -33915,4 +33964,5 @@ Body:
     Flags:
       IsGuild: true
       IgnoreKagehumi: true
+    CastCancel: true
     Duration2: 300000

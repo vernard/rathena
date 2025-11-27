@@ -7,9 +7,7 @@
 //= 1.1 Added WOE:TE maps [Cydh]
 //============================================================
 
-//============================================================
-// WoE:TE Castles
-//============================================================
+// WOE:TE Maps ===================
 te_prtcas01	mapflag	noicewall
 te_prtcas02	mapflag	noicewall
 te_prtcas03	mapflag	noicewall

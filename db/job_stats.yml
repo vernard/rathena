@@ -23,14 +23,11 @@
 #
 ###########################################################################
 # - Jobs:                    List of jobs associated to group.
-#     Job                    Job name.
+#     Job                    Job ID.
 #   MaxWeight                Base maximum weight. (Default: 20000)
-#   HpFactor                 Exponential HP increase. Per base level: [HpFactor * BaseLv / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 0)
-#   HpIncrease               Linear HP increase. Per base level: [HpIncrease / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 500)
-#   SpFactor                 Exponential SP increase. Per base level: [SpFactor * BaseLv / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 0)
-#   SpIncrease               Linear SP increase. Per base level: [SpIncrease / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 100)
-#   ApFactor                 Exponential AP increase. Per base level: [ApFactor * BaseLv / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 0)
-#   ApIncrease               Linear AP increase. Per base level: [ApIncrease / 100]. Used when macro HP_SP_TABLES is disabled. (Default: 0)
+#   HPFactor                 HP increase per base level. Floor(HPFactor / 100) * BaseLv. Used when macro HP_SP_TABLES is disabled. (Default: 20000)
+#   HPMultiplicator          Base HP value. 35 + BaseLv * (HPMultiplicator / 100). Used when macro HP_SP_TABLES is disabled. (Default: 500)
+#   SPFactor                 SP increase per job level. Floor(SPFactor / 100) * BaseLv. Used when macro HP_SP_TABLES is disabled. (Default: 100)
 #   BaseASPD:                Base ASPD for each weapon type. (Default: 2000)
 #     Weapon                 Weapon type with associated ASPD.
 #   BonusStats:              Job level bonus stats/traits.
@@ -77,26 +74,18 @@
 #   BaseAp:                  Base AP per base level.
 #     - Level                Base level.
 #       Ap                   Base AP.
-#   AlternateOutfits:        Alternate Jobs outfits. (Default: empty)
 ###########################################################################
 
 Header:
   Type: JOB_STATS
-  Version: 4
+  Version: 1
 
 Footer:
   Imports:
-  # Load base information first
+  # Import base information first
   - Path: db/pre-re/job_stats.yml
     Mode: Prerenewal
   - Path: db/re/job_stats.yml
-    Mode: Renewal
-
-  # Next, populate with ASPD information
-  # If RENEWAL is defined and RENEWAL_ASPD is not defined then the pre-renewal file is loaded
-  - Path: db/pre-re/job_aspd.yml
-    Mode: Prerenewal
-  - Path: db/re/job_aspd.yml
     Mode: Renewal
 
   # Next, populate with experience information
@@ -109,10 +98,6 @@ Footer:
   - Path: db/pre-re/job_basepoints.yml
     Mode: Prerenewal
   - Path: db/re/job_basepoints.yml
-    Mode: Renewal
-
-  # Next, populate outfit information
-  - Path: db/re/job_outfits.yml
     Mode: Renewal
 
   # Finally, import custom information

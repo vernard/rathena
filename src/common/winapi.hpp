@@ -4,7 +4,7 @@
 #ifndef WINAPI_HPP
 #define WINAPI_HPP
 
-#include <config/core.hpp>
+#include "../config/core.hpp"
 
 #ifdef DEPRECATED_WINDOWS_SUPPORT
 #ifndef NTDDI_VERSION
@@ -37,7 +37,6 @@
 #define NONLS
 #define NOMEMMGR
 #define NOMETAFILE
-#define NOMINMAX
 #define NOOPENFILE
 #define NOSERVICE
 #define NOSOUND
@@ -53,8 +52,6 @@
 #include <Ws2tcpip.h>
 #include <Mswsock.h>
 #include <MMSystem.h>
-
-#undef NOMINMAX
 
 #include "cbasetypes.hpp"
 

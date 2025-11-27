@@ -8,9 +8,9 @@
 #include <string>
 #include <unordered_map>
 
-#include <common/cbasetypes.hpp>
-#include <common/database.hpp>
-#include <common/sql.hpp>
+#include "../common/cbasetypes.hpp"
+#include "../common/database.hpp"
+#include "../common/sql.hpp"
 
 struct s_storage_table;
 
@@ -20,26 +20,28 @@ public:
 
 	}
 
-	const std::string getDefaultLocation() override;
-	uint64 parseBodyNode( const ryml::NodeRef& node ) override;
+	const std::string getDefaultLocation();
+	uint64 parseBodyNode( const YAML::Node& node );
 };
 
 extern InterServerDatabase interServerDb;
 
-int32 inter_init_sql(const char *file);
+int inter_init_sql(const char *file);
 void inter_final(void);
-int32 inter_parse_frommap(int32 fd);
-int32 inter_mapif_init(int32 fd);
-int32 mapif_disconnectplayer(int32 fd, uint32 account_id, uint32 char_id, int32 reason);
-void mapif_accinfo_ack( bool success, int32 map_fd, int32 u_fd, int32 u_aid, int32 account_id, int32 group_id, int32 logincount, int32 state, const char* email, const char* last_ip, const char* lastlogin, const char* birthdate, const char* userid );
+int inter_parse_frommap(int fd);
+int inter_mapif_init(int fd);
+int mapif_disconnectplayer(int fd, uint32 account_id, uint32 char_id, int reason);
+void mapif_accinfo_ack(bool success, int map_fd, int u_fd, int u_aid, int account_id, int8 type,
+	int group_id, int logincount, int state, const char *email, const char *last_ip, const char *lastlogin,
+	const char *birthdate, const char *userid);
 
-int32 inter_log(const char *fmt,...);
+int inter_log(const char *fmt,...);
 
-extern uint32 party_share_level;
+extern unsigned int party_share_level;
 
 extern Sql* sql_handle;
 extern Sql* lsql_handle;
 
-int32 inter_accreg_fromsql(uint32 account_id, uint32 char_id, int32 fd, int32 type);
+int inter_accreg_fromsql(uint32 account_id, uint32 char_id, int fd, int type);
 
 #endif /* INTER_HPP */

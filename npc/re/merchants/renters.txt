@@ -1,19 +1,24 @@
-//===== rAthena Script =======================================
+//===== rAthena Script ======================================= 
 //= Renters
-//===== Description: =========================================
+//===== By: ================================================== 
+//= rAthena Dev Team
+//===== Current Version: ===================================== 
+//= 2.2
+//===== Compatible With: ===================================== 
+//= rAthena Project
+//===== Description: ========================================= 
 //= [Official Conversion]
 //= Renewal-specific breeder NPCs.
-//===== Changelogs: ==========================================
+//===== Additional Comments: ================================= 
 //= 2.1 Moved some renters to a separate renewal file. [Daegaladh]
 //= 2.2 Updated to match the official scripts. [Euphy]
-//= 2.3 Added fourth class support. [Emistry]
-//============================================================
+//============================================================ 
 
 // Dragon Breeder :: dragon
 //============================================================
 job3_rune01,88,62,5	script	Dragon Breeder	105,{
 	mes "[Dragon Breeder]";
-	if ((eaclass()&EAJ_THIRDMASK)==EAJ_RUNE_KNIGHT) {
+	if (Class == Job_Rune_Knight || Class == Job_Rune_Knight_T || Class == Job_Baby_Rune_Knight) {
 		mes "Welcome. Would you like to rent a Dragon?";
 		next;
 		switch(select("Yes:No")) {
@@ -51,7 +56,7 @@ job3_rune01,88,62,5	script	Dragon Breeder	105,{
 //============================================================
 prontera,130,213,5	script	Riding Creature Master	105,{
 	mes "[Riding Creature Master]";
-	if ((eaclass()&EAJ_THIRDMASK)==EAJ_RUNE_KNIGHT) {
+	if (Class == Job_Rune_Knight || Class == Job_Rune_Knight_T || Class == Job_Baby_Rune_Knight) {
 		mes "Welcome. Would you like to rent a Dragon?";
 		next;
 		switch(select("Yes:No")) {
@@ -80,7 +85,7 @@ prontera,130,213,5	script	Riding Creature Master	105,{
 			close;
 		}
 	}
-	if ((eaclass()&EAJ_THIRDMASK)==EAJ_ROYAL_GUARD) {
+	if (Class == Job_Royal_Guard || Class == Job_Royal_Guard_T || Class == Job_Baby_Royal_Guard) {
 		mes "Welcome. Would you like to rent a Gryphon?";
 		next;
 		switch(select("Yes:No")) {
@@ -152,7 +157,7 @@ prontera,125,208,5	script	Peco Peco Remover	105,{
 //============================================================
 -	script	::mgm	-1,{
 	mes "[Mado Gear Armorer]";
-	if ((eaclass()&EAJ_THIRDMASK)==EAJ_MECHANIC) {
+	if (Class == Job_Mechanic || Class == Job_Mechanic_T || Class == Job_Baby_Mechanic) {
 		mes "Welcome, Mechanic.";
 		mes "Would you like to rent a Pushcart or";
 		mes "ride a Mado Gear?";

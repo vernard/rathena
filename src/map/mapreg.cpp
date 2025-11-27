@@ -3,16 +3,16 @@
 
 #include "mapreg.hpp"
 
-#include <cstdlib>
+#include <stdlib.h>
 
-#include <common/cbasetypes.hpp>
-#include <common/db.hpp>
-#include <common/ers.hpp>
-#include <common/malloc.hpp>
-#include <common/showmsg.hpp>
-#include <common/sql.hpp>
-#include <common/strlib.hpp>
-#include <common/timer.hpp>
+#include "../common/cbasetypes.hpp"
+#include "../common/db.hpp"
+#include "../common/ers.hpp"
+#include "../common/malloc.hpp"
+#include "../common/showmsg.hpp"
+#include "../common/sql.hpp"
+#include "../common/strlib.hpp"
+#include "../common/timer.hpp"
 
 #include "map.hpp" // mmysql_handle
 #include "script.hpp"
@@ -49,7 +49,7 @@ int64 mapreg_readreg(int64 uid)
 char* mapreg_readregstr(int64 uid)
 {
 	struct mapreg_save *m = (struct mapreg_save *)i64db_get(regs.vars, uid);
-	return m ? m->u.str : nullptr;
+	return m ? m->u.str : NULL;
 }
 
 /**
@@ -62,7 +62,7 @@ char* mapreg_readregstr(int64 uid)
 bool mapreg_setreg(int64 uid, int64 val)
 {
 	struct mapreg_save *m;
-	int32 num = script_getvarid(uid);
+	int num = script_getvarid(uid);
 	uint32 i = script_getvaridx(uid);
 	const char* name = get_str(num);
 
@@ -121,11 +121,11 @@ bool mapreg_setreg(int64 uid, int64 val)
 bool mapreg_setregstr(int64 uid, const char* str)
 {
 	struct mapreg_save *m;
-	int32 num = script_getvarid(uid);
+	int num = script_getvarid(uid);
 	uint32 i = script_getvaridx(uid);
 	const char* name = get_str(num);
 
-	if (str == nullptr || *str == 0) {
+	if (str == NULL || *str == 0) {
 		if (i)
 			script_array_update(&regs, uid, true);
 		if (name[1] != '@') {
@@ -135,14 +135,14 @@ bool mapreg_setregstr(int64 uid, const char* str)
 				Sql_ShowDebug(mmysql_handle);
 		}
 		if ((m = static_cast<mapreg_save *>(i64db_get(regs.vars, uid)))) {
-			if (m->u.str != nullptr)
+			if (m->u.str != NULL)
 				aFree(m->u.str);
 			ers_free(mapreg_ers, m);
 		}
 		i64db_remove(regs.vars, uid);
 	} else {
 		if ((m = static_cast<mapreg_save *>(i64db_get(regs.vars, uid)))) {
-			if (m->u.str != nullptr)
+			if (m->u.str != NULL)
 				aFree(m->u.str);
 			m->u.str = aStrdup(str);
 			if (name[1] != '@') {
@@ -186,27 +186,28 @@ static void script_load_mapreg(void)
 	   | varname | index | value |
 	   +-------------------------+
 	                                */
-	SqlStmt stmt{ *mmysql_handle };
+	SqlStmt* stmt = SqlStmt_Malloc(mmysql_handle);
 	char varname[32+1];
 	uint32 index;
 	char value[255+1];
 	uint32 length;
 
-	if ( SQL_ERROR == stmt.Prepare("SELECT `varname`, `index`, `value` FROM `%s`", mapreg_table)
-	  || SQL_ERROR == stmt.Execute()
+	if ( SQL_ERROR == SqlStmt_Prepare(stmt, "SELECT `varname`, `index`, `value` FROM `%s`", mapreg_table)
+	  || SQL_ERROR == SqlStmt_Execute(stmt)
 	  ) {
 		SqlStmt_ShowDebug(stmt);
+		SqlStmt_Free(stmt);
 		return;
 	}
 
 	skip_insert = true;
 
-	stmt.BindColumn(0, SQLDT_STRING, &varname[0], sizeof(varname), &length);
-	stmt.BindColumn(1, SQLDT_UINT32, &index);
-	stmt.BindColumn(2, SQLDT_STRING, &value[0], sizeof(value));
+	SqlStmt_BindColumn(stmt, 0, SQLDT_STRING, &varname[0], sizeof(varname), &length, NULL);
+	SqlStmt_BindColumn(stmt, 1, SQLDT_UINT32, &index, 0, NULL, NULL);
+	SqlStmt_BindColumn(stmt, 2, SQLDT_STRING, &value[0], sizeof(value), NULL, NULL);
 
-	while ( SQL_SUCCESS == stmt.NextRow() ) {
-		int32 s = add_str(varname);
+	while ( SQL_SUCCESS == SqlStmt_NextRow(stmt) ) {
+		int s = add_str(varname);
 		int64 uid = reference_uid(s, index);
 
 		if( i64db_exists(regs.vars, uid) ) {
@@ -216,9 +217,11 @@ static void script_load_mapreg(void)
 		if( varname[length-1] == '$' ) {
 			mapreg_setregstr(uid, value);
 		} else {
-			mapreg_setreg(uid, strtoll(value,nullptr,10));
+			mapreg_setreg(uid, strtoll(value,NULL,10));
 		}
 	}
+
+	SqlStmt_Free(stmt);
 
 	skip_insert = false;
 	mapreg_dirty = false;
@@ -234,7 +237,7 @@ static void script_save_mapreg(void)
 		struct mapreg_save *m;
 		for (m = static_cast<mapreg_save *>(dbi_first(iter)); dbi_exists(iter); m = static_cast<mapreg_save *>(dbi_next(iter))) {
 			if (m->save) {
-				int32 num = script_getvarid(m->uid);
+				int num = script_getvarid(m->uid);
 				uint32 i = script_getvaridx(m->uid);
 				const char* name = get_str(num);
 				if (!m->is_string) {
@@ -271,9 +274,9 @@ static TIMER_FUNC(script_autosave_mapreg){
  *
  * @see DBApply
  */
-int32 mapreg_destroyreg(DBKey key, DBData *data, va_list ap)
+int mapreg_destroyreg(DBKey key, DBData *data, va_list ap)
 {
-	struct mapreg_save *m = nullptr;
+	struct mapreg_save *m = NULL;
 
 	if (data->type != DB_DATA_PTR) // Sanity check
 		return 0;
@@ -303,7 +306,7 @@ void mapreg_reload(void)
 
 	if (regs.arrays) {
 		regs.arrays->destroy(regs.arrays, script_free_array_db);
-		regs.arrays = nullptr;
+		regs.arrays = NULL;
 	}
 
 	script_load_mapreg();
@@ -333,7 +336,7 @@ void mapreg_init(void)
 	mapreg_ers = ers_new(sizeof(struct mapreg_save), "mapreg.cpp:mapreg_ers", ERS_OPT_CLEAN);
 
 	skip_insert = false;
-	regs.arrays = nullptr;
+	regs.arrays = NULL;
 
 	script_load_mapreg();
 

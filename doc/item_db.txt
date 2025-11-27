@@ -3,7 +3,7 @@
 //===== By: ==================================================
 //= rAthena Dev Team
 //===== Last Updated: ========================================
-//= 20220402
+//= 20200602
 //===== Description: =========================================
 //= Explanation of the item_db.yml file and structure.
 //============================================================
@@ -101,7 +101,6 @@ Attack: Weapon's attack.
 ---------------------------------------
 
 MagicAttack: Weapon's magic attack. (Renewal only)
-             Unlike matk bonus from equipment, MagicAttack is taken into account in weapon variance calculation on Renewal.
 
 ---------------------------------------
 
@@ -160,10 +159,10 @@ Baby        - Baby classes (no Third-Baby classes).
 Third       - Third classes (no Transcedent-Third or Third-Baby classes).
 Third_Upper - Transcedent-Third classes.
 Third_Baby  - Third-Baby classes.
-Fourth      - Fourth classes.
 All_Upper   - All Transcedent classes
 All_Baby    - All baby classes
 All_Third   - Applies to all Third classes.
+Fourth      - Fourth classes.
 
 ---------------------------------------
 
@@ -217,10 +216,6 @@ EquipLevelMax: Only able to equip if base level is lower than this.
 ---------------------------------------
 
 Refineable: Defines if the item can be refined.
-
----------------------------------------
-
-Gradable: Defines if the item can be graded.
 
 ---------------------------------------
 
@@ -285,10 +280,10 @@ Script: Script to execute when the item is used/equipped.
 
 ---------------------------------------
 
-EquipScript: Script to execute when the item is equipped.
-             Warning, not all item bonuses will work here as expected.
+OnEquip_Script: Script to execute when the item is equipped.
+                Warning, not all item bonuses will work here as expected.
 
 ---------------------------------------
 
-UnEquipScript: Script to execute when the item is unequipped or when a rental item expires.
-               Warning, not all item bonuses will work here as expected.
+OnUnequip_Script: Script to execute when the item is unequipped or when a rental item expires.
+                  Warning, not all item bonuses will work here as expected.

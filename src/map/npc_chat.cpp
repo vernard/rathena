@@ -5,15 +5,15 @@
 
 #include "npc.hpp"
 
-#include <pcre.h>
+#include "../../3rdparty/pcre/include/pcre.h"
 
-#include <common/malloc.hpp>
-#include <common/showmsg.hpp>
-#include <common/strlib.hpp>
-#include <common/timer.hpp>
+#include "../common/malloc.hpp"
+#include "../common/showmsg.hpp"
+#include "../common/strlib.hpp"
+#include "../common/timer.hpp"
 
-#include "mob.hpp" // mob_data
-#include "pc.hpp" // map_session_data
+#include "mob.hpp" // struct mob_data
+#include "pc.hpp" // struct map_session_data
 
 /**
  *  Written by MouseJstr in a vision... (2/21/2005)
@@ -110,33 +110,33 @@ void finalize_pcrematch_entry(struct pcrematch_entry* e)
 /**
  * Lookup (and possibly create) a new set of patterns by the set id
  */
-static struct pcrematch_set* lookup_pcreset(npc_data* nd, int64 setid) 
+static struct pcrematch_set* lookup_pcreset(struct npc_data* nd, int64 setid) 
 {
 	struct pcrematch_set *pcreset;
 	struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
-	if (npcParse == nullptr) 
+	if (npcParse == NULL) 
 		nd->chatdb = npcParse = (struct npc_parse *) aCalloc(sizeof(struct npc_parse), 1);
 	
 	pcreset = npcParse->active;
 	
-	while (pcreset != nullptr) {
+	while (pcreset != NULL) {
 		if (pcreset->setid == setid)
 		break;
 		pcreset = pcreset->next;
 	}
-	if (pcreset == nullptr) 
+	if (pcreset == NULL) 
 		pcreset = npcParse->inactive;
 	
-	while (pcreset != nullptr) {
+	while (pcreset != NULL) {
 		if (pcreset->setid == setid)
 		break;
 		pcreset = pcreset->next;
 	}
 	
-	if (pcreset == nullptr) {
+	if (pcreset == NULL) {
 		pcreset = (struct pcrematch_set *) aCalloc(sizeof(struct pcrematch_set), 1);
 		pcreset->next = npcParse->inactive;
-		if (pcreset->next != nullptr)
+		if (pcreset->next != NULL)
 			pcreset->next->prev = pcreset;
 		pcreset->prev = 0;
 		npcParse->inactive = pcreset;
@@ -151,30 +151,30 @@ static struct pcrematch_set* lookup_pcreset(npc_data* nd, int64 setid)
  *
  * if the setid does not exist, this will silently return
  */
-static void activate_pcreset(npc_data* nd, int64 setid)
+static void activate_pcreset(struct npc_data* nd, int64 setid)
 {
 	struct pcrematch_set *pcreset;
 	struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
-	if (npcParse == nullptr) 
+	if (npcParse == NULL) 
 		return; // Nothing to activate...
 	pcreset = npcParse->inactive;
-	while (pcreset != nullptr) {
+	while (pcreset != NULL) {
 		if (pcreset->setid == setid)
 			break;
 		pcreset = pcreset->next;
 	}
-	if (pcreset == nullptr)
+	if (pcreset == NULL)
 		return; // not in inactive list
-	if (pcreset->next != nullptr)
+	if (pcreset->next != NULL)
 		pcreset->next->prev = pcreset->prev;
-	if (pcreset->prev != nullptr)
+	if (pcreset->prev != NULL)
 		pcreset->prev->next = pcreset->next;
 	else 
 		npcParse->inactive = pcreset->next;
 	
-	pcreset->prev = nullptr;
+	pcreset->prev = NULL;
 	pcreset->next = npcParse->active;
-	if (pcreset->next != nullptr)
+	if (pcreset->next != NULL)
 		pcreset->next->prev = pcreset;
 	npcParse->active = pcreset;
 }
@@ -184,35 +184,35 @@ static void activate_pcreset(npc_data* nd, int64 setid)
  *
  * if the setid does not exist, this will silently return
  */
-static void deactivate_pcreset(npc_data* nd, int64 setid)
+static void deactivate_pcreset(struct npc_data* nd, int64 setid)
 {
 	struct pcrematch_set *pcreset;
 	struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
-	if (npcParse == nullptr) 
+	if (npcParse == NULL) 
 		return; // Nothing to deactivate...
 	if (setid == -1) {
-		while(npcParse->active != nullptr)
+		while(npcParse->active != NULL)
 			deactivate_pcreset(nd, npcParse->active->setid);
 		return;
 	}
 	pcreset = npcParse->active;
-	while (pcreset != nullptr) {
+	while (pcreset != NULL) {
 		if (pcreset->setid == setid)
 			break;
 		pcreset = pcreset->next;
 	}
-	if (pcreset == nullptr)
+	if (pcreset == NULL)
 		return; // not in active list
-	if (pcreset->next != nullptr)
+	if (pcreset->next != NULL)
 		pcreset->next->prev = pcreset->prev;
-	if (pcreset->prev != nullptr)
+	if (pcreset->prev != NULL)
 		pcreset->prev->next = pcreset->next;
 	else 
 		npcParse->active = pcreset->next;
 	
-	pcreset->prev = nullptr;
+	pcreset->prev = NULL;
 	pcreset->next = npcParse->inactive;
-	if (pcreset->next != nullptr)
+	if (pcreset->next != NULL)
 		pcreset->next->prev = pcreset;
 	npcParse->inactive = pcreset;
 }
@@ -220,34 +220,34 @@ static void deactivate_pcreset(npc_data* nd, int64 setid)
 /**
  * delete a set of patterns.
  */
-static void delete_pcreset(npc_data* nd, int64 setid)
+static void delete_pcreset(struct npc_data* nd, int64 setid)
 {
-	int32 active = 1;
+	int active = 1;
 	struct pcrematch_set *pcreset;
 	struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
-	if (npcParse == nullptr) 
+	if (npcParse == NULL) 
 		return; // Nothing to deactivate...
 	pcreset = npcParse->active;
-	while (pcreset != nullptr) {
+	while (pcreset != NULL) {
 		if (pcreset->setid == setid)
 			break;
 		pcreset = pcreset->next;
 	}
-	if (pcreset == nullptr) {
+	if (pcreset == NULL) {
 		active = 0;
 		pcreset = npcParse->inactive;
-		while (pcreset != nullptr) {
+		while (pcreset != NULL) {
 			if (pcreset->setid == setid)
 				break;
 			pcreset = pcreset->next;
 		}
 	}
-	if (pcreset == nullptr) 
+	if (pcreset == NULL) 
 		return;
 	
-	if (pcreset->next != nullptr)
+	if (pcreset->next != NULL)
 		pcreset->next->prev = pcreset->prev;
-	if (pcreset->prev != nullptr)
+	if (pcreset->prev != NULL)
 		pcreset->prev->next = pcreset->next;
 	
 	if(active)
@@ -255,8 +255,8 @@ static void delete_pcreset(npc_data* nd, int64 setid)
 	else
 		npcParse->inactive = pcreset->next;
 	
-	pcreset->prev = nullptr;
-	pcreset->next = nullptr;
+	pcreset->prev = NULL;
+	pcreset->next = NULL;
 	
 	while (pcreset->head) {
 		struct pcrematch_entry* n = pcreset->head->next;
@@ -282,17 +282,17 @@ static struct pcrematch_entry* create_pcrematch_entry(struct pcrematch_set* set)
 	// items defined later. as a result, we have to do some work up front.
 	
 	/*  if we are the first pattern, stick us at the end */
-	if (last == nullptr) {
+	if (last == NULL) {
 		set->head = e;
 		return e;
 	}
 	
 	/* Look for the last entry */
-	while (last->next != nullptr)
+	while (last->next != NULL)
 		last = last->next;
 	
 	last->next = e;
-	e->next = nullptr;
+	e->next = NULL;
 	
 	return e;
 }
@@ -300,16 +300,16 @@ static struct pcrematch_entry* create_pcrematch_entry(struct pcrematch_set* set)
 /**
  * define/compile a new pattern
  */
-void npc_chat_def_pattern(npc_data* nd, int64 setid, const char* pattern, const char* label)
+void npc_chat_def_pattern(struct npc_data* nd, int64 setid, const char* pattern, const char* label)
 {
 	const char *err;
-	int32 erroff;
+	int erroff;
 	
 	struct pcrematch_set * s = lookup_pcreset(nd, setid);
 	struct pcrematch_entry *e = create_pcrematch_entry(s);
 	e->pattern = aStrdup(pattern);
 	e->label = aStrdup(label);
-	e->pcre_ = pcre_compile(pattern, PCRE_CASELESS, &err, &erroff, nullptr);
+	e->pcre_ = pcre_compile(pattern, PCRE_CASELESS, &err, &erroff, NULL);
 	e->pcre_extra_ = pcre_study(e->pcre_, 0, &err);
 }
 
@@ -319,10 +319,10 @@ void npc_chat_def_pattern(npc_data* nd, int64 setid, const char* pattern, const 
  *
  * this could be more efficent but.. how often do you do this?
  */
-void npc_chat_finalize(npc_data* nd)
+void npc_chat_finalize(struct npc_data* nd)
 {
 	struct npc_parse *npcParse = (struct npc_parse *) nd->chatdb;
-	if (npcParse == nullptr)
+	if (npcParse == NULL)
 		return;
 	
 	while(npcParse->active)
@@ -338,35 +338,35 @@ void npc_chat_finalize(npc_data* nd)
 /**
  * Handler called whenever a global message is spoken in a NPC's area
  */
-int32 npc_chat_sub(block_list* bl, va_list ap)
+int npc_chat_sub(struct block_list* bl, va_list ap)
 {
-	npc_data* nd = (npc_data *) bl;
+	struct npc_data* nd = (struct npc_data *) bl;
 	struct npc_parse* npcParse = (struct npc_parse *) nd->chatdb;
 	char* msg;
-	int32 len, i;
-	map_session_data* sd;
+	int len, i;
+	struct map_session_data* sd;
 	struct npc_label_list* lst;
 	struct pcrematch_set* pcreset;
 	struct pcrematch_entry* e;
 	
 	// Not interested in anything you might have to say...
-	if (npcParse == nullptr || npcParse->active == nullptr)
+	if (npcParse == NULL || npcParse->active == NULL)
 		return 0;
 	
 	msg = va_arg(ap,char*);
-	len = va_arg(ap,int32);
-	sd = va_arg(ap,map_session_data *);
+	len = va_arg(ap,int);
+	sd = va_arg(ap,struct map_session_data *);
 	
 	// iterate across all active sets
-	for (pcreset = npcParse->active; pcreset != nullptr; pcreset = pcreset->next)
+	for (pcreset = npcParse->active; pcreset != NULL; pcreset = pcreset->next)
 	{
 		// interate across all patterns in that set
-		for (e = pcreset->head; e != nullptr; e = e->next)
+		for (e = pcreset->head; e != NULL; e = e->next)
 		{
-			int32 offsets[2*10 + 10]; // 1/3 reserved for temp space requred by pcre_exec
+			int offsets[2*10 + 10]; // 1/3 reserved for temp space requred by pcre_exec
 			
 			// perform pattern match
-			int32 r = pcre_exec(e->pcre_, e->pcre_extra_, msg, len, 0, 0, offsets, ARRAYLENGTH(offsets));
+			int r = pcre_exec(e->pcre_, e->pcre_extra_, msg, len, 0, 0, offsets, ARRAYLENGTH(offsets));
 			if (r > 0)
 			{
 				// save out the matched strings
@@ -387,7 +387,7 @@ int32 npc_chat_sub(block_list* bl, va_list ap)
 				}
 				
 				// run the npc script
-				run_script(nd->u.scr.script,lst[i].pos,sd->id,nd->id);
+				run_script(nd->u.scr.script,lst[i].pos,sd->bl.id,nd->bl.id);
 				return 0;
 			}
 		}
@@ -398,42 +398,42 @@ int32 npc_chat_sub(block_list* bl, va_list ap)
 
 // Various script builtins used to support these functions
 
-int32 buildin_defpattern(struct script_state* st)
+int buildin_defpattern(struct script_state* st)
 {
 	int64 setid = conv_num64(st,& (st->stack->stack_data[st->start+2]));
 	const char* pattern = conv_str(st,& (st->stack->stack_data[st->start+3]));
 	const char* label = conv_str(st,& (st->stack->stack_data[st->start+4]));
-	npc_data* nd = (npc_data *)map_id2bl(st->oid);
+	struct npc_data* nd = (struct npc_data *)map_id2bl(st->oid);
 	
 	npc_chat_def_pattern(nd, setid, pattern, label);
 	
 	return 0;
 }
 
-int32 buildin_activatepset(struct script_state* st)
+int buildin_activatepset(struct script_state* st)
 {
 	int64 setid = conv_num64(st,& (st->stack->stack_data[st->start+2]));
-	npc_data* nd = (npc_data *)map_id2bl(st->oid);
+	struct npc_data* nd = (struct npc_data *)map_id2bl(st->oid);
 	
 	activate_pcreset(nd, setid);
 	
 	return 0;
 }
 
-int32 buildin_deactivatepset(struct script_state* st)
+int buildin_deactivatepset(struct script_state* st)
 {
 	int64 setid = conv_num64(st,& (st->stack->stack_data[st->start+2]));
-	npc_data* nd = (npc_data *)map_id2bl(st->oid);
+	struct npc_data* nd = (struct npc_data *)map_id2bl(st->oid);
 	
 	deactivate_pcreset(nd, setid);
 	
 	return 0;
 }
 
-int32 buildin_deletepset(struct script_state* st)
+int buildin_deletepset(struct script_state* st)
 {
 	int64 setid = conv_num64(st,& (st->stack->stack_data[st->start+2]));
-	npc_data* nd = (npc_data *)map_id2bl(st->oid);
+	struct npc_data* nd = (struct npc_data *)map_id2bl(st->oid);
 	
 	delete_pcreset(nd, setid);
 	

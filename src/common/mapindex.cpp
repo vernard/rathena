@@ -3,7 +3,7 @@
 
 #include "mapindex.hpp"
 
-#include <cstdlib>
+#include <stdlib.h>
 
 #include "core.hpp"
 #include "mmo.hpp"
@@ -15,7 +15,7 @@ struct _indexes {
 	char name[MAP_NAME_LENGTH]; //Stores map name
 } indexes[MAX_MAPINDEX];
 
-int32 max_index = 0;
+int max_index = 0;
 
 #define mapindex_exists(id) (indexes[id].name[0] != '\0')
 
@@ -23,7 +23,7 @@ int32 max_index = 0;
 /// Result gets placed either into 'buf' or in a static local buffer.
 const char* mapindex_getmapname(const char* string, char* output) {
 	static char buf[MAP_NAME_LENGTH];
-	char* dest = (output != nullptr) ? output : buf;
+	char* dest = (output != NULL) ? output : buf;
 
 	size_t len = strnlen(string, MAP_NAME_LENGTH_EXT);
 	if (len == MAP_NAME_LENGTH_EXT) {
@@ -44,7 +44,7 @@ const char* mapindex_getmapname(const char* string, char* output) {
 /// Result gets placed either into 'buf' or in a static local buffer.
 const char* mapindex_getmapname_ext(const char* string, char* output) {
 	static char buf[MAP_NAME_LENGTH_EXT];
-	char* dest = (output != nullptr) ? output : buf;
+	char* dest = (output != NULL) ? output : buf;
 
 	size_t len;
 
@@ -71,7 +71,7 @@ const char* mapindex_getmapname_ext(const char* string, char* output) {
 
 /// Adds a map to the specified index
 /// Returns 1 if successful, 0 oherwise
-int32 mapindex_addmap(int32 index, const char* name) {
+int mapindex_addmap(int index, const char* name) {
 	char map_name[MAP_NAME_LENGTH];
 	if (index == -1){ //autogive index
 		ARR_FIND(1,max_index,index,(indexes[index].name[0] == '\0'));
@@ -107,8 +107,8 @@ int32 mapindex_addmap(int32 index, const char* name) {
 	return index;
 }
 
-uint16 mapindex_name2idx(const char* name, const char *func) {
-	int32 i;
+unsigned short mapindex_name2idx(const char* name, const char *func) {
+	int i;
 	char map_name[MAP_NAME_LENGTH];
 	mapindex_getmapname(name, map_name);
 
@@ -120,7 +120,7 @@ uint16 mapindex_name2idx(const char* name, const char *func) {
 	return 0;
 }
 
-const char* mapindex_idx2name(uint16 id, const char *func) {
+const char* mapindex_idx2name(unsigned short id, const char *func) {
 	if (id >= MAX_MAPINDEX || !mapindex_exists(id)) {
 		ShowDebug("(%s) mapindex_id2name: Requested name for non-existant map index [%d] in cache.\n", func, id);
 		return indexes[0].name; // dummy empty string so that the callee doesn't crash
@@ -131,8 +131,8 @@ const char* mapindex_idx2name(uint16 id, const char *func) {
 void mapindex_init(void) {
 	FILE *fp;
 	char line[1024];
-	int32 last_index = -1;
-	int32 index;
+	int last_index = -1;
+	int index;
 	char map_name[MAP_NAME_LENGTH];
 	char path[255];
 	const char* mapindex_cfgfile[] = {
@@ -146,7 +146,7 @@ void mapindex_init(void) {
 	for( size_t i = 0; i < ARRAYLENGTH(mapindex_cfgfile); i++ ){
 		sprintf( path, "%s/%s", db_path, mapindex_cfgfile[i] );
 
-		if( ( fp = fopen( path, "r" ) ) == nullptr ){
+		if( ( fp = fopen( path, "r" ) ) == NULL ){
 			// It is only fatal if it is the main file
 			if( i == 0 ){
 				ShowFatalError("Unable to read mapindex config file %s!\n", path );
@@ -164,7 +164,6 @@ void mapindex_init(void) {
 			switch (sscanf(line, "%11s\t%d", map_name, &index)) {
 				case 1: //Map with no ID given, auto-assign
 					index = last_index+1;
-					[[fallthrough]];
 				case 2: //Map with ID given
 					mapindex_addmap(index,map_name);
 					break;
@@ -182,13 +181,13 @@ void mapindex_init(void) {
  * @param mapname
  **/
 void mapindex_check_mapdefault(const char *mapname) {
-	mapname = mapindex_getmapname(mapname, nullptr);
+	mapname = mapindex_getmapname(mapname, NULL);
 	if( !strdb_iget(mapindex_db, mapname) ) {
 		ShowError("mapindex_init: Default map '%s' not found in cache! Please change in (by default in) char_athena.conf!\n", mapname);
 	}
 }
 
-int32 mapindex_removemap(int32 index){
+int mapindex_removemap(int index){
 	indexes[index].name[0] = '\0';
 	return 0;
 }

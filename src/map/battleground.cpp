@@ -4,15 +4,16 @@
 #include "battleground.hpp"
 
 #include <unordered_map>
+#include <yaml-cpp/yaml.h>
 
-#include <common/cbasetypes.hpp>
-#include <common/malloc.hpp>
-#include <common/nullpo.hpp>
-#include <common/random.hpp>
-#include <common/showmsg.hpp>
-#include <common/strlib.hpp>
-#include <common/timer.hpp>
-#include <common/utilities.hpp>
+#include "../common/cbasetypes.hpp"
+#include "../common/malloc.hpp"
+#include "../common/nullpo.hpp"
+#include "../common/random.hpp"
+#include "../common/showmsg.hpp"
+#include "../common/strlib.hpp"
+#include "../common/timer.hpp"
+#include "../common/utilities.hpp"
 
 #include "battle.hpp"
 #include "clif.hpp"
@@ -29,9 +30,9 @@
 using namespace rathena;
 
 BattlegroundDatabase battleground_db;
-std::unordered_map<int32, std::shared_ptr<s_battleground_data>> bg_team_db;
+std::unordered_map<int, std::shared_ptr<s_battleground_data>> bg_team_db;
 std::vector<std::shared_ptr<s_battleground_queue>> bg_queues;
-int32 bg_queue_count = 1;
+int bg_queue_count = 1;
 
 const std::string BattlegroundDatabase::getDefaultLocation() {
 	return std::string(db_path) + "/battleground_db.yml";
@@ -42,7 +43,7 @@ const std::string BattlegroundDatabase::getDefaultLocation() {
  * @param node: The YAML node containing the entry
  * @return count of successfully parsed rows
  */
-uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
+uint64 BattlegroundDatabase::parseBodyNode(const YAML::Node &node) {
 	uint32 id;
 
 	if (!this->asUInt32(node, "Id", id))
@@ -70,7 +71,7 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 	}
 
 	if (this->nodeExists(node, "MinPlayers")) {
-		int32 min;
+		int min;
 
 		if (!this->asInt32(node, "MinPlayers", min))
 			return 0;
@@ -92,7 +93,7 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 	}
 
 	if (this->nodeExists(node, "MaxPlayers")) {
-		int32 max;
+		int max;
 
 		if (!this->asInt32(node, "MaxPlayers", max))
 			return 0;
@@ -114,7 +115,7 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 	}
 
 	if (this->nodeExists(node, "MinLevel")) {
-		int32 min;
+		int min;
 
 		if (!this->asInt32(node, "MinLevel", min))
 			return 0;
@@ -131,7 +132,7 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 	}
 
 	if (this->nodeExists(node, "MaxLevel")) {
-		int32 max;
+		int max;
 
 		if (!this->asInt32(node, "MaxLevel", max))
 			return 0;
@@ -172,7 +173,7 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 	}
 
 	if (this->nodeExists(node, "Join")) {
-		const auto& joinNode = node["Join"];
+		const YAML::Node &joinNode = node["Join"];
 
 		if (this->nodeExists(joinNode, "Solo")) {
 			bool active;
@@ -218,12 +219,10 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 	}
 
 	if (this->nodeExists(node, "JobRestrictions")) {
-		const auto& jobsNode = node["JobRestrictions"];
+		const YAML::Node &jobsNode = node["JobRestrictions"];
 
-		for (const auto& jobit : jobsNode) {
-			std::string job_name;
-			c4::from_chars(jobit.key(), &job_name);
-			std::string job_name_constant = "JOB_" + job_name;
+		for (const auto &jobit : jobsNode) {
+			std::string job_name = jobit.first.as<std::string>(), job_name_constant = "JOB_" + job_name;
 			int64 constant;
 
 			if (!script_get_constant(job_name_constant.c_str(), &constant)) {
@@ -244,9 +243,10 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 	}
 
 	if (this->nodeExists(node, "Locations")) {
-		int32 count = 0;
+		int count = 0;
 
-		for (const auto& location : node["Locations"]) {
+		for (const auto &locationit : node["Locations"]) {
+			const YAML::Node &location = locationit;
 			s_battleground_map map_entry;
 
 			if (this->nodeExists(location, "Map")) {
@@ -259,11 +259,6 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 
 				if (map_entry.mapindex == 0) {
 					this->invalidWarning(location["Map"], "Invalid battleground map name %s, skipping.\n", map_name.c_str());
-					return 0;
-				}
-
-				if( map_mapindex2mapid( map_entry.mapindex ) < 0 ){
-					// Ignore silently, the map is on another mapserver
 					return 0;
 				}
 			}
@@ -287,8 +282,7 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 			std::vector<std::string> team_list = { "TeamA", "TeamB" };
 
 			for (const auto &it : team_list) {
-				c4::csubstr team_name = c4::to_csubstr(it);
-				const ryml::NodeRef& team = location;
+				const YAML::Node &team = location;
 
 				if (this->nodeExists(team, it)) {
 					s_battleground_team *team_ptr;
@@ -298,54 +292,22 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 					else if (it.find("TeamB") != std::string::npos)
 						team_ptr = &map_entry.team2;
 					else {
-						this->invalidWarning(team[team_name], "An invalid Team is defined.\n");
+						this->invalidWarning(team[it], "An invalid Team is defined.\n");
 						return 0;
 					}
 
-					if (this->nodeExists(team[team_name], "RespawnX")) {
-						uint16 warp_x;
-
-						if (!this->asUInt16(team[team_name], "RespawnX", warp_x))
+					if (this->nodeExists(team[it], "RespawnX")) {
+						if (!this->asInt16(team[it], "RespawnX", team_ptr->warp_x))
 							return 0;
-
-						if (warp_x == 0) {
-							this->invalidWarning(node["RespawnX"], "RespawnX has to be greater than zero.\n");
-							return 0;
-						}
-
-						map_data *md = map_getmapdata(map_mapindex2mapid(map_entry.mapindex));
-
-						if (warp_x >= md->xs) {
-							this->invalidWarning(node["RespawnX"], "RespawnX has to be smaller than %hu.\n", md->xs);
-							return 0;
-						}
-
-						team_ptr->warp_x = warp_x;
 					}
 
-					if (this->nodeExists(team[team_name], "RespawnY")) {
-						uint16 warp_y;
-
-						if (!this->asUInt16(team[team_name], "RespawnY", warp_y))
+					if (this->nodeExists(team[it], "RespawnY")) {
+						if (!this->asInt16(team[it], "RespawnY", team_ptr->warp_y))
 							return 0;
-
-						if (warp_y == 0) {
-							this->invalidWarning(node["RespawnY"], "RespawnY has to be greater than zero.\n");
-							return 0;
-						}
-
-						map_data *md = map_getmapdata(map_mapindex2mapid(map_entry.mapindex));
-
-						if (warp_y >= md->ys) {
-							this->invalidWarning(node["RespawnY"], "RespawnY has to be smaller than %hu.\n", md->ys);
-							return 0;
-						}
-
-						team_ptr->warp_y = warp_y;
 					}
 
-					if (this->nodeExists(team[team_name], "DeathEvent")) {
-						if (!this->asString(team[team_name], "DeathEvent", team_ptr->death_event))
+					if (this->nodeExists(team[it], "DeathEvent")) {
+						if (!this->asString(team[it], "DeathEvent", team_ptr->death_event))
 							return 0;
 
 						team_ptr->death_event.resize(EVENT_NAME_LENGTH);
@@ -356,8 +318,8 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 						}
 					}
 
-					if (this->nodeExists(team[team_name], "QuitEvent")) {
-						if (!this->asString(team[team_name], "QuitEvent", team_ptr->quit_event))
+					if (this->nodeExists(team[it], "QuitEvent")) {
+						if (!this->asString(team[it], "QuitEvent", team_ptr->quit_event))
 							return 0;
 
 						team_ptr->quit_event.resize(EVENT_NAME_LENGTH);
@@ -368,8 +330,8 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 						}
 					}
 
-					if (this->nodeExists(team[team_name], "ActiveEvent")) {
-						if (!this->asString(team[team_name], "ActiveEvent", team_ptr->active_event))
+					if (this->nodeExists(team[it], "ActiveEvent")) {
+						if (!this->asString(team[it], "ActiveEvent", team_ptr->active_event))
 							return 0;
 
 						team_ptr->active_event.resize(EVENT_NAME_LENGTH);
@@ -380,8 +342,8 @@ uint64 BattlegroundDatabase::parseBodyNode(const ryml::NodeRef& node) {
 						}
 					}
 
-					if (this->nodeExists(team[team_name], "Variable")) {
-						if (!this->asString(team[team_name], "Variable", team_ptr->bg_id_var))
+					if (this->nodeExists(team[it], "Variable")) {
+						if (!this->asString(team[it], "Variable", team_ptr->bg_id_var))
 							return 0;
 
 						team_ptr->bg_id_var.resize(NAME_LENGTH);
@@ -424,7 +386,7 @@ std::shared_ptr<s_battleground_type> bg_search_name(const char *name)
  * @param queue_id: Queue ID
  * @return s_battleground_queue on success or nullptr on failure
  */
-std::shared_ptr<s_battleground_queue> bg_search_queue(int32 queue_id)
+std::shared_ptr<s_battleground_queue> bg_search_queue(int queue_id)
 {
 	for (const auto &queue : bg_queues) {
 		if (queue_id == queue->queue_id)
@@ -439,7 +401,7 @@ std::shared_ptr<s_battleground_queue> bg_search_queue(int32 queue_id)
  * @param bg: Battleground data
  * @return map_session_data
  */
-map_session_data* bg_getavailablesd(s_battleground_data *bg)
+struct map_session_data* bg_getavailablesd(s_battleground_data *bg)
 {
 	nullpo_retr(nullptr, bg);
 
@@ -456,7 +418,7 @@ map_session_data* bg_getavailablesd(s_battleground_data *bg)
  * @param bg_id: Battleground ID
  * @return True on success or false otherwise
  */
-bool bg_team_delete(int32 bg_id)
+bool bg_team_delete(int bg_id)
 {
 	std::shared_ptr<s_battleground_data> bgteam = util::umap_find(bg_team_db, bg_id);
 
@@ -482,7 +444,7 @@ bool bg_team_delete(int32 bg_id)
  * @param y: Y coordinate
  * @return True on success or false otherwise
  */
-bool bg_team_warp(int32 bg_id, uint16 mapindex, int16 x, int16 y)
+bool bg_team_warp(int bg_id, unsigned short mapindex, short x, short y)
 {
 	std::shared_ptr<s_battleground_data> bgteam = util::umap_find(bg_team_db, bg_id);
 
@@ -500,7 +462,7 @@ bool bg_team_warp(int32 bg_id, uint16 mapindex, int16 x, int16 y)
  * Remove a player's Battleground map marker
  * @param sd: Player data
  */
-void bg_send_dot_remove(map_session_data *sd)
+void bg_send_dot_remove(struct map_session_data *sd)
 {
 	nullpo_retv(sd);
 
@@ -516,7 +478,7 @@ void bg_send_dot_remove(map_session_data *sd)
  * @param is_queue: Joined from queue
  * @return True on success or false otherwise
  */
-bool bg_team_join(int32 bg_id, map_session_data *sd, bool is_queue)
+bool bg_team_join(int bg_id, struct map_session_data *sd, bool is_queue)
 {
 	if (!sd || sd->bg_id)
 		return false;
@@ -531,12 +493,12 @@ bool bg_team_join(int32 bg_id, map_session_data *sd, bool is_queue)
 
 		sd->bg_id = bg_id;
 		member.sd = sd;
-		member.x = sd->x;
-		member.y = sd->y;
+		member.x = sd->bl.x;
+		member.y = sd->bl.y;
 		if (is_queue) { // Save the location from where the person entered the battleground
 			member.entry_point.map = sd->mapindex;
-			member.entry_point.x = sd->x;
-			member.entry_point.y = sd->y;
+			member.entry_point.x = sd->bl.x;
+			member.entry_point.y = sd->bl.y;
 		}
 		bgteam->members.push_back(member);
 
@@ -544,7 +506,7 @@ bool bg_team_join(int32 bg_id, map_session_data *sd, bool is_queue)
 
 		for (const auto &pl_sd : bgteam->members) {
 			if (pl_sd.sd != sd)
-				clif_hpmeter_single( *sd, pl_sd.sd->id, pl_sd.sd->battle_status.hp, pl_sd.sd->battle_status.max_hp );
+				clif_hpmeter_single(sd->fd, pl_sd.sd->bl.id, pl_sd.sd->battle_status.hp, pl_sd.sd->battle_status.max_hp);
 		}
 
 		clif_bg_hp(sd);
@@ -562,14 +524,14 @@ bool bg_team_join(int32 bg_id, map_session_data *sd, bool is_queue)
  * @param deserter: Whether to apply the deserter status or not
  * @return Remaining count in Battleground team or -1 on failure
  */
-int32 bg_team_leave(map_session_data *sd, bool quit, bool deserter)
+int bg_team_leave(struct map_session_data *sd, bool quit, bool deserter)
 {
 	if (!sd || !sd->bg_id)
 		return -1;
 
 	bg_send_dot_remove(sd);
 
-	int32 bg_id = sd->bg_id;
+	int bg_id = sd->bg_id;
 	std::shared_ptr<s_battleground_data> bgteam = util::umap_find(bg_team_db, bg_id);
 
 	sd->bg_id = 0;
@@ -584,7 +546,7 @@ int32 bg_team_leave(map_session_data *sd, bool quit, bool deserter)
 					if (member->entry_point.map != 0 && !map_getmapflag(map_mapindex2mapid(member->entry_point.map), MF_NOSAVE))
 						pc_setpos(sd, member->entry_point.map, member->entry_point.x, member->entry_point.y, CLR_TELEPORT);
 					else
-						pc_setpos( sd, mapindex_name2id( sd->status.save_point.map ), sd->status.save_point.x, sd->status.save_point.y, CLR_TELEPORT ); // Warp to save point if the entry map has no save flag.
+						pc_setpos(sd, sd->status.save_point.map, sd->status.save_point.x, sd->status.save_point.y, CLR_TELEPORT); // Warp to save point if the entry map has no save flag.
 
 					bgteam->members.erase(member);
 					break;
@@ -609,10 +571,10 @@ int32 bg_team_leave(map_session_data *sd, bool quit, bool deserter)
 			std::shared_ptr<s_battleground_type> bg = battleground_db.find(bg_id);
 
 			if (bg)
-				sc_start(nullptr, sd, SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT, 100, 1, static_cast<t_tick>(bg->deserter_time) * 1000); // Deserter timer
+				sc_start(nullptr, &sd->bl, SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT, 100, 1, static_cast<t_tick>(bg->deserter_time) * 1000); // Deserter timer
 		}
 
-		return static_cast<int32>( bgteam->members.size() );
+		return bgteam->members.size();
 	}
 
 	return -1;
@@ -623,7 +585,7 @@ int32 bg_team_leave(map_session_data *sd, bool quit, bool deserter)
  * @param sd: Player data
  * @return True on success or false otherwise
  */
-bool bg_member_respawn(map_session_data *sd)
+bool bg_member_respawn(struct map_session_data *sd)
 {
 	if (!sd || !sd->bg_id || !pc_isdead(sd))
 		return false;
@@ -635,7 +597,7 @@ bool bg_member_respawn(map_session_data *sd)
 			return false; // Respawn not handled by Core
 
 		pc_setpos(sd, bgteam->cemetery.map, bgteam->cemetery.x, bgteam->cemetery.y, CLR_OUTSIGHT);
-		status_revive(sd, 1, 100);
+		status_revive(&sd->bl, 1, 100);
 
 		return true; // Warped
 	}
@@ -652,9 +614,9 @@ bool bg_member_respawn(map_session_data *sd)
  * @param dev: Death NPC Event
  * @return Battleground ID
  */
-int32 bg_create(uint16 mapindex, s_battleground_team* team)
+int bg_create(uint16 mapindex, s_battleground_team* team)
 {
-	int32 bg_team_counter = 1;
+	int bg_team_counter = 1;
 
 	while (bg_team_db.find(bg_team_counter) != bg_team_db.end())
 		bg_team_counter++;
@@ -679,7 +641,7 @@ int32 bg_create(uint16 mapindex, s_battleground_team* team)
  * @param bl: Object
  * @return Battleground ID
  */
-int32 bg_team_get_id(block_list *bl)
+int bg_team_get_id(struct block_list *bl)
 {
 	nullpo_ret(bl);
 
@@ -691,8 +653,8 @@ int32 bg_team_get_id(block_list *bl)
 				return ((TBL_PET*)bl)->master->bg_id;
 			break;
 		case BL_MOB: {
-			map_session_data *msd;
-			mob_data *md = (TBL_MOB*)bl;
+			struct map_session_data *msd;
+			struct mob_data *md = (TBL_MOB*)bl;
 
 			if( md->special_state.ai && (msd = map_id2sd(md->master_id)) != nullptr )
 				return msd->bg_id;
@@ -720,7 +682,7 @@ int32 bg_team_get_id(block_list *bl)
  * @param mes: Message
  * @param len: Message length
  */
-void bg_send_message(map_session_data *sd, const char *mes, size_t len)
+void bg_send_message(struct map_session_data *sd, const char *mes, int len)
 {
 	nullpo_retv(sd);
 
@@ -730,7 +692,7 @@ void bg_send_message(map_session_data *sd, const char *mes, size_t len)
 	std::shared_ptr<s_battleground_data> bgteam = util::umap_find(bg_team_db, sd->bg_id);
 
 	if (bgteam)
-		clif_bg_message(bgteam.get(), sd->id, sd->status.name, mes, len);
+		clif_bg_message(bgteam.get(), sd->bl.id, sd->status.name, mes, len);
 
 	return;
 }
@@ -739,16 +701,16 @@ void bg_send_message(map_session_data *sd, const char *mes, size_t len)
  * Update a player's Battleground minimap icon
  * @see DBApply
  */
-int32 bg_send_xy_timer_sub(std::shared_ptr<s_battleground_data> bg)
+int bg_send_xy_timer_sub(std::shared_ptr<s_battleground_data> bg)
 {
-	map_session_data *sd;
+	struct map_session_data *sd;
 
 	for (auto &pl_sd : bg->members) {
 		sd = pl_sd.sd;
 
-		if (sd->x != pl_sd.x || sd->y != pl_sd.y) { // xy update
-			pl_sd.x = sd->x;
-			pl_sd.y = sd->y;
+		if (sd->bl.x != pl_sd.x || sd->bl.y != pl_sd.y) { // xy update
+			pl_sd.x = sd->bl.x;
+			pl_sd.y = sd->bl.y;
 			clif_bg_xy(sd);
 		}
 	}
@@ -780,7 +742,7 @@ TIMER_FUNC(bg_send_xy_timer)
  */
 static TIMER_FUNC(bg_on_ready_loopback)
 {
-	int32 queue_id = (int32)data;
+	int queue_id = (int)data;
 	std::shared_ptr<s_battleground_queue> queue = bg_search_queue(queue_id);
 
 	if (queue == nullptr) {
@@ -808,7 +770,7 @@ static TIMER_FUNC(bg_on_ready_loopback)
  */
 static TIMER_FUNC(bg_on_ready_expire)
 {
-	int32 queue_id = (int32)data;
+	int queue_id = (int)data;
 	std::shared_ptr<s_battleground_queue> queue = bg_search_queue(queue_id);
 
 	if (queue == nullptr) {
@@ -841,7 +803,7 @@ static TIMER_FUNC(bg_on_ready_expire)
  */
 static TIMER_FUNC(bg_on_ready_start)
 {
-	int32 queue_id = (int32)data;
+	int queue_id = (int)data;
 	std::shared_ptr<s_battleground_queue> queue = bg_search_queue(queue_id);
 
 	if (queue == nullptr) {
@@ -860,7 +822,7 @@ static TIMER_FUNC(bg_on_ready_start)
  * @param sd: Player data
  * @return True if in a battleground or false otherwise
  */
-bool bg_player_is_in_bg_map(map_session_data *sd)
+bool bg_player_is_in_bg_map(struct map_session_data *sd)
 {
 	nullpo_retr(false, sd);
 
@@ -880,27 +842,27 @@ bool bg_player_is_in_bg_map(map_session_data *sd)
  * @param name: Battleground name
  * @return True if the player is good to join a queue or false otherwise
  */
-static bool bg_queue_check_status(map_session_data* sd, const char *name)
+static bool bg_queue_check_status(struct map_session_data* sd, const char *name)
 {
 	nullpo_retr(false, sd);
 
-	if (!sd->sc.empty()) {
-		if (sd->sc.getSCE(SC_ENTRY_QUEUE_APPLY_DELAY)) { // Exclude any player who's recently left a battleground queue
+	if (sd->sc.count) {
+		if (sd->sc.data[SC_ENTRY_QUEUE_APPLY_DELAY]) { // Exclude any player who's recently left a battleground queue
 			char buf[CHAT_SIZE_MAX];
 
-			sprintf(buf, msg_txt(sd, 339), static_cast<int32>((get_timer(sd->sc.getSCE(SC_ENTRY_QUEUE_APPLY_DELAY)->timer)->tick - gettick()) / 1000)); // You can't apply to a battleground queue for %d seconds due to recently leaving one.
+			sprintf(buf, msg_txt(sd, 339), static_cast<int32>((get_timer(sd->sc.data[SC_ENTRY_QUEUE_APPLY_DELAY]->timer)->tick - gettick()) / 1000)); // You can't apply to a battleground queue for %d seconds due to recently leaving one.
 			clif_bg_queue_apply_result(BG_APPLY_NONE, name, sd);
-			clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], buf, false, SELF);
+			clif_messagecolor(&sd->bl, color_table[COLOR_LIGHT_GREEN], buf, false, SELF);
 			return false;
 		}
 
-		if (sd->sc.getSCE(SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT)) { // Exclude any player who's recently deserted a battleground
+		if (sd->sc.data[SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT]) { // Exclude any player who's recently deserted a battleground
 			char buf[CHAT_SIZE_MAX];
-			int32 status_tick = static_cast<int32>(DIFF_TICK(get_timer(sd->sc.getSCE(SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT)->timer)->tick, gettick()) / 1000);
+			int32 status_tick = static_cast<int32>(DIFF_TICK(get_timer(sd->sc.data[SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT]->timer)->tick, gettick()) / 1000);
 
 			sprintf(buf, msg_txt(sd, 338), status_tick / 60, status_tick % 60); // You can't apply to a battleground queue due to recently deserting a battleground. Time remaining: %d minutes and %d seconds.
 			clif_bg_queue_apply_result(BG_APPLY_NONE, name, sd);
-			clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], buf, false, SELF);
+			clif_messagecolor(&sd->bl, color_table[COLOR_LIGHT_GREEN], buf, false, SELF);
 			return false;
 		}
 	}
@@ -915,7 +877,7 @@ static bool bg_queue_check_status(map_session_data* sd, const char *name)
  * @param name: Battleground name
  * @return True on success or false otherwise
  */
-bool bg_queue_check_joinable(std::shared_ptr<s_battleground_type> bg, map_session_data *sd, const char *name)
+bool bg_queue_check_joinable(std::shared_ptr<s_battleground_type> bg, struct map_session_data *sd, const char *name)
 {
 	nullpo_retr(false, sd);
 
@@ -941,13 +903,13 @@ bool bg_queue_check_joinable(std::shared_ptr<s_battleground_type> bg, map_sessio
 
 	if (bg_player_is_in_bg_map(sd)) { // Is the player currently in a battleground map? Reject them.
 		clif_bg_queue_apply_result(BG_APPLY_NONE, name, sd);
-		clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
+		clif_messagecolor(&sd->bl, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
 		return false;
 	}
 
-	if (battle_config.bgqueue_nowarp_mapflag > 0 && map_getmapflag(sd->m, MF_NOWARP)) { // Check player's current position for mapflag check
+	if (battle_config.bgqueue_nowarp_mapflag > 0 && map_getmapflag(sd->bl.m, MF_NOWARP)) { // Check player's current position for mapflag check
 		clif_bg_queue_apply_result(BG_APPLY_NONE, name, sd);
-		clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
+		clif_messagecolor(&sd->bl, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
 		return false;
 	}
 
@@ -990,7 +952,7 @@ bool bg_queue_reservation(const char *name, bool state, bool ended)
  * @param name: Battleground name
  * @param sd: Player who requested to join the battlegrounds
  */
-void bg_queue_join_solo(const char *name, map_session_data *sd)
+void bg_queue_join_solo(const char *name, struct map_session_data *sd)
 {
 	if (!sd) {
 		ShowError("bg_queue_join_solo: Tried to join non-existent player\n.");
@@ -1017,7 +979,7 @@ void bg_queue_join_solo(const char *name, map_session_data *sd)
  * @param name: Battleground name
  * @param sd: Player who requested to join the battlegrounds
  */
-void bg_queue_join_party(const char *name, map_session_data *sd)
+void bg_queue_join_party(const char *name, struct map_session_data *sd)
 {
 	if (!sd) {
 		ShowError("bg_queue_join_party: Tried to join non-existent player\n.");
@@ -1046,7 +1008,7 @@ void bg_queue_join_party(const char *name, map_session_data *sd)
 			return;
 		}
 
-		int32 p_online = 0;
+		int p_online = 0;
 
 		for (const auto &it : p->party.member) {
 			if (it.online)
@@ -1058,14 +1020,14 @@ void bg_queue_join_party(const char *name, map_session_data *sd)
 			return; // Too many party members online
 		}
 
-		std::vector<map_session_data *> list;
+		std::vector<struct map_session_data *> list;
 
 		for (const auto &it : p->party.member) {
 			if (list.size() == bg->max_players)
 				break;
 
 			if (it.online) {
-				map_session_data *pl_sd = map_charid2sd(it.char_id);
+				struct map_session_data *pl_sd = map_charid2sd(it.char_id);
 
 				if (pl_sd)
 					list.push_back(pl_sd);
@@ -1085,7 +1047,7 @@ void bg_queue_join_party(const char *name, map_session_data *sd)
  * @param name: Battleground name
  * @param sd: Player who requested to join the battlegrounds
  */
-void bg_queue_join_guild(const char *name, map_session_data *sd)
+void bg_queue_join_guild(const char *name, struct map_session_data *sd)
 {
 	if (!sd) {
 		ShowError("bg_queue_join_guild: Tried to join non-existent player\n.");
@@ -1097,7 +1059,7 @@ void bg_queue_join_guild(const char *name, map_session_data *sd)
 		return; // Someone has bypassed the client check for being in a guild
 	}
 	
-	if (strcmp(sd->status.name, sd->guild->guild.master) != 0) {
+	if (strcmp(sd->status.name, sd->guild->master) != 0) {
 		clif_bg_queue_apply_result(BG_APPLY_PARTYGUILD_LEADER, name, sd);
 		return; // Not the guild leader
 	}
@@ -1110,21 +1072,21 @@ void bg_queue_join_guild(const char *name, map_session_data *sd)
 			return;
 		}
 
-		auto &g = sd->guild;
+		struct guild* g = sd->guild;
 
-		if (g->guild.connect_member > bg->max_players) {
+		if (g->connect_member > bg->max_players) {
 			clif_bg_queue_apply_result(BG_APPLY_PLAYER_COUNT, name, sd);
 			return; // Too many guild members online
 		}
 
-		std::vector<map_session_data *> list;
+		std::vector<struct map_session_data *> list;
 
-		for (const auto &it : g->guild.member) {
+		for (const auto &it : g->member) {
 			if (list.size() == bg->max_players)
 				break;
 
 			if (it.online) {
-				map_session_data *pl_sd = map_charid2sd(it.char_id);
+				struct map_session_data *pl_sd = map_charid2sd(it.char_id);
 
 				if (pl_sd)
 					list.push_back(pl_sd);
@@ -1145,7 +1107,7 @@ void bg_queue_join_guild(const char *name, map_session_data *sd)
  * @param sd: Player who requested to join the battlegrounds
  * @param list: Contains all players including the player who requested to join
  */
-void bg_queue_join_multi(const char *name, map_session_data *sd, std::vector <map_session_data *> list)
+void bg_queue_join_multi(const char *name, struct map_session_data *sd, std::vector <map_session_data *> list)
 {
 	if (!sd) {
 		ShowError("bg_queue_join_multi: Tried to join non-existent player\n.");
@@ -1172,7 +1134,7 @@ void bg_queue_join_multi(const char *name, map_session_data *sd, std::vector <ma
 			break;
 		}
 
-		bool r = rnd_chance(50, 100);
+		bool r = rnd() % 2 != 0;
 		std::vector<map_session_data *> *team = r ? &queue->teamb_members : &queue->teama_members;
 
 		if (queue->state == QUEUE_STATE_ACTIVE) {
@@ -1188,7 +1150,7 @@ void bg_queue_join_multi(const char *name, map_session_data *sd, std::vector <ma
 		}
 
 		while (!list.empty() && team->size() < bg->max_players) {
-			map_session_data *sd2 = list.back();
+			struct map_session_data *sd2 = list.back();
 
 			list.pop_back();
 
@@ -1275,7 +1237,7 @@ void bg_queue_clear(std::shared_ptr<s_battleground_queue> queue, bool ended)
  * @param apply_sc: Apply the SC_ENTRY_QUEUE_APPLY_DELAY status on queue leave (default: true)
  * @return True on success or false otherwise
  */
-static bool bg_queue_leave_sub(map_session_data *sd, std::vector<map_session_data *> &members, bool apply_sc)
+static bool bg_queue_leave_sub(struct map_session_data *sd, std::vector<map_session_data *> &members, bool apply_sc)
 {
 	if (!sd)
 		return false;
@@ -1287,7 +1249,7 @@ static bool bg_queue_leave_sub(map_session_data *sd, std::vector<map_session_dat
 			members.erase(list_it);
 
 			if (apply_sc)
-				sc_start(nullptr, sd, SC_ENTRY_QUEUE_APPLY_DELAY, 100, 1, 60000);
+				sc_start(nullptr, &sd->bl, SC_ENTRY_QUEUE_APPLY_DELAY, 100, 1, 60000);
 			sd->bg_queue_id = 0;
 			pc_delete_bg_queue_timer(sd);
 			return true;
@@ -1305,7 +1267,7 @@ static bool bg_queue_leave_sub(map_session_data *sd, std::vector<map_session_dat
  * @param apply_sc: Apply the SC_ENTRY_QUEUE_APPLY_DELAY status on queue leave (default: true)
  * @return True on success or false otherwise
  */
-bool bg_queue_leave(map_session_data *sd, bool apply_sc)
+bool bg_queue_leave(struct map_session_data *sd, bool apply_sc)
 {
 	if (!sd || sd->bg_queue_id == 0)
 		return false;
@@ -1386,8 +1348,8 @@ void bg_join_active(map_session_data *sd, std::shared_ptr<s_battleground_queue> 
 		return;
 
 	// Check player's current position for mapflag check
-	if (battle_config.bgqueue_nowarp_mapflag > 0 && map_getmapflag(sd->m, MF_NOWARP)) {
-		clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
+	if (battle_config.bgqueue_nowarp_mapflag > 0 && map_getmapflag(sd->bl.m, MF_NOWARP)) {
+		clif_messagecolor(&sd->bl, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
 		bg_queue_leave(sd);
 		clif_bg_queue_entry_init(sd);
 		return;
@@ -1395,7 +1357,7 @@ void bg_join_active(map_session_data *sd, std::shared_ptr<s_battleground_queue> 
 
 	pc_delete_bg_queue_timer(sd); // Cancel timer so player doesn't leave the queue.
 
-	int32 bg_id_team_1 = static_cast<int32>(mapreg_readreg(add_str(queue->map->team1.bg_id_var.c_str())));
+	int bg_id_team_1 = static_cast<int>(mapreg_readreg(add_str(queue->map->team1.bg_id_var.c_str())));
 	std::shared_ptr<s_battleground_data> bgteam_1 = util::umap_find(bg_team_db, bg_id_team_1);
 
 	for (auto &pl_sd : queue->teama_members) {
@@ -1415,7 +1377,7 @@ void bg_join_active(map_session_data *sd, std::shared_ptr<s_battleground_queue> 
 		return;
 	}
 
-	int32 bg_id_team_2 = static_cast<int32>(mapreg_readreg(add_str(queue->map->team2.bg_id_var.c_str())));
+	int bg_id_team_2 = static_cast<int>(mapreg_readreg(add_str(queue->map->team2.bg_id_var.c_str())));
 	std::shared_ptr<s_battleground_data> bgteam_2 = util::umap_find(bg_team_db, bg_id_team_2);
 
 	for (auto &pl_sd : queue->teamb_members) {
@@ -1450,8 +1412,8 @@ bool bg_mapflag_check(std::shared_ptr<s_battleground_queue> queue) {
 	bool found = false;
 
 	for (const auto &sd : queue->teama_members) {
-		if (map_getmapflag(sd->m, MF_NOWARP)) {
-			clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
+		if (map_getmapflag(sd->bl.m, MF_NOWARP)) {
+			clif_messagecolor(&sd->bl, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
 			bg_queue_leave(sd);
 			clif_bg_queue_entry_init(sd);
 			found = true;
@@ -1459,8 +1421,8 @@ bool bg_mapflag_check(std::shared_ptr<s_battleground_queue> queue) {
 	}
 
 	for (const auto &sd : queue->teamb_members) {
-		if (map_getmapflag(sd->m, MF_NOWARP)) {
-			clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
+		if (map_getmapflag(sd->bl.m, MF_NOWARP)) {
+			clif_messagecolor(&sd->bl, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.
 			bg_queue_leave(sd);
 			clif_bg_queue_entry_init(sd);
 			found = true;
@@ -1479,10 +1441,10 @@ bool bg_mapflag_check(std::shared_ptr<s_battleground_queue> queue) {
 
 		// Announce failure to remaining players
 		for (const auto &sd : queue->teama_members)
-			clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 340), false, SELF); // Participants were unable to join. Delaying entry for more participants.
+			clif_messagecolor(&sd->bl, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 340), false, SELF); // Participants were unable to join. Delaying entry for more participants.
 
 		for (const auto &sd : queue->teamb_members)
-			clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 340), false, SELF); // Participants were unable to join. Delaying entry for more participants.
+			clif_messagecolor(&sd->bl, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 340), false, SELF); // Participants were unable to join. Delaying entry for more participants.
 	}
 
 	return found;
@@ -1493,7 +1455,7 @@ bool bg_mapflag_check(std::shared_ptr<s_battleground_queue> queue) {
  * @param queue: Battleground queue
  * @param sd: Player data
  */
-void bg_queue_on_accept_invite(map_session_data *sd)
+void bg_queue_on_accept_invite(struct map_session_data *sd)
 {
 	nullpo_retv(sd);
 
@@ -1547,8 +1509,8 @@ void bg_queue_start_battleground(std::shared_ptr<s_battleground_queue> queue)
 		return;
 
 	uint16 map_idx = queue->map->mapindex;
-	int32 bg_team_1 = bg_create(map_idx, &queue->map->team1);
-	int32 bg_team_2 = bg_create(map_idx, &queue->map->team2);
+	int bg_team_1 = bg_create(map_idx, &queue->map->team1);
+	int bg_team_2 = bg_create(map_idx, &queue->map->team2);
 
 	for (const auto &sd : queue->teama_members) {
 		clif_bg_queue_entry_init(sd);
@@ -1574,7 +1536,7 @@ void bg_queue_start_battleground(std::shared_ptr<s_battleground_queue> queue)
  * @param req_players: Required amount of players
  * @return s_battleground_queue*
  */
-static void bg_queue_create(int32 bg_id, int32 req_players)
+static void bg_queue_create(int bg_id, int req_players)
 {
 	auto queue = std::make_shared<s_battleground_queue>();
 

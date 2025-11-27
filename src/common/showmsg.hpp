@@ -4,9 +4,7 @@
 #ifndef SHOWMSG_HPP
 #define SHOWMSG_HPP
 
-#include <libconfig.h>
-
-#include <common/cbasetypes.hpp>
+#include "../../3rdparty/libconfig/libconfig.h"
 
 // for help with the console colors look here:
 // http://www.edoceo.com/liberum/?doc=printf-with-color
@@ -69,9 +67,9 @@
 
 #define CL_SPACE		"           "	// space aquivalent of the print messages
 
-extern int32 stdout_with_ansisequence; //If the color ansi sequences are to be used. [flaviojs]
-extern int32 msg_silent; //Specifies how silent the console is. [Skotlex]
-extern int32 console_msg_log; //Specifies what error messages to log. [Ind]
+extern int stdout_with_ansisequence; //If the color ansi sequences are to be used. [flaviojs]
+extern int msg_silent; //Specifies how silent the console is. [Skotlex]
+extern int console_msg_log; //Specifies what error messages to log. [Ind]
 extern char console_log_filepath[32]; ///< Filepath to save console_msg_log. [Cydh]
 extern char timestamp_format[20]; //For displaying Timestamps [Skotlex]
 
@@ -88,7 +86,7 @@ enum msg_type {
 };
 
 extern void ClearScreen(void);
-extern int32 _vShowMessage(enum msg_type flag, const char *string, va_list ap);
+extern int _vShowMessage(enum msg_type flag, const char *string, va_list ap);
 extern void ShowMessage(const char *, ...);
 extern void ShowStatus(const char *, ...);
 extern void ShowSQL(const char *, ...);

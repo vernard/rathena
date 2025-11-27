@@ -3,30 +3,26 @@
 
 #include "int_mail.hpp"
 
-#include <cstdlib>
-#include <cstring>
-#include <memory>
+#include <stdlib.h>
+#include <string.h>
 
-#include <common/mmo.hpp>
-#include <common/showmsg.hpp>
-#include <common/socket.hpp>
-#include <common/sql.hpp>
-#include <common/strlib.hpp>
-#include <common/utilities.hpp>
+#include "../common/mmo.hpp"
+#include "../common/showmsg.hpp"
+#include "../common/socket.hpp"
+#include "../common/sql.hpp"
+#include "../common/strlib.hpp"
 
 #include "char.hpp"
 #include "char_mapif.hpp"
 #include "inter.hpp"
 
-using namespace rathena;
+bool mail_loadmessage(int mail_id, struct mail_message* msg);
+void mapif_Mail_return( int fd, uint32 char_id, int mail_id, uint32 account_id_receiver = 0, uint32 account_id_sender = 0 );
+bool mapif_Mail_delete( int fd, uint32 char_id, int mail_id, uint32 account_id = 0 );
 
-bool mail_loadmessage(int32 mail_id, struct mail_message* msg);
-void mapif_Mail_return( int32 fd, uint32 char_id, int32 mail_id, uint32 account_id_receiver = 0, uint32 account_id_sender = 0 );
-bool mapif_Mail_delete( int32 fd, uint32 char_id, int32 mail_id, uint32 account_id = 0 );
-
-int32 mail_fromsql(uint32 char_id, struct mail_data* md)
+int mail_fromsql(uint32 char_id, struct mail_data* md)
 {
-	int32 i;
+	int i;
 	char *data;
 
 	memset(md, 0, sizeof(struct mail_data));
@@ -42,7 +38,7 @@ int32 mail_fromsql(uint32 char_id, struct mail_data* md)
 	md->full = (Sql_NumRows(sql_handle) > MAIL_MAX_INBOX);
 
 	for( i = 0; i < MAIL_MAX_INBOX && SQL_SUCCESS == Sql_NextRow(sql_handle); i++ ){
-		Sql_GetData(sql_handle, 0, &data, nullptr); md->msg[i].id = atoi(data);
+		Sql_GetData(sql_handle, 0, &data, NULL); md->msg[i].id = atoi(data);
 	}
 
 	md->amount = i;
@@ -79,11 +75,11 @@ int32 mail_fromsql(uint32 char_id, struct mail_data* md)
 
 /// Stores a single message in the database.
 /// Returns the message's ID if successful (or 0 if it fails).
-int32 mail_savemessage(struct mail_message* msg)
+int mail_savemessage(struct mail_message* msg)
 {
 	StringBuf buf;
-	SqlStmt stmt{ *sql_handle };
-	int32 i, j;
+	SqlStmt* stmt;
+	int i, j;
 	bool found = false;
 
 	if( SQL_ERROR == Sql_QueryStr( sql_handle, "START TRANSACTION" ) ){
@@ -98,18 +94,22 @@ int32 mail_savemessage(struct mail_message* msg)
 	StringBuf_AppendStr(&buf, ")");
 
 	// prepare and execute query
-	if( SQL_SUCCESS != stmt.PrepareStr(StringBuf_Value(&buf))
-	||  SQL_SUCCESS != stmt.BindParam(0, SQLDT_STRING, msg->send_name, strnlen(msg->send_name, NAME_LENGTH))
-	||  SQL_SUCCESS != stmt.BindParam(1, SQLDT_STRING, msg->dest_name, strnlen(msg->dest_name, NAME_LENGTH))
-	||  SQL_SUCCESS != stmt.BindParam(2, SQLDT_STRING, msg->title, strnlen(msg->title, MAIL_TITLE_LENGTH))
-	||  SQL_SUCCESS != stmt.BindParam(3, SQLDT_STRING, msg->body, strnlen(msg->body, MAIL_BODY_LENGTH))
-	||  SQL_SUCCESS != stmt.Execute() )
+	stmt = SqlStmt_Malloc(sql_handle);
+	if( SQL_SUCCESS != SqlStmt_PrepareStr(stmt, StringBuf_Value(&buf))
+	||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 0, SQLDT_STRING, msg->send_name, strnlen(msg->send_name, NAME_LENGTH))
+	||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 1, SQLDT_STRING, msg->dest_name, strnlen(msg->dest_name, NAME_LENGTH))
+	||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 2, SQLDT_STRING, msg->title, strnlen(msg->title, MAIL_TITLE_LENGTH))
+	||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 3, SQLDT_STRING, msg->body, strnlen(msg->body, MAIL_BODY_LENGTH))
+	||  SQL_SUCCESS != SqlStmt_Execute(stmt) )
 	{
 		SqlStmt_ShowDebug(stmt);
+		StringBuf_Destroy(&buf);
 		Sql_QueryStr( sql_handle, "ROLLBACK" );
 		return msg->id = 0;
 	} else
-		msg->id = (int32)stmt.LastInsertId();
+		msg->id = (int)SqlStmt_LastInsertId(stmt);
+
+	SqlStmt_Free(stmt);
 	
 	StringBuf_Clear(&buf);
 	StringBuf_Printf(&buf,"INSERT INTO `%s` (`id`, `index`, `amount`, `nameid`, `refine`, `attribute`, `identify`, `unique_id`, `bound`, `enchantgrade`", schema_config.mail_attachment_db);
@@ -150,6 +150,8 @@ int32 mail_savemessage(struct mail_message* msg)
 		Sql_QueryStr( sql_handle, "ROLLBACK" );
 	}
 
+	StringBuf_Destroy(&buf);
+
 	if( msg->id && SQL_ERROR == Sql_QueryStr( sql_handle, "COMMIT" ) ){
 		Sql_ShowDebug( sql_handle );
 		return 0;
@@ -160,9 +162,9 @@ int32 mail_savemessage(struct mail_message* msg)
 
 /// Retrieves a single message from the database.
 /// Returns true if the operation succeeds (or false if it fails).
-bool mail_loadmessage(int32 mail_id, struct mail_message* msg)
+bool mail_loadmessage(int mail_id, struct mail_message* msg)
 {
-	int32 i, j;
+	int i, j;
 	StringBuf buf;
 	char* data;
 
@@ -172,17 +174,17 @@ bool mail_loadmessage(int32 mail_id, struct mail_message* msg)
 		Sql_FreeResult(sql_handle);
 		return false;
 	}else{
-		Sql_GetData(sql_handle, 0, &data, nullptr); msg->id = atoi(data);
-		Sql_GetData(sql_handle, 1, &data, nullptr); safestrncpy(msg->send_name, data, NAME_LENGTH);
-		Sql_GetData(sql_handle, 2, &data, nullptr); msg->send_id = atoi(data);
-		Sql_GetData(sql_handle, 3, &data, nullptr); safestrncpy(msg->dest_name, data, NAME_LENGTH);
-		Sql_GetData(sql_handle, 4, &data, nullptr); msg->dest_id = atoi(data);
-		Sql_GetData(sql_handle, 5, &data, nullptr); safestrncpy(msg->title, data, MAIL_TITLE_LENGTH);
-		Sql_GetData(sql_handle, 6, &data, nullptr); safestrncpy(msg->body, data, MAIL_BODY_LENGTH);
-		Sql_GetData(sql_handle, 7, &data, nullptr); msg->timestamp = atoi(data);
-		Sql_GetData(sql_handle, 8, &data, nullptr); msg->status = (mail_status)atoi(data);
-		Sql_GetData(sql_handle, 9, &data, nullptr); msg->zeny = atoi(data);
-		Sql_GetData(sql_handle,10, &data, nullptr); msg->type = (mail_inbox_type)atoi(data);
+		Sql_GetData(sql_handle, 0, &data, NULL); msg->id = atoi(data);
+		Sql_GetData(sql_handle, 1, &data, NULL); safestrncpy(msg->send_name, data, NAME_LENGTH);
+		Sql_GetData(sql_handle, 2, &data, NULL); msg->send_id = atoi(data);
+		Sql_GetData(sql_handle, 3, &data, NULL); safestrncpy(msg->dest_name, data, NAME_LENGTH);
+		Sql_GetData(sql_handle, 4, &data, NULL); msg->dest_id = atoi(data);
+		Sql_GetData(sql_handle, 5, &data, NULL); safestrncpy(msg->title, data, MAIL_TITLE_LENGTH);
+		Sql_GetData(sql_handle, 6, &data, NULL); safestrncpy(msg->body, data, MAIL_BODY_LENGTH);
+		Sql_GetData(sql_handle, 7, &data, NULL); msg->timestamp = atoi(data);
+		Sql_GetData(sql_handle, 8, &data, NULL); msg->status = (mail_status)atoi(data);
+		Sql_GetData(sql_handle, 9, &data, NULL); msg->zeny = atoi(data);
+		Sql_GetData(sql_handle,10, &data, NULL); msg->type = (mail_inbox_type)atoi(data);
 
 		if( msg->type == MAIL_INBOX_NORMAL && charserv_config.mail_return_days > 0 ){
 			msg->scheduled_deletion = msg->timestamp + charserv_config.mail_return_days * 24 * 60 * 60;
@@ -212,39 +214,41 @@ bool mail_loadmessage(int32 mail_id, struct mail_message* msg)
 	if( SQL_ERROR == Sql_Query(sql_handle, StringBuf_Value(&buf)) ){
 		Sql_ShowDebug(sql_handle);
 		Sql_FreeResult(sql_handle);
+		StringBuf_Destroy(&buf);
 		return false;
 	}
 
 	memset(msg->item, 0, sizeof(struct item) * MAIL_MAX_ITEM);
 
 	for( i = 0; i < MAIL_MAX_ITEM && SQL_SUCCESS == Sql_NextRow(sql_handle); i++ ){
-		Sql_GetData(sql_handle,0, &data, nullptr); msg->item[i].amount = (int16)atoi(data);
-		Sql_GetData(sql_handle,1, &data, nullptr); msg->item[i].nameid = strtoul(data, nullptr, 10);
-		Sql_GetData(sql_handle,2, &data, nullptr); msg->item[i].refine = atoi(data);
-		Sql_GetData(sql_handle,3, &data, nullptr); msg->item[i].attribute = atoi(data);
-		Sql_GetData(sql_handle,4, &data, nullptr); msg->item[i].identify = atoi(data);
-		Sql_GetData(sql_handle,5, &data, nullptr); msg->item[i].unique_id = strtoull(data, nullptr, 10);
-		Sql_GetData(sql_handle,6, &data, nullptr); msg->item[i].bound = atoi(data);
-		Sql_GetData(sql_handle,7, &data, nullptr); msg->item[i].enchantgrade = atoi(data);
+		Sql_GetData(sql_handle,0, &data, NULL); msg->item[i].amount = (short)atoi(data);
+		Sql_GetData(sql_handle,1, &data, NULL); msg->item[i].nameid = strtoul(data, nullptr, 10);
+		Sql_GetData(sql_handle,2, &data, NULL); msg->item[i].refine = atoi(data);
+		Sql_GetData(sql_handle,3, &data, NULL); msg->item[i].attribute = atoi(data);
+		Sql_GetData(sql_handle,4, &data, NULL); msg->item[i].identify = atoi(data);
+		Sql_GetData(sql_handle,5, &data, NULL); msg->item[i].unique_id = strtoull(data, NULL, 10);
+		Sql_GetData(sql_handle,6, &data, NULL); msg->item[i].bound = atoi(data);
+		Sql_GetData(sql_handle,7, &data, NULL); msg->item[i].enchantgrade = atoi(data);
 		msg->item[i].expire_time = 0;
 
 		for( j = 0; j < MAX_SLOTS; j++ ){
-			Sql_GetData(sql_handle,8 + j, &data, nullptr); msg->item[i].card[j] = strtoul(data, nullptr, 10);
+			Sql_GetData(sql_handle,8 + j, &data, NULL); msg->item[i].card[j] = strtoul(data, nullptr, 10);
 		}
 
 		for( j = 0; j < MAX_ITEM_RDM_OPT; j++ ){
-			Sql_GetData(sql_handle, 8 + MAX_SLOTS + j * 3, &data, nullptr); msg->item[i].option[j].id = atoi(data);
-			Sql_GetData(sql_handle, 9 + MAX_SLOTS + j * 3, &data, nullptr); msg->item[i].option[j].value = atoi(data);
-			Sql_GetData(sql_handle,10 + MAX_SLOTS + j * 3, &data, nullptr); msg->item[i].option[j].param = atoi(data);
+			Sql_GetData(sql_handle, 8 + MAX_SLOTS + j * 3, &data, NULL); msg->item[i].option[j].id = atoi(data);
+			Sql_GetData(sql_handle, 9 + MAX_SLOTS + j * 3, &data, NULL); msg->item[i].option[j].value = atoi(data);
+			Sql_GetData(sql_handle,10 + MAX_SLOTS + j * 3, &data, NULL); msg->item[i].option[j].param = atoi(data);
 		}
 	}
 
+	StringBuf_Destroy(&buf);
 	Sql_FreeResult(sql_handle);
 
 	return true;
 }
 
-int32 mail_timer_sub( int32 limit, enum mail_inbox_type type ){
+int mail_timer_sub( int limit, enum mail_inbox_type type ){
 	// Start by deleting all expired mails sent by the server
 	if( SQL_ERROR == Sql_Query( sql_handle, "DELETE FROM `%s`WHERE `type` = '%d' AND `send_id` = '0' AND `time` <= UNIX_TIMESTAMP( NOW() - INTERVAL %d DAY )", schema_config.mail_db, type, limit ) ){
 		Sql_ShowDebug( sql_handle );
@@ -252,10 +256,10 @@ int32 mail_timer_sub( int32 limit, enum mail_inbox_type type ){
 	}
 
 	struct{
-		int32 mail_id;
-		int32 char_id;
-		int32 account_id;
-		int32 account_id_sender;
+		int mail_id;
+		int char_id;
+		int account_id;
+		int account_id_sender;
 	}mails[MAIL_ITERATION_SIZE];
 
 	if( limit <= 0 ){
@@ -280,18 +284,18 @@ int32 mail_timer_sub( int32 limit, enum mail_inbox_type type ){
 		return 0;
 	}
 
-	for( int32 i = 0; i < MAIL_ITERATION_SIZE && SQL_SUCCESS == Sql_NextRow( sql_handle ); i++ ){
+	for( int i = 0; i < MAIL_ITERATION_SIZE && SQL_SUCCESS == Sql_NextRow( sql_handle ); i++ ){
 		char* data;
 
-		Sql_GetData(sql_handle, 0, &data, nullptr); mails[i].mail_id = atoi(data);
-		Sql_GetData(sql_handle, 1, &data, nullptr); mails[i].char_id = atoi(data);
-		Sql_GetData(sql_handle, 2, &data, nullptr); mails[i].account_id = atoi(data);
-		Sql_GetData( sql_handle, 3, &data, nullptr ); mails[i].account_id_sender = atoi( data );
+		Sql_GetData(sql_handle, 0, &data, NULL); mails[i].mail_id = atoi(data);
+		Sql_GetData(sql_handle, 1, &data, NULL); mails[i].char_id = atoi(data);
+		Sql_GetData(sql_handle, 2, &data, NULL); mails[i].account_id = atoi(data);
+		Sql_GetData( sql_handle, 3, &data, NULL ); mails[i].account_id_sender = atoi( data );
 	}
 
 	Sql_FreeResult(sql_handle);
 
-	for( int32 i = 0; i < MAIL_ITERATION_SIZE; i++ ){
+	for( int i = 0; i < MAIL_ITERATION_SIZE; i++ ){
 		if( mails[i].mail_id == 0 ){
 			break;
 		}
@@ -320,7 +324,7 @@ TIMER_FUNC(mail_delete_timer){
 /*==========================================
  * Client Inbox Request
  *------------------------------------------*/
-void mapif_Mail_sendinbox(int32 fd, uint32 char_id, unsigned char flag, enum mail_inbox_type type)
+void mapif_Mail_sendinbox(int fd, uint32 char_id, unsigned char flag, enum mail_inbox_type type)
 {
 	struct mail_data md;
 	mail_fromsql(char_id, &md);
@@ -336,7 +340,7 @@ void mapif_Mail_sendinbox(int32 fd, uint32 char_id, unsigned char flag, enum mai
 	WFIFOSET(fd,WFIFOW(fd,2));
 }
 
-void mapif_parse_Mail_requestinbox(int32 fd)
+void mapif_parse_Mail_requestinbox(int fd)
 {
 	mapif_Mail_sendinbox(fd, RFIFOL(fd,2), RFIFOB(fd,6), (mail_inbox_type)RFIFOB(fd,7));
 }
@@ -344,9 +348,9 @@ void mapif_parse_Mail_requestinbox(int32 fd)
 /*==========================================
  * Mark mail as 'Read'
  *------------------------------------------*/
-void mapif_parse_Mail_read(int32 fd)
+void mapif_parse_Mail_read(int fd)
 {
-	int32 mail_id = RFIFOL(fd,2);
+	int mail_id = RFIFOL(fd,2);
 	if( SQL_ERROR == Sql_Query(sql_handle, "UPDATE `%s` SET `status` = '%d' WHERE `id` = '%d'", schema_config.mail_db, MAIL_READ, mail_id) )
 		Sql_ShowDebug(sql_handle);
 }
@@ -354,7 +358,7 @@ void mapif_parse_Mail_read(int32 fd)
 /*==========================================
  * Client Attachment Request
  *------------------------------------------*/
-bool mail_DeleteAttach(int32 mail_id){
+bool mail_DeleteAttach(int mail_id){
 	if( SQL_ERROR == Sql_Query(sql_handle, "DELETE FROM `%s` WHERE `id` = '%d'", schema_config.mail_attachment_db, mail_id ) ){
 		Sql_ShowDebug(sql_handle);
 		return false;
@@ -363,7 +367,7 @@ bool mail_DeleteAttach(int32 mail_id){
 	return true;
 }
 
-void mapif_Mail_getattach(int32 fd, uint32 char_id, int32 mail_id, int32 type)
+void mapif_Mail_getattach(int fd, uint32 char_id, int mail_id, int type)
 {
 	struct mail_message msg;
 
@@ -392,7 +396,7 @@ void mapif_Mail_getattach(int32 fd, uint32 char_id, int32 mail_id, int32 type)
 	}
 
 	if( type & MAIL_ATT_ITEM ){
-		int32 i;
+		int i;
 
 		ARR_FIND(0, MAIL_MAX_ITEM, i, msg.item[i].nameid > 0 && msg.item[i].amount > 0);
 
@@ -427,7 +431,7 @@ void mapif_Mail_getattach(int32 fd, uint32 char_id, int32 mail_id, int32 type)
 	WFIFOSET(fd,WFIFOW(fd,2));
 }
 
-void mapif_parse_Mail_getattach(int32 fd)
+void mapif_parse_Mail_getattach(int fd)
 {
 	mapif_Mail_getattach(fd, RFIFOL(fd,2), RFIFOL(fd,6),RFIFOB(fd,10));
 }
@@ -435,7 +439,7 @@ void mapif_parse_Mail_getattach(int32 fd)
 /*==========================================
  * Delete Mail
  *------------------------------------------*/
-bool mapif_Mail_delete( int32 fd, uint32 char_id, int32 mail_id, uint32 account_id ){
+bool mapif_Mail_delete( int fd, uint32 char_id, int mail_id, uint32 account_id ){
 	bool failed = false;
 
 	if( SQL_ERROR == Sql_QueryStr( sql_handle, "START TRANSACTION" ) ||
@@ -456,10 +460,10 @@ bool mapif_Mail_delete( int32 fd, uint32 char_id, int32 mail_id, uint32 account_
 
 	// If the char server triggered this, check if we have to notify a map server
 	if( fd <= 0 ){
-		std::shared_ptr<struct online_char_data> character = util::umap_find( char_get_onlinedb(), account_id );
+		struct online_char_data* character;
 
 		// Check for online players
-		if( character != nullptr && character->server >= 0 ){
+		if( ( character = (struct online_char_data*)idb_get( char_get_onlinedb(), account_id ) ) != nullptr && character->server >= 0 ){
 			fd = map_server[character->server].fd;
 		}else{
 			// The request was triggered inside the character server or the player is offline now
@@ -477,7 +481,7 @@ bool mapif_Mail_delete( int32 fd, uint32 char_id, int32 mail_id, uint32 account_
 	return !failed;
 }
 
-void mapif_parse_Mail_delete(int32 fd)
+void mapif_parse_Mail_delete(int fd)
 {
 	mapif_Mail_delete( fd, RFIFOL( fd, 2 ), RFIFOL( fd, 6 ) );
 }
@@ -504,7 +508,7 @@ void mapif_Mail_new(struct mail_message *msg)
 /*==========================================
  * Return Mail
  *------------------------------------------*/
-void mapif_Mail_return( int32 fd, uint32 char_id, int32 mail_id, uint32 account_id_receiver, uint32 account_id_sender ){
+void mapif_Mail_return( int fd, uint32 char_id, int mail_id, uint32 account_id_receiver, uint32 account_id_sender ){
 	struct mail_message msg;
 
 	if( !mail_loadmessage( mail_id, &msg ) ){
@@ -527,7 +531,7 @@ void mapif_Mail_return( int32 fd, uint32 char_id, int32 mail_id, uint32 account_
 
 	// If we do not want to return mails without any attachments and the request was not sent by a user
 	if( fd <= 0 && !charserv_config.mail_return_empty ){
-		int32 i;
+		int i;
 
 		ARR_FIND( 0, MAIL_MAX_ITEM, i, msg.item[i].nameid > 0 );
 
@@ -539,7 +543,7 @@ void mapif_Mail_return( int32 fd, uint32 char_id, int32 mail_id, uint32 account_
 	char temp_[MAIL_TITLE_LENGTH + 3];
 
 	// swap sender and receiver
-	std::swap( msg.send_id, msg.dest_id );
+	SWAP( msg.send_id, msg.dest_id );
 	safestrncpy( temp_, msg.send_name, NAME_LENGTH );
 	safestrncpy( msg.send_name, msg.dest_name, NAME_LENGTH );
 	safestrncpy( msg.dest_name, temp_, NAME_LENGTH );
@@ -550,17 +554,17 @@ void mapif_Mail_return( int32 fd, uint32 char_id, int32 mail_id, uint32 account_
 
 	msg.status = MAIL_NEW;
 	msg.type = MAIL_INBOX_RETURNED;
-	msg.timestamp = time( nullptr );
+	msg.timestamp = time( NULL );
 
-	int32 new_mail = mail_savemessage( &msg );
+	int new_mail = mail_savemessage( &msg );
 	mapif_Mail_new( &msg );
 
 	// If the char server triggered this, check if we have to notify a map server
 	if( fd <= 0 ){
-		std::shared_ptr<struct online_char_data> character = util::umap_find( char_get_onlinedb(), account_id_sender );
+		struct online_char_data* character;
 
 		// Check for online players
-		if( character != nullptr && character->server >= 0 ){
+		if( ( character = (struct online_char_data*)idb_get( char_get_onlinedb(), account_id_sender ) ) != nullptr && character->server >= 0 ){
 			fd = map_server[character->server].fd;
 		}else{
 			// The request was triggered inside the character server or the player is offline now
@@ -576,7 +580,7 @@ void mapif_Mail_return( int32 fd, uint32 char_id, int32 mail_id, uint32 account_
 	WFIFOSET(fd,11);
 }
 
-void mapif_parse_Mail_return(int32 fd)
+void mapif_parse_Mail_return(int fd)
 {
 	mapif_Mail_return(fd, RFIFOL(fd,2), RFIFOL(fd,6));
 }
@@ -584,9 +588,9 @@ void mapif_parse_Mail_return(int32 fd)
 /*==========================================
  * Send Mail
  *------------------------------------------*/
-void mapif_Mail_send(int32 fd, struct mail_message* msg)
+void mapif_Mail_send(int fd, struct mail_message* msg)
 {
-	int32 len = sizeof(struct mail_message) + 4;
+	int len = sizeof(struct mail_message) + 4;
 
 	WFIFOHEAD(fd,len);
 	WFIFOW(fd,0) = 0x384d;
@@ -595,7 +599,7 @@ void mapif_Mail_send(int32 fd, struct mail_message* msg)
 	WFIFOSET(fd,len);
 }
 
-void mapif_parse_Mail_send(int32 fd)
+void mapif_parse_Mail_send(int fd)
 {
 	struct mail_message msg;
 	char esc_name[NAME_LENGTH*2+1];
@@ -617,7 +621,7 @@ void mapif_parse_Mail_send(int32 fd)
 		msg.dest_name[0] = '\0';
 
 		if( SQL_SUCCESS == Sql_NextRow(sql_handle) ){
-			Sql_GetData(sql_handle, 0, &data, nullptr);
+			Sql_GetData(sql_handle, 0, &data, NULL);
 			msg.dest_id = atoi(data);
 			Sql_GetData(sql_handle, 1, &data, &len);
 			safestrncpy(msg.dest_name, data, NAME_LENGTH);
@@ -634,15 +638,15 @@ void mapif_parse_Mail_send(int32 fd)
 #if PACKETVER < 20150513
 		uint32 account_id = RFIFOL(fd,4);
 
-		Sql_GetData(sql_handle, 0, &data, nullptr);
+		Sql_GetData(sql_handle, 0, &data, NULL);
 		if (atoi(data) != account_id)
 		{ // Cannot send mail to char in the same account
-			Sql_GetData(sql_handle, 1, &data, nullptr);
+			Sql_GetData(sql_handle, 1, &data, NULL);
 			msg.dest_id = atoi(data);
 		}
 #else
 		// In RODEX you can even send mails to yourself
-		Sql_GetData(sql_handle, 1, &data, nullptr);
+		Sql_GetData(sql_handle, 1, &data, NULL);
 		msg.dest_id = atoi(data);
 #endif
 	}
@@ -656,7 +660,7 @@ void mapif_parse_Mail_send(int32 fd)
 	mapif_Mail_new(&msg); // notify recipient
 }
 
-bool mail_sendmail(int32 send_id, const char* send_name, int32 dest_id, const char* dest_name, const char* title, const char* body, int32 zeny, struct item *item, int32 amount)
+bool mail_sendmail(int send_id, const char* send_name, int dest_id, const char* dest_name, const char* title, const char* body, int zeny, struct item *item, int amount)
 {
 	struct mail_message msg;
 	memset(&msg, 0, sizeof(struct mail_message));
@@ -668,15 +672,15 @@ bool mail_sendmail(int32 send_id, const char* send_name, int32 dest_id, const ch
 	safestrncpy(msg.title, title, MAIL_TITLE_LENGTH);
 	safestrncpy(msg.body, body, MAIL_BODY_LENGTH);
 	msg.zeny = zeny;
-	if( item != nullptr ){
-		int32 i;
+	if( item != NULL ){
+		int i;
 
 		for( i = 0; i < amount && i < MAIL_MAX_ITEM; i++ ){
 			memcpy(&msg.item[i], &item[i], sizeof(struct item));
 		}
 	}
 
-	msg.timestamp = time(nullptr);
+	msg.timestamp = time(NULL);
 	msg.type = MAIL_INBOX_NORMAL;
 
 	if( !mail_savemessage(&msg) ){
@@ -687,7 +691,7 @@ bool mail_sendmail(int32 send_id, const char* send_name, int32 dest_id, const ch
 	return true;
 }
 
-void mapif_Mail_receiver_send( int32 fd, int32 requesting_char_id, int32 char_id, int32 class_, int32 base_level, const char* name ){
+void mapif_Mail_receiver_send( int fd, int requesting_char_id, int char_id, int class_, int base_level, const char* name ){
 	WFIFOHEAD(fd,38);
 	WFIFOW(fd,0) = 0x384e;
 	WFIFOL(fd,2) = requesting_char_id;
@@ -698,7 +702,7 @@ void mapif_Mail_receiver_send( int32 fd, int32 requesting_char_id, int32 char_id
 	WFIFOSET(fd,38);
 }
 
-void mapif_parse_Mail_receiver_check( int32 fd ){
+void mapif_parse_Mail_receiver_check( int fd ){
 	char name[NAME_LENGTH], esc_name[NAME_LENGTH * 2 + 1];
 	uint32 char_id = 0;
 	uint16 class_ = 0, base_level = 0;
@@ -713,9 +717,9 @@ void mapif_parse_Mail_receiver_check( int32 fd ){
 	}else if( SQL_SUCCESS == Sql_NextRow(sql_handle) ){
 		char *data;
 
-		Sql_GetData(sql_handle, 0, &data, nullptr); char_id = atoi(data);
-		Sql_GetData(sql_handle, 1, &data, nullptr); class_ = atoi(data);
-		Sql_GetData(sql_handle, 2, &data, nullptr); base_level = atoi(data);
+		Sql_GetData(sql_handle, 0, &data, NULL); char_id = atoi(data);
+		Sql_GetData(sql_handle, 1, &data, NULL); class_ = atoi(data);
+		Sql_GetData(sql_handle, 2, &data, NULL); base_level = atoi(data);
 	}
 
 	Sql_FreeResult(sql_handle);
@@ -725,7 +729,7 @@ void mapif_parse_Mail_receiver_check( int32 fd ){
 /*==========================================
  * Packets From Map Server
  *------------------------------------------*/
-int32 inter_mail_parse_frommap(int32 fd)
+int inter_mail_parse_frommap(int fd)
 {
 	switch(RFIFOW(fd,0))
 	{
@@ -742,7 +746,7 @@ int32 inter_mail_parse_frommap(int32 fd)
 	return 1;
 }
 
-int32 inter_mail_sql_init(void)
+int inter_mail_sql_init(void)
 {
 	return 1;
 }

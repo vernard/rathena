@@ -4,8 +4,6 @@
 #ifndef LOGINCNSLIF_HPP
 #define LOGINCNSLIF_HPP
 
-#include <common/cbasetypes.hpp>
-
 /**
  * Console Command Parser
  * Transmited from command cli.cpp
@@ -14,7 +12,16 @@
  * @param buf: buffer to parse, (from console)
  * @return 1=success
  */
-int32 cnslif_parse(const char* buf);
+int cnslif_parse(const char* buf);
+
+/**
+ * Read the option specified in command line
+ *  and assign the confs used by the different server.
+ * @param argc:
+ * @param argv:
+ * @return true or Exit on failure.
+ */
+int logcnslif_get_options(int argc, char ** argv);
 
 /**
  * Initialize the module.

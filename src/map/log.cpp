@@ -3,13 +3,13 @@
 
 #include "log.hpp"
 
-#include <cstdlib>
+#include <stdlib.h>
 
-#include <common/cbasetypes.hpp>
-#include <common/nullpo.hpp>
-#include <common/showmsg.hpp>
-#include <common/sql.hpp> // SQL_INNODB
-#include <common/strlib.hpp>
+#include "../common/cbasetypes.hpp"
+#include "../common/nullpo.hpp"
+#include "../common/showmsg.hpp"
+#include "../common/sql.hpp" // SQL_INNODB
+#include "../common/strlib.hpp"
 
 #include "battle.hpp"
 #include "homunculus.hpp"
@@ -85,12 +85,6 @@ static char log_picktype2char(e_log_pick_type type)
 		case LOG_TYPE_MERGE_ITEM:		return 'Z';  // Merged Item
 		case LOG_TYPE_QUEST:			return 'Q';  // (Q)uest Item
 		case LOG_TYPE_PRIVATE_AIRSHIP:	return 'H';  // Private Airs(H)ip
-		case LOG_TYPE_BARTER:			return 'J';  // Barter Shop
-		case LOG_TYPE_LAPHINE:			return 'W';  // Laphine UI
-		case LOG_TYPE_ENCHANTGRADE:		return '0';  // Enchantgrade UI
-		case LOG_TYPE_REFORM:			return '1';  // Reform UI
-		case LOG_TYPE_ENCHANT:			return '2';  // Echant UI
-		case LOG_TYPE_PACKAGE:			return '3';  // Item Package Selection
 	}
 
 	// should not get here, fallback
@@ -142,12 +136,12 @@ static char log_feedingtype2char(e_log_feeding_type type) {
 }
 
 /// check if this item should be logged according the settings
-static bool should_log_item(t_itemid nameid, int32 amount, int32 refine)
+static bool should_log_item(t_itemid nameid, int amount, int refine)
 {
-	int32 filter = log_config.filter;
-	std::shared_ptr<item_data> id = item_db.find(nameid);
+	int filter = log_config.filter;
+	struct item_data* id;
 
-	if( id == nullptr )
+	if( ( id = itemdb_exists(nameid) ) == NULL )
 		return false;
 
 	if( ( filter&LOG_FILTER_ALL ) ||
@@ -170,7 +164,7 @@ static bool should_log_item(t_itemid nameid, int32 amount, int32 refine)
 
 
 /// logs items, that summon monsters
-void log_branch(map_session_data* sd)
+void log_branch(struct map_session_data* sd)
 {
 	nullpo_retv(sd);
 
@@ -178,15 +172,17 @@ void log_branch(map_session_data* sd)
 		return;
 
 	if( log_config.sql_logs ) {
-		SqlStmt stmt{ *logmysql_handle };
-
-		if( SQL_SUCCESS != stmt.Prepare(LOG_QUERY " INTO `%s` (`branch_date`, `account_id`, `char_id`, `char_name`, `map`) VALUES (NOW(), '%d', '%d', ?, '%s')", log_config.log_branch, sd->status.account_id, sd->status.char_id, mapindex_id2name(sd->mapindex) )
-		||  SQL_SUCCESS != stmt.BindParam(0, SQLDT_STRING, sd->status.name, strnlen(sd->status.name, NAME_LENGTH))
-		||  SQL_SUCCESS != stmt.Execute() )
+		SqlStmt* stmt;
+		stmt = SqlStmt_Malloc(logmysql_handle);
+		if( SQL_SUCCESS != SqlStmt_Prepare(stmt, LOG_QUERY " INTO `%s` (`branch_date`, `account_id`, `char_id`, `char_name`, `map`) VALUES (NOW(), '%d', '%d', ?, '%s')", log_config.log_branch, sd->status.account_id, sd->status.char_id, mapindex_id2name(sd->mapindex) )
+		||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 0, SQLDT_STRING, sd->status.name, strnlen(sd->status.name, NAME_LENGTH))
+		||  SQL_SUCCESS != SqlStmt_Execute(stmt) )
 		{
 			SqlStmt_ShowDebug(stmt);
+			SqlStmt_Free(stmt);
 			return;
 		}
+		SqlStmt_Free(stmt);
 	}
 	else
 	{
@@ -194,7 +190,7 @@ void log_branch(map_session_data* sd)
 		time_t curtime;
 		FILE* logfp;
 
-		if( ( logfp = fopen(log_config.log_branch, "a") ) == nullptr )
+		if( ( logfp = fopen(log_config.log_branch, "a") ) == NULL )
 			return;
 		time(&curtime);
 		strftime(timestring, sizeof(timestring), log_timestamp_format, localtime(&curtime));
@@ -204,7 +200,7 @@ void log_branch(map_session_data* sd)
 }
 
 /// logs item transactions (generic)
-void log_pick(int32 id, int16 m, e_log_pick_type type, int32 amount, struct item* itm)
+void log_pick(int id, int16 m, e_log_pick_type type, int amount, struct item* itm)
 {
 	nullpo_retv(itm);
 	if( ( log_config.enable_logs&type ) == 0 )
@@ -217,8 +213,8 @@ void log_pick(int32 id, int16 m, e_log_pick_type type, int32 amount, struct item
 
 	if( log_config.sql_logs )
 	{
-		int32 i;
-		SqlStmt stmt{ *logmysql_handle };
+		int i;
+		SqlStmt* stmt = SqlStmt_Malloc(logmysql_handle);
 		StringBuf buf;
 		StringBuf_Init(&buf);
 
@@ -239,8 +235,11 @@ void log_pick(int32 id, int16 m, e_log_pick_type type, int32 amount, struct item
 			StringBuf_Printf(&buf, ",'%d','%d','%d'", itm->option[i].id, itm->option[i].value, itm->option[i].param);
 		StringBuf_Printf(&buf, ")");
 
-		if (SQL_SUCCESS != stmt.PrepareStr(StringBuf_Value(&buf)) || SQL_SUCCESS != stmt.Execute())
+		if (SQL_SUCCESS != SqlStmt_PrepareStr(stmt, StringBuf_Value(&buf)) || SQL_SUCCESS != SqlStmt_Execute(stmt))
 			SqlStmt_ShowDebug(stmt);
+
+		SqlStmt_Free(stmt);
+		StringBuf_Destroy(&buf);
 	}
 	else
 	{
@@ -248,7 +247,7 @@ void log_pick(int32 id, int16 m, e_log_pick_type type, int32 amount, struct item
 		time_t curtime;
 		FILE* logfp;
 
-		if( ( logfp = fopen(log_config.log_pick, "a") ) == nullptr )
+		if( ( logfp = fopen(log_config.log_pick, "a") ) == NULL )
 			return;
 		time(&curtime);
 		strftime(timestring, sizeof(timestring), log_timestamp_format, localtime(&curtime));
@@ -258,31 +257,32 @@ void log_pick(int32 id, int16 m, e_log_pick_type type, int32 amount, struct item
 }
 
 /// logs item transactions (players)
-void log_pick_pc(map_session_data* sd, e_log_pick_type type, int32 amount, struct item* itm)
+void log_pick_pc(struct map_session_data* sd, e_log_pick_type type, int amount, struct item* itm)
 {
 	nullpo_retv(sd);
-	log_pick(sd->status.char_id, sd->m, type, amount, itm);
+	log_pick(sd->status.char_id, sd->bl.m, type, amount, itm);
 }
 
 
 /// logs item transactions (monsters)
-void log_pick_mob(mob_data* md, e_log_pick_type type, int32 amount, struct item* itm)
+void log_pick_mob(struct mob_data* md, e_log_pick_type type, int amount, struct item* itm)
 {
 	nullpo_retv(md);
-	log_pick(md->mob_id, md->m, type, amount, itm);
+	log_pick(md->mob_id, md->bl.m, type, amount, itm);
 }
 
 /// logs zeny transactions
-// ids are char_ids
-void log_zeny(const map_session_data &target_sd, e_log_pick_type type, uint32 src_id, int32 amount)
+void log_zeny(struct map_session_data* sd, e_log_pick_type type, struct map_session_data* src_sd, int amount)
 {
+	nullpo_retv(sd);
+
 	if( !log_config.zeny || ( log_config.zeny != 1 && abs(amount) < log_config.zeny ) )
 		return;
 
 	if( log_config.sql_logs )
 	{
-		if (SQL_ERROR == Sql_Query(logmysql_handle, LOG_QUERY " INTO `%s` (`time`, `char_id`, `src_id`, `type`, `amount`, `map`) VALUES (NOW(), '%d', '%d', '%c', '%d', '%s')",
-			log_config.log_zeny, target_sd.status.char_id, src_id, log_picktype2char(type), amount, mapindex_id2name(target_sd.mapindex)))
+		if( SQL_ERROR == Sql_Query(logmysql_handle, LOG_QUERY " INTO `%s` (`time`, `char_id`, `src_id`, `type`, `amount`, `map`) VALUES (NOW(), '%d', '%d', '%c', '%d', '%s')",
+			log_config.log_zeny, sd->status.char_id, src_sd->status.char_id, log_picktype2char(type), amount, mapindex_id2name(sd->mapindex)) )
 		{
 			Sql_ShowDebug(logmysql_handle);
 			return;
@@ -294,18 +294,18 @@ void log_zeny(const map_session_data &target_sd, e_log_pick_type type, uint32 sr
 		time_t curtime;
 		FILE* logfp;
 
-		if( ( logfp = fopen(log_config.log_zeny, "a") ) == nullptr )
+		if( ( logfp = fopen(log_config.log_zeny, "a") ) == NULL )
 			return;
 		time(&curtime);
 		strftime(timestring, sizeof(timestring), log_timestamp_format, localtime(&curtime));
-		fprintf(logfp, "%s - [%d] ->\t%s[%d]\t%d\t\n", timestring, src_id, target_sd.status.name, target_sd.status.char_id, amount);
+		fprintf(logfp, "%s - %s[%d]\t%s[%d]\t%d\t\n", timestring, src_sd->status.name, src_sd->status.account_id, sd->status.name, sd->status.account_id, amount);
 		fclose(logfp);
 	}
 }
 
 
 /// logs MVP monster rewards
-void log_mvpdrop(map_session_data* sd, int32 monster_id, t_itemid nameid, t_exp exp )
+void log_mvpdrop(struct map_session_data* sd, int monster_id, t_itemid nameid, t_exp exp )
 {
 	nullpo_retv(sd);
 
@@ -327,7 +327,7 @@ void log_mvpdrop(map_session_data* sd, int32 monster_id, t_itemid nameid, t_exp 
 		time_t curtime;
 		FILE* logfp;
 
-		if( ( logfp = fopen(log_config.log_mvpdrop,"a") ) == nullptr )
+		if( ( logfp = fopen(log_config.log_mvpdrop,"a") ) == NULL )
 			return;
 		time(&curtime);
 		strftime(timestring, sizeof(timestring), log_timestamp_format, localtime(&curtime));
@@ -338,7 +338,7 @@ void log_mvpdrop(map_session_data* sd, int32 monster_id, t_itemid nameid, t_exp 
 
 
 /// logs used atcommands
-void log_atcommand(map_session_data* sd, const char* message)
+void log_atcommand(struct map_session_data* sd, const char* message)
 {
 	nullpo_retv(sd);
 
@@ -348,16 +348,19 @@ void log_atcommand(map_session_data* sd, const char* message)
 
 	if( log_config.sql_logs )
 	{
-		SqlStmt stmt{ *logmysql_handle };
+		SqlStmt* stmt;
 
-		if( SQL_SUCCESS != stmt.Prepare(LOG_QUERY " INTO `%s` (`atcommand_date`, `account_id`, `char_id`, `char_name`, `map`, `command`) VALUES (NOW(), '%d', '%d', ?, '%s', ?)", log_config.log_gm, sd->status.account_id, sd->status.char_id, sd->mapindex == 0 ? "" : mapindex_id2name(sd->mapindex))
-		||  SQL_SUCCESS != stmt.BindParam(0, SQLDT_STRING, sd->status.name, strnlen(sd->status.name, NAME_LENGTH))
-		||  SQL_SUCCESS != stmt.BindParam(1, SQLDT_STRING, (char*)message, safestrnlen(message, 255))
-		||  SQL_SUCCESS != stmt.Execute() )
+		stmt = SqlStmt_Malloc(logmysql_handle);
+		if( SQL_SUCCESS != SqlStmt_Prepare(stmt, LOG_QUERY " INTO `%s` (`atcommand_date`, `account_id`, `char_id`, `char_name`, `map`, `command`) VALUES (NOW(), '%d', '%d', ?, '%s', ?)", log_config.log_gm, sd->status.account_id, sd->status.char_id, mapindex_id2name(sd->mapindex) )
+		||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 0, SQLDT_STRING, sd->status.name, strnlen(sd->status.name, NAME_LENGTH))
+		||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 1, SQLDT_STRING, (char*)message, safestrnlen(message, 255))
+		||  SQL_SUCCESS != SqlStmt_Execute(stmt) )
 		{
 			SqlStmt_ShowDebug(stmt);
+			SqlStmt_Free(stmt);
 			return;
 		}
+		SqlStmt_Free(stmt);
 	}
 	else
 	{
@@ -365,7 +368,7 @@ void log_atcommand(map_session_data* sd, const char* message)
 		time_t curtime;
 		FILE* logfp;
 
-		if( ( logfp = fopen(log_config.log_gm, "a") ) == nullptr )
+		if( ( logfp = fopen(log_config.log_gm, "a") ) == NULL )
 			return;
 		time(&curtime);
 		strftime(timestring, sizeof(timestring), log_timestamp_format, localtime(&curtime));
@@ -375,7 +378,7 @@ void log_atcommand(map_session_data* sd, const char* message)
 }
 
 /// logs messages passed to script command 'logmes'
-void log_npc( npc_data* nd, const char* message ){
+void log_npc( struct npc_data* nd, const char* message ){
 	nullpo_retv(nd);
 
 	if( !log_config.npc )
@@ -383,16 +386,18 @@ void log_npc( npc_data* nd, const char* message ){
 
 	if( log_config.sql_logs )
 	{
-		SqlStmt stmt{ *logmysql_handle };
-
-		if( SQL_SUCCESS != stmt.Prepare(LOG_QUERY " INTO `%s` (`npc_date`, `char_name`, `map`, `mes`) VALUES (NOW(), ?, '%s', ?)", log_config.log_npc, map_mapid2mapname(nd->m) )
-		||  SQL_SUCCESS != stmt.BindParam(0, SQLDT_STRING, nd->name, strnlen(nd->name, NAME_LENGTH))
-		||  SQL_SUCCESS != stmt.BindParam(1, SQLDT_STRING, (char*)message, safestrnlen(message, 255))
-		||  SQL_SUCCESS != stmt.Execute() )
+		SqlStmt* stmt;
+		stmt = SqlStmt_Malloc(logmysql_handle);
+		if( SQL_SUCCESS != SqlStmt_Prepare(stmt, LOG_QUERY " INTO `%s` (`npc_date`, `char_name`, `map`, `mes`) VALUES (NOW(), ?, '%s', ?)", log_config.log_npc, map_mapid2mapname(nd->bl.m) )
+		||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 0, SQLDT_STRING, nd->name, strnlen(nd->name, NAME_LENGTH))
+		||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 1, SQLDT_STRING, (char*)message, safestrnlen(message, 255))
+		||  SQL_SUCCESS != SqlStmt_Execute(stmt) )
 		{
 			SqlStmt_ShowDebug(stmt);
+			SqlStmt_Free(stmt);
 			return;
 		}
+		SqlStmt_Free(stmt);
 	}
 	else
 	{
@@ -400,7 +405,7 @@ void log_npc( npc_data* nd, const char* message ){
 		time_t curtime;
 		FILE* logfp;
 
-		if( ( logfp = fopen(log_config.log_npc, "a") ) == nullptr )
+		if( ( logfp = fopen(log_config.log_npc, "a") ) == NULL )
 			return;
 		time(&curtime);
 		strftime(timestring, sizeof(timestring), log_timestamp_format, localtime(&curtime));
@@ -410,7 +415,7 @@ void log_npc( npc_data* nd, const char* message ){
 }
 
 /// logs messages passed to script command 'logmes'
-void log_npc(map_session_data* sd, const char* message)
+void log_npc(struct map_session_data* sd, const char* message)
 {
 	nullpo_retv(sd);
 
@@ -419,16 +424,18 @@ void log_npc(map_session_data* sd, const char* message)
 
 	if( log_config.sql_logs )
 	{
-		SqlStmt stmt{ *logmysql_handle };
-
-		if( SQL_SUCCESS != stmt.Prepare(LOG_QUERY " INTO `%s` (`npc_date`, `account_id`, `char_id`, `char_name`, `map`, `mes`) VALUES (NOW(), '%d', '%d', ?, '%s', ?)", log_config.log_npc, sd->status.account_id, sd->status.char_id, mapindex_id2name(sd->mapindex) )
-		||  SQL_SUCCESS != stmt.BindParam(0, SQLDT_STRING, sd->status.name, strnlen(sd->status.name, NAME_LENGTH))
-		||  SQL_SUCCESS != stmt.BindParam(1, SQLDT_STRING, (char*)message, safestrnlen(message, 255))
-		||  SQL_SUCCESS != stmt.Execute() )
+		SqlStmt* stmt;
+		stmt = SqlStmt_Malloc(logmysql_handle);
+		if( SQL_SUCCESS != SqlStmt_Prepare(stmt, LOG_QUERY " INTO `%s` (`npc_date`, `account_id`, `char_id`, `char_name`, `map`, `mes`) VALUES (NOW(), '%d', '%d', ?, '%s', ?)", log_config.log_npc, sd->status.account_id, sd->status.char_id, mapindex_id2name(sd->mapindex) )
+		||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 0, SQLDT_STRING, sd->status.name, strnlen(sd->status.name, NAME_LENGTH))
+		||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 1, SQLDT_STRING, (char*)message, safestrnlen(message, 255))
+		||  SQL_SUCCESS != SqlStmt_Execute(stmt) )
 		{
 			SqlStmt_ShowDebug(stmt);
+			SqlStmt_Free(stmt);
 			return;
 		}
+		SqlStmt_Free(stmt);
 	}
 	else
 	{
@@ -436,7 +443,7 @@ void log_npc(map_session_data* sd, const char* message)
 		time_t curtime;
 		FILE* logfp;
 
-		if( ( logfp = fopen(log_config.log_npc, "a") ) == nullptr )
+		if( ( logfp = fopen(log_config.log_npc, "a") ) == NULL )
 			return;
 		time(&curtime);
 		strftime(timestring, sizeof(timestring), log_timestamp_format, localtime(&curtime));
@@ -447,7 +454,7 @@ void log_npc(map_session_data* sd, const char* message)
 
 
 /// logs chat
-void log_chat(e_log_chat_type type, int32 type_id, int32 src_charid, int32 src_accid, const char* mapname, int32 x, int32 y, const char* dst_charname, const char* message)
+void log_chat(e_log_chat_type type, int type_id, int src_charid, int src_accid, const char* mapname, int x, int y, const char* dst_charname, const char* message)
 {
 	if( ( log_config.chat&type ) == 0 )
 	{// disabled
@@ -464,16 +471,19 @@ void log_chat(e_log_chat_type type, int32 type_id, int32 src_charid, int32 src_a
 	}
 
 	if( log_config.sql_logs ) {
-		SqlStmt stmt{ *logmysql_handle };
+		SqlStmt* stmt;
 
-		if( SQL_SUCCESS != stmt.Prepare(LOG_QUERY " INTO `%s` (`time`, `type`, `type_id`, `src_charid`, `src_accountid`, `src_map`, `src_map_x`, `src_map_y`, `dst_charname`, `message`) VALUES (NOW(), '%c', '%d', '%d', '%d', '%s', '%d', '%d', ?, ?)", log_config.log_chat, log_chattype2char(type), type_id, src_charid, src_accid, mapname, x, y)
-		||  SQL_SUCCESS != stmt.BindParam(0, SQLDT_STRING, (char*)dst_charname, safestrnlen(dst_charname, NAME_LENGTH))
-		||  SQL_SUCCESS != stmt.BindParam(1, SQLDT_STRING, (char*)message, safestrnlen(message, CHAT_SIZE_MAX))
-		||  SQL_SUCCESS != stmt.Execute() )
+		stmt = SqlStmt_Malloc(logmysql_handle);
+		if( SQL_SUCCESS != SqlStmt_Prepare(stmt, LOG_QUERY " INTO `%s` (`time`, `type`, `type_id`, `src_charid`, `src_accountid`, `src_map`, `src_map_x`, `src_map_y`, `dst_charname`, `message`) VALUES (NOW(), '%c', '%d', '%d', '%d', '%s', '%d', '%d', ?, ?)", log_config.log_chat, log_chattype2char(type), type_id, src_charid, src_accid, mapname, x, y)
+		||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 0, SQLDT_STRING, (char*)dst_charname, safestrnlen(dst_charname, NAME_LENGTH))
+		||  SQL_SUCCESS != SqlStmt_BindParam(stmt, 1, SQLDT_STRING, (char*)message, safestrnlen(message, CHAT_SIZE_MAX))
+		||  SQL_SUCCESS != SqlStmt_Execute(stmt) )
 		{
 			SqlStmt_ShowDebug(stmt);
+			SqlStmt_Free(stmt);
 			return;
 		}
+		SqlStmt_Free(stmt);
 	}
 	else
 	{
@@ -481,7 +491,7 @@ void log_chat(e_log_chat_type type, int32 type_id, int32 src_charid, int32 src_a
 		time_t curtime;
 		FILE* logfp;
 
-		if( ( logfp = fopen(log_config.log_chat, "a") ) == nullptr )
+		if( ( logfp = fopen(log_config.log_chat, "a") ) == NULL )
 			return;
 		time(&curtime);
 		strftime(timestring, sizeof(timestring), log_timestamp_format, localtime(&curtime));
@@ -491,7 +501,7 @@ void log_chat(e_log_chat_type type, int32 type_id, int32 src_charid, int32 src_a
 }
 
 /// logs cash transactions
-void log_cash( map_session_data* sd, e_log_pick_type type, e_log_cash_type cash_type, int32 amount ){
+void log_cash( struct map_session_data* sd, e_log_pick_type type, e_log_cash_type cash_type, int amount ){
 	nullpo_retv( sd );
 
 	if( !log_config.cash )
@@ -509,7 +519,7 @@ void log_cash( map_session_data* sd, e_log_pick_type type, e_log_cash_type cash_
 		time_t curtime;
 		FILE* logfp;
 
-		if( ( logfp = fopen( log_config.log_cash, "a" ) ) == nullptr )
+		if( ( logfp = fopen( log_config.log_cash, "a" ) ) == NULL )
 			return;
 		time( &curtime );
 		strftime( timestring, sizeof( timestring ), log_timestamp_format, localtime( &curtime ) );
@@ -524,9 +534,9 @@ void log_cash( map_session_data* sd, e_log_pick_type type, e_log_cash_type cash_
  * @param type Log type, @see e_log_feeding_type
  * @param nameid Item used as food
  **/
-void log_feeding(map_session_data *sd, e_log_feeding_type type, t_itemid nameid) {
-	uint32 target_id = 0, intimacy = 0;
-	uint16 target_class = 0;
+void log_feeding(struct map_session_data *sd, e_log_feeding_type type, t_itemid nameid) {
+	unsigned int target_id = 0, intimacy = 0;
+	unsigned short target_class = 0;
 
 	nullpo_retv( sd );
 
@@ -552,7 +562,7 @@ void log_feeding(map_session_data *sd, e_log_feeding_type type, t_itemid nameid)
 
 	if (log_config.sql_logs) {
 		if (SQL_ERROR == Sql_Query(logmysql_handle, LOG_QUERY " INTO `%s` (`time`, `char_id`, `target_id`, `target_class`, `type`, `intimacy`, `item_id`, `map`, `x`, `y`) VALUES ( NOW(), '%" PRIu32 "', '%" PRIu32 "', '%hu', '%c', '%" PRIu32 "', '%u', '%s', '%hu', '%hu' )",
-			log_config.log_feeding, sd->status.char_id, target_id, target_class, log_feedingtype2char(type), intimacy, nameid, mapindex_id2name(sd->mapindex), sd->x, sd->y))
+			log_config.log_feeding, sd->status.char_id, target_id, target_class, log_feedingtype2char(type), intimacy, nameid, mapindex_id2name(sd->mapindex), sd->bl.x, sd->bl.y))
 		{
 			Sql_ShowDebug(logmysql_handle);
 			return;
@@ -562,11 +572,11 @@ void log_feeding(map_session_data *sd, e_log_feeding_type type, t_itemid nameid)
 		time_t curtime;
 		FILE* logfp;
 
-		if ((logfp = fopen(log_config.log_feeding, "a")) == nullptr)
+		if ((logfp = fopen(log_config.log_feeding, "a")) == NULL)
 			return;
 		time(&curtime);
 		strftime(timestring, sizeof(timestring), log_timestamp_format, localtime(&curtime));
-		fprintf(logfp, "%s - %s[%d]\t%d\t%d(%c)\t%d\t%u\t%s\t%hu,%hu\n", timestring, sd->status.name, sd->status.char_id, target_id, target_class, log_feedingtype2char(type), intimacy, nameid, mapindex_id2name(sd->mapindex), sd->x, sd->y);
+		fprintf(logfp, "%s - %s[%d]\t%d\t%d(%c)\t%d\t%u\t%s\t%hu,%hu\n", timestring, sd->status.name, sd->status.char_id, target_id, target_class, log_feedingtype2char(type), intimacy, nameid, mapindex_id2name(sd->mapindex), sd->bl.x, sd->bl.y);
 		fclose(logfp);
 	}
 }
@@ -585,16 +595,16 @@ void log_set_defaults(void)
 }
 
 
-int32 log_config_read(const char* cfgName)
+int log_config_read(const char* cfgName)
 {
-	static int32 count = 0;
+	static int count = 0;
 	char line[1024], w1[1024], w2[1024];
 	FILE *fp;
 
 	if( count++ == 0 )
 		log_set_defaults();
 
-	if( ( fp = fopen(cfgName, "r") ) == nullptr )
+	if( ( fp = fopen(cfgName, "r") ) == NULL )
 	{
 		ShowError("Log configuration file not found at: %s\n", cfgName);
 		return 1;
