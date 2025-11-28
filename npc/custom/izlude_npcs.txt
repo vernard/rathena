@@ -1,0 +1,17 @@
+//===== Custom Script =======================================
+//= Izlude Custom NPC Arrangement
+//===== Description: =========================================
+//= Custom NPC positions for Izlude.
+//= - Healer at (124,114) - see custom/healer.txt
+//= - Warpra at (132,114) - next to Healer
+//============================================================
+
+// Override Quest Warper position
+izlude,132,114,4	script	Warpra#izl_custom	113,{ callfunc "QWS_Town_Warpra",11,"Izlude Town"; close; }
+
+// Disable original Warpra on server load
+-	script	IzludeNPCOverrides	-1,{
+OnInit:
+	disablenpc "Warpra#26";
+	end;
+}
