@@ -1,22 +1,25 @@
 //===== rAthena Script =======================================
-//= Healer
+//= Healer (Enhanced with 5 Buffs)
 //===== By: ==================================================
-//= Euphy
+//= Euphy (original)
+//= Modified by Claude Code
 //===== Current Version: =====================================
-//= 1.1
+//= 1.2
 //===== Compatible With: =====================================
 //= rAthena Project
 //===== Description: =========================================
-//= Basic healer script.
+//= Enhanced healer script with 5 buffs.
 //===== Additional Comments: =================================
 //= 1.0 Initial script.
 //= 1.1 Aligned coordinates with @go.
+//= 1.2 Added 5 buffs: Increase Agi, Blessing, Impositio Manus,
+//=     Magnificat, and Angelus (4 minute duration, level 10)
 //============================================================
 
 -	script	Healer	-1,{
 
 	.@Price = 0;	// Zeny required for heal
-	.@Buffs = 0;	// Also buff players? (1: yes / 0: no)
+	.@Buffs = 1;	// Also buff players? (1: yes / 0: no)
 	.@Delay = 0;	// Heal delay, in seconds
 
 	if (@HD > gettimetick(2))
@@ -32,10 +35,21 @@
 	specialeffect2 EF_HEAL2;
 	percentheal 100,100;
 	if (.@Buffs) {
+		// Increase Agi
 		specialeffect2 EF_INCAGILITY;
 		sc_start SC_INCREASEAGI,240000,10;
+		// Blessing
 		specialeffect2 EF_BLESSING;
 		sc_start SC_BLESSING,240000,10;
+		// Impositio Manus
+		specialeffect2 EF_IMPOSITIO;
+		sc_start SC_IMPOSITIO,240000,10;
+		// Magnificat
+		specialeffect2 EF_MAGNIFICAT;
+		sc_start SC_MAGNIFICAT,240000,10;
+		// Angelus
+		specialeffect2 EF_ANGELUS;
+		sc_start SC_ANGELUS,240000,10;
 	}
 	if (.@Delay)
 		@HD = gettimetick(2) + .@Delay;
