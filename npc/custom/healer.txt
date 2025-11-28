@@ -63,9 +63,9 @@
 		for (.@i = 0; .@i < .@inventorysize; .@i++) {
 			// Check if item is not identified
 			if (@inventorylist_identify[.@i] == 0) {
-				// Get item type (4 = weapon, 5 = armor)
+				// Get item type (4 = armor, 5 = weapon, 8 = pet armor)
 				.@type = getiteminfo(@inventorylist_id[.@i], ITEMINFO_TYPE);
-				if (.@type == IT_WEAPON || .@type == IT_ARMOR) {
+				if (.@type == IT_WEAPON || .@type == IT_ARMOR || .@type == IT_PETARMOR) {
 					// Remove unidentified item and add identified version
 					delitem2 @inventorylist_id[.@i], 1, 0, @inventorylist_refine[.@i],
 						@inventorylist_attribute[.@i], @inventorylist_card1[.@i],
