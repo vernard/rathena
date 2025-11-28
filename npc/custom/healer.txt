@@ -1,19 +1,21 @@
 //===== rAthena Script =======================================
-//= Healer (Enhanced with 5 Buffs)
+//= Healer (Enhanced with 5 Buffs + Identification)
 //===== By: ==================================================
 //= Euphy (original)
 //= Modified by Claude Code
 //===== Current Version: =====================================
-//= 1.2
+//= 1.3
 //===== Compatible With: =====================================
 //= rAthena Project
 //===== Description: =========================================
-//= Enhanced healer script with 5 buffs.
+//= Enhanced healer script with 5 buffs and item identification.
 //===== Additional Comments: =================================
 //= 1.0 Initial script.
 //= 1.1 Aligned coordinates with @go.
 //= 1.2 Added 5 buffs: Increase Agi, Blessing, Impositio Manus,
 //=     Magnificat, and Angelus (4 minute duration, level 10)
+//= 1.3 Added equipment identification feature with configurable
+//=     buff duration (10 minutes default)
 //============================================================
 
 -	script	Healer	-1,{
@@ -21,6 +23,8 @@
 	.@Price = 0;	// Zeny required for heal
 	.@Buffs = 1;	// Also buff players? (1: yes / 0: no)
 	.@Delay = 0;	// Heal delay, in seconds
+	.@BuffDuration = 600000;	// Buff duration in milliseconds (600000 = 10 minutes, 240000 = 4 minutes standard)
+	.@IdentifyItems = 1;	// Identify all unidentified equipment? (1: yes / 0: no)
 
 	if (@HD > gettimetick(2))
 		end;
@@ -37,19 +41,48 @@
 	if (.@Buffs) {
 		// Increase Agi
 		specialeffect2 EF_INCAGILITY;
-		sc_start SC_INCREASEAGI,240000,10;
+		sc_start SC_INCREASEAGI,.@BuffDuration,10;
 		// Blessing
 		specialeffect2 EF_BLESSING;
-		sc_start SC_BLESSING,240000,10;
+		sc_start SC_BLESSING,.@BuffDuration,10;
 		// Impositio Manus
 		specialeffect2 EF_IMPOSITIO;
-		sc_start SC_IMPOSITIO,240000,10;
+		sc_start SC_IMPOSITIO,.@BuffDuration,10;
 		// Magnificat
 		specialeffect2 EF_MAGNIFICAT;
-		sc_start SC_MAGNIFICAT,240000,10;
+		sc_start SC_MAGNIFICAT,.@BuffDuration,10;
 		// Angelus
 		specialeffect2 EF_ANGELUS;
-		sc_start SC_ANGELUS,240000,10;
+		sc_start SC_ANGELUS,.@BuffDuration,10;
+	}
+	if (.@IdentifyItems) {
+		// Identify all unidentified equipment in inventory
+		.@identified = 0;
+		getinventorylist;
+		.@inventorysize = getarraysize(@inventorylist_id);
+		for (.@i = 0; .@i < .@inventorysize; .@i++) {
+			// Check if item is not identified
+			if (@inventorylist_identify[.@i] == 0) {
+				// Get item type (4 = weapon, 5 = armor)
+				.@type = getiteminfo(@inventorylist_id[.@i], ITEMINFO_TYPE);
+				if (.@type == IT_WEAPON || .@type == IT_ARMOR) {
+					// Remove unidentified item and add identified version
+					delitem2 @inventorylist_id[.@i], 1, 0, @inventorylist_refine[.@i],
+						@inventorylist_attribute[.@i], @inventorylist_card1[.@i],
+						@inventorylist_card2[.@i], @inventorylist_card3[.@i],
+						@inventorylist_card4[.@i];
+					getitem2 @inventorylist_id[.@i], 1, 1, @inventorylist_refine[.@i],
+						@inventorylist_attribute[.@i], @inventorylist_card1[.@i],
+						@inventorylist_card2[.@i], @inventorylist_card3[.@i],
+						@inventorylist_card4[.@i];
+					.@identified++;
+				}
+			}
+		}
+		if (.@identified > 0) {
+			specialeffect2 EF_MAGNIFIERITEM;
+			message strcharinfo(0), "Identified " + .@identified + " item(s).";
+		}
 	}
 	if (.@Delay)
 		@HD = gettimetick(2) + .@Delay;
@@ -59,42 +92,52 @@
 
 // Duplicates
 //============================================================
-alberta,25,240,6	duplicate(Healer)	Healer#alb	909
-aldebaran,135,118,6	duplicate(Healer)	Healer#alde	909
-amatsu,200,79,4	duplicate(Healer)	Healer#ama	909
-ayothaya,207,169,6	duplicate(Healer)	Healer#ayo	909
-comodo,184,158,6	duplicate(Healer)	Healer#com	909
-einbech,57,36,6	duplicate(Healer)	Healer#einbe	909
-einbroch,57,202,6	duplicate(Healer)	Healer#einbr	909
-geffen,115,72,6	duplicate(Healer)	Healer#gef	909
-gonryun,156,122,6	duplicate(Healer)	Healer#gon	909
-hugel,89,150,6	duplicate(Healer)	Healer#hug	909
-izlude,121,150,6	duplicate(Healer)	Healer#izl	909	//Pre-RE: (125,118)
-jawaii,250,139,4	duplicate(Healer)	Healer#jaw	909
-lighthalzen,152,100,6	duplicate(Healer)	Healer#lhz	909
-louyang,226,103,4	duplicate(Healer)	Healer#lou	909
-manuk,272,144,6	duplicate(Healer)	Healer#man	909
-mid_camp,203,289,6	duplicate(Healer)	Healer#mid	909
-moc_ruins,72,164,4	duplicate(Healer)	Healer#moc	909
-morocc,153,97,6	duplicate(Healer)	Healer#mor	909
-moscovia,220,191,4	duplicate(Healer)	Healer#mos	909
-niflheim,212,182,5	duplicate(Healer)	Healer#nif	909
-payon,179,106,4	duplicate(Healer)	Healer#pay	909
-prontera,162,193,4	duplicate(Healer)	Healer#prt	909
-rachel,125,116,6	duplicate(Healer)	Healer#rac	909
-splendide,201,153,4	duplicate(Healer)	Healer#spl	909
-thor_camp,249,74,4	duplicate(Healer)	Healer#thor	909
-umbala,105,148,3	duplicate(Healer)	Healer#umb	909
-veins,217,121,4	duplicate(Healer)	Healer#ve	909
-xmas,143,136,4	duplicate(Healer)	Healer#xmas	909
-yuno,164,45,4	duplicate(Healer)	Healer#yuno	909
+alberta,25,240,6	duplicate(Healer)	Healer#alb	2036
+aldebaran,135,118,6	duplicate(Healer)	Healer#alde	2036
+amatsu,200,79,4	duplicate(Healer)	Healer#ama	2036
+ayothaya,207,169,6	duplicate(Healer)	Healer#ayo	2036
+comodo,184,158,6	duplicate(Healer)	Healer#com	2036
+einbech,57,36,6	duplicate(Healer)	Healer#einbe	2036
+einbroch,57,202,6	duplicate(Healer)	Healer#einbr	2036
+geffen,115,72,6	duplicate(Healer)	Healer#gef	2036
+gonryun,156,122,6	duplicate(Healer)	Healer#gon	2036
+hugel,89,150,6	duplicate(Healer)	Healer#hug	2036
+izlude,121,150,6	duplicate(Healer)	Healer#izl	2036	//Pre-RE: (125,118)
+jawaii,250,139,4	duplicate(Healer)	Healer#jaw	2036
+lighthalzen,152,100,6	duplicate(Healer)	Healer#lhz	2036
+louyang,226,103,4	duplicate(Healer)	Healer#lou	2036
+manuk,272,144,6	duplicate(Healer)	Healer#man	2036
+mid_camp,203,289,6	duplicate(Healer)	Healer#mid	2036
+moc_ruins,72,164,4	duplicate(Healer)	Healer#moc	2036
+morocc,153,97,6	duplicate(Healer)	Healer#mor	2036
+moscovia,220,191,4	duplicate(Healer)	Healer#mos	2036
+niflheim,212,182,5	duplicate(Healer)	Healer#nif	2036
+payon,179,106,4	duplicate(Healer)	Healer#pay	2036
+prontera,162,193,4	duplicate(Healer)	Healer#prt	2036
+rachel,125,116,6	duplicate(Healer)	Healer#rac	2036
+splendide,201,153,4	duplicate(Healer)	Healer#spl	2036
+thor_camp,249,74,4	duplicate(Healer)	Healer#thor	2036
+umbala,105,148,3	duplicate(Healer)	Healer#umb	2036
+veins,217,121,4	duplicate(Healer)	Healer#ve	2036
+xmas,143,136,4	duplicate(Healer)	Healer#xmas	2036
+yuno,164,45,4	duplicate(Healer)	Healer#yuno	2036
 
 // Duplicates (Renewal)
 //============================================================
-brasilis,194,221,6	duplicate(Healer)	Healer#bra	909
-dewata,195,187,4	duplicate(Healer)	Healer#dew	909
-dicastes01,201,194,4	duplicate(Healer)	Healer#dic	909
-ecl_in01,45,60,4	duplicate(Healer)	Healer#ecl	909
-malangdo,132,114,6	duplicate(Healer)	Healer#mal	909
-malaya,227,204,6	duplicate(Healer)	Healer#ma	909
-mora,55,152,4	duplicate(Healer)	Healer#mora	909
+brasilis,194,221,6	duplicate(Healer)	Healer#bra	2036
+dewata,195,187,4	duplicate(Healer)	Healer#dew	2036
+dicastes01,201,194,4	duplicate(Healer)	Healer#dic	2036
+ecl_in01,45,60,4	duplicate(Healer)	Healer#ecl	2036
+malangdo,132,114,6	duplicate(Healer)	Healer#mal	2036
+malaya,227,204,6	duplicate(Healer)	Healer#ma	2036
+mora,55,152,4	duplicate(Healer)	Healer#mora	2036
+
+// Field Healers (near Quest Warpers)
+//============================================================
+ama_fild01,183,325,4	duplicate(Healer)	Healer#ama_fld	2036
+gef_fild10,76,339,4	duplicate(Healer)	Healer#gef_fld	2036
+mjolnir_02,90,363,4	duplicate(Healer)	Healer#mjo_fld	2036
+moc_fild04,212,331,4	duplicate(Healer)	Healer#moc_fld04	2036
+moc_fild19,111,97,4	duplicate(Healer)	Healer#moc_fld19	2036
+prt_fild05,278,215,4	duplicate(Healer)	Healer#prt_fld	2036
+yuno_fild03,42,135,4	duplicate(Healer)	Healer#yuno_fld	2036
