@@ -1,0 +1,50 @@
+//===== rAthena Script =======================================
+//= Prontera Custom NPC Arrangement
+//===== Description: =========================================
+//= Custom Kafra and adjusted NPC positions for Prontera center.
+//= - Hunting Missions at (141,172) - left of Banker
+//= - Banker at (144,172) - see custom/etc/bank.txt
+//= - Kafra at center (147,172) - old Warpra position
+//= - Warpra (Quest Warper) at (159,193) - near Healer
+//= - Healer at (162,193)
+//= - Kriemhild flag at (156,214) - top of Chef Assistant
+//= - Smile Assistance and Guide NPCs disabled
+//============================================================
+
+// Custom Kafra in Prontera center
+// Uses sprite 117 (same as kaf_prontera5)
+prontera,147,172,4	script	Kafra Employee::kaf_prontera_center	117,{
+	cutin "kafra_01",2;
+	callfunc "F_KafSet";
+	mes "[Kafra Employee]";
+	mes "Welcome to the";
+	mes "Kafra Corporation~";
+	mes "The Kafra Services are";
+	mes "always here to support";
+	mes "you. So how can I be";
+	mes "of service today?";
+	callfunc "F_Kafra",5,0,0,40,800;
+	savepoint "prontera",147,175,1,1;
+	callfunc "F_KafEnd",0,1,"in the city of Prontera";
+}
+
+// Override Quest Warper position - moved next to Kafra
+// This creates a new Warpra next to the Kafra
+prontera,159,193,4	script	Warpra#prt_custom	113,{ callfunc "QWS_Town_Warpra",0,"Prontera Town"; close; }
+
+// Relocated Kriemhild flag - moved to top of Chef Assistant (Chef at 156,212)
+prontera,156,214,4	duplicate(InsideFlagsPR1)	Kriemhild#prt_custom	722
+
+// Disable NPCs on server load
+-	script	PronteraNPCOverrides	-1,{
+OnInit:
+	// Disable original Warpra#32 from quest_warper.txt
+	disablenpc "Warpra#32";
+	// Disable Smile Assistance in middle of Prontera
+	disablenpc "Smile Assistance#prt";
+	// Disable Guide in middle of Prontera
+	disablenpc "Guide#prt";
+	// Disable original Kriemhild flag (replaced with Kriemhild#prt_custom above)
+	disablenpc "Kriemhild#15";
+	end;
+}
