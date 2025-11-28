@@ -42,8 +42,9 @@ OnInit:
 	disablenpc "Warpra#32";
 	// Disable Smile Assistance in middle of Prontera
 	disablenpc "Smile Assistance#prt";
-	// Disable Guide in middle of Prontera
-	disablenpc "Guide#prt";
+	// Disable Guide in middle of Prontera (154,187)
+	// The NPC is defined as Guide#prt::PrtGuide, so unique name is PrtGuide
+	disablenpc "PrtGuide";
 	// Disable original Kriemhild flag (replaced with Kriemhild#prt_custom above)
 	disablenpc "Kriemhild#15";
 	end;
