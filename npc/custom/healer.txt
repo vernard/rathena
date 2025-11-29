@@ -18,41 +18,33 @@
 //=     buff duration (10 minutes default)
 //= 1.4 Fixed heal order: buffs applied before heal so Blessing's
 //=     INT bonus is reflected in max SP before percentheal
-//= 1.5 Level-based pricing: free for lvl 1-20, scales up to 10k at 90+
+//= 1.5 Two-tier pricing: 1k for heal+identify, 5k for heal+buffs+identify
 //============================================================
 
 -	script	Healer	-1,{
 
-	// Level-based pricing (free for beginners, scales with level)
-	.@Level = BaseLevel;
-	if (.@Level <= 20) .@Price = 0;
-	else if (.@Level <= 25) .@Price = 1000;
-	else if (.@Level <= 30) .@Price = 1500;
-	else if (.@Level <= 35) .@Price = 2000;
-	else if (.@Level <= 40) .@Price = 2500;
-	else if (.@Level <= 45) .@Price = 3000;
-	else if (.@Level <= 50) .@Price = 3500;
-	else if (.@Level <= 55) .@Price = 4000;
-	else if (.@Level <= 60) .@Price = 5000;
-	else if (.@Level <= 65) .@Price = 6000;
-	else if (.@Level <= 70) .@Price = 7000;
-	else if (.@Level <= 75) .@Price = 7500;
-	else if (.@Level <= 80) .@Price = 8000;
-	else if (.@Level <= 85) .@Price = 8500;
-	else if (.@Level <= 89) .@Price = 9000;
-	else .@Price = 10000;
-	.@Buffs = 1;	// Also buff players? (1: yes / 0: no)
-	.@BuffDuration = 600000;	// Buff duration in milliseconds (600000 = 10 minutes, 240000 = 4 minutes standard)
+	.@BuffDuration = 600000;	// Buff duration in milliseconds (600000 = 10 minutes)
 	.@IdentifyItems = 1;	// Identify all unidentified equipment? (1: yes / 0: no)
 
-	if (.@Price) {
-		message strcharinfo(0), "Healing costs " + callfunc("F_InsertComma",.@Price) + " Zeny.";
-		if (Zeny < .@Price)
+	// Menu selection for service tier
+	switch(select("Heal + Identify (1,000z):Heal + Buffs + Identify (5,000z):Cancel")) {
+		case 1:
+			.@Price = 1000;
+			.@Buffs = 0;
+			break;
+		case 2:
+			.@Price = 5000;
+			.@Buffs = 1;
+			break;
+		case 3:
 			end;
-		if (select("^0055FFHeal^000000:^777777Cancel^000000") == 2)
-			end;
-		Zeny -= .@Price;
 	}
+
+	if (Zeny < .@Price) {
+		message strcharinfo(0), "You need " + callfunc("F_InsertComma",.@Price) + " Zeny.";
+		end;
+	}
+	Zeny -= .@Price;
 	// Apply buffs first so stat bonuses affect max HP/SP before heal
 	if (.@Buffs) {
 		// Increase Agi
