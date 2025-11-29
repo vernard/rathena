@@ -4,7 +4,7 @@
 //= Euphy (original)
 //= Modified by Claude Code
 //===== Current Version: =====================================
-//= 1.3
+//= 1.6
 //===== Compatible With: =====================================
 //= rAthena Project
 //===== Description: =========================================
@@ -19,25 +19,38 @@
 //= 1.4 Fixed heal order: buffs applied before heal so Blessing's
 //=     INT bonus is reflected in max SP before percentheal
 //= 1.5 Two-tier pricing: 1k for heal+identify, 5k for heal+buffs+identify
+//= 1.6 Configurable pricing via env vars, free for low-level players
 //============================================================
 
 -	script	Healer	-1,{
 
-	.@BuffDuration = 600000;	// Buff duration in milliseconds (600000 = 10 minutes)
 	.@IdentifyItems = 1;	// Identify all unidentified equipment? (1: yes / 0: no)
 
-	// Menu selection for service tier
-	switch(select("Heal + Identify (1,000z):Heal + Buffs + Identify (5,000z):Cancel")) {
-		case 1:
-			.@Price = 1000;
-			.@Buffs = 0;
-			break;
-		case 2:
-			.@Price = 5000;
-			.@Buffs = 1;
-			break;
-		case 3:
-			end;
+	// Configurable settings from environment variables
+	.@BasicPrice = 1000;
+	.@BuffsPrice = 5000;
+	.@FreeLevel = 30;
+	.@BuffDuration = 600000;
+
+	// Free full service for low-level adventurers (skip menu)
+	if (.@FreeLevel > 0 && BaseLevel <= .@FreeLevel) {
+		.@Price = 0;
+		.@Buffs = 1;
+		message strcharinfo(0), "Free service for adventurers level " + .@FreeLevel + " and below!";
+	} else {
+		// Menu selection for higher level players
+		switch(select("Heal + Identify (" + .@BasicPrice + "z):Heal + Buffs + Identify (" + .@BuffsPrice + "z):Cancel")) {
+			case 1:
+				.@Price = .@BasicPrice;
+				.@Buffs = 0;
+				break;
+			case 2:
+				.@Price = .@BuffsPrice;
+				.@Buffs = 1;
+				break;
+			case 3:
+				end;
+		}
 	}
 
 	if (Zeny < .@Price) {
