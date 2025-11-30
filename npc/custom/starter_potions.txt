@@ -1,0 +1,27 @@
+//===== rAthena Script =======================================
+//= Starter Potions (Login Event)
+//===== Description: =========================================
+//= Gives new characters starter potions on first login.
+//= Potions are character-bound (cannot trade, drop, store).
+//===== Additional Comments: =================================
+//= Uses permanent character variable to track if received.
+//============================================================
+
+-	script	StarterPotions	-1,{
+	end;
+
+OnPCLoginEvent:
+	// Check if character already received starter potions
+	if (STARTER_POTIONS_RECEIVED) end;
+
+	// Give character-bound starter potions (bound type 4 = character bound)
+	getitembound 30001, 100, 4;  // Starter Red Potion
+	getitembound 30002, 100, 4;  // Starter Orange Potion
+	getitembound 30003, 100, 4;  // Starter Blue Potion
+
+	// Mark as received so they don't get duplicates
+	STARTER_POTIONS_RECEIVED = 1;
+
+	dispbottom "You received 100 Starter Red Potions, 100 Starter Orange Potions, and 100 Starter Blue Potions!";
+	end;
+}

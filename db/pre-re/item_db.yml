@@ -87,6 +87,64 @@ Header:
   Type: ITEM_DB
   Version: 2
 
+# Custom starter potions (given via login event script as character-bound items)
+# Stack.Storage blocks storage, character-bound blocks trading
+Body:
+  - Id: 30001
+    AegisName: Starter_Red_Potion
+    Name: Starter Red Potion
+    Type: Healing
+    Weight: 0
+    Stack:
+      Amount: 0
+      Storage: true
+      GuildStorage: true
+    Trade:
+      NoDrop: true
+      NoTrade: true
+      NoSell: true
+      NoCart: true
+      NoMail: true
+      NoAuction: true
+    Script: |
+      itemheal rand(45,65),0;
+  - Id: 30002
+    AegisName: Starter_Orange_Potion
+    Name: Starter Orange Potion
+    Type: Healing
+    Weight: 0
+    Stack:
+      Amount: 0
+      Storage: true
+      GuildStorage: true
+    Trade:
+      NoDrop: true
+      NoTrade: true
+      NoSell: true
+      NoCart: true
+      NoMail: true
+      NoAuction: true
+    Script: |
+      itemheal rand(105,145),0;
+  - Id: 30003
+    AegisName: Starter_Blue_Potion
+    Name: Starter Blue Potion
+    Type: Healing
+    Weight: 0
+    Stack:
+      Amount: 0
+      Storage: true
+      GuildStorage: true
+    Trade:
+      NoDrop: true
+      NoTrade: true
+      NoSell: true
+      NoCart: true
+      NoMail: true
+      NoAuction: true
+    Script: |
+      itemheal 0,rand(40,60);
+
 Footer:
   Imports:
   - Path: db/pre-re/item_db_usable.yml
