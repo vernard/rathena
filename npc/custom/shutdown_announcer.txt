@@ -1,0 +1,92 @@
+//===== rAthena Script =======================================
+//= Shutdown Countdown Announcer
+//===== Description: =========================================
+//= Polls database for scheduled shutdowns and broadcasts
+//= countdown messages to all players.
+//=
+//= Triggered by webhook: /api_shutdown.php
+//============================================================
+
+-	script	ShutdownAnnouncer	-1,{
+OnInit:
+	// Announcement intervals in seconds (10min, 5min, 2min, 1min, 30sec)
+	setarray .intervals[0], 600, 300, 120, 60, 30;
+	.interval_count = 5;
+
+	// Track the current schedule ID and last announced interval
+	.current_schedule_id = 0;
+	.last_announced_interval = 9999;  // High value so first interval always triggers
+
+	// Start the polling timer
+	initnpctimer;
+	end;
+
+OnTimer5000:
+	// Check for pending shutdown schedule
+	.@count = query_sql("SELECT id, TIMESTAMPDIFF(SECOND, initiated_at, NOW()) as elapsed, countdown_minutes * 60 as total_seconds FROM shutdown_schedule WHERE processed = 0 ORDER BY id DESC LIMIT 1", .@id, .@elapsed, .@total);
+
+	if (.@count > 0) {
+		.@remaining = .@total[0] - .@elapsed[0];
+
+		// New schedule? Reset tracking
+		if (.current_schedule_id != .@id[0]) {
+			.current_schedule_id = .@id[0];
+			.last_announced_interval = 9999;
+			// debugmes "New shutdown schedule detected, ID: " + .@id[0];
+		}
+
+		// debugmes "Shutdown: " + .@remaining + " seconds remaining";
+
+		if (.@remaining <= 0) {
+			// Countdown complete
+			query_sql("UPDATE shutdown_schedule SET processed = 1 WHERE id = " + .@id[0]);
+			announce "[Server] Server restart imminent. Goodbye!",bc_all,"0xFFFF00";
+			.current_schedule_id = 0;
+			.last_announced_interval = 9999;
+			// debugmes "Shutdown countdown complete";
+		}
+		else {
+			// Check each interval - announce when we drop below it for the first time
+			for (.@i = 0; .@i < .interval_count; .@i++) {
+				.@interval = .intervals[.@i];
+
+				// Skip intervals that are > the total countdown time
+				// (e.g., don't announce "10 minutes" for a 1-minute countdown)
+				if (.@interval > .@total[0]) {
+					continue;
+				}
+
+				// Announce if we've dropped to/below this interval and haven't announced it yet
+				if (.@remaining <= .@interval && .last_announced_interval > .@interval) {
+					.last_announced_interval = .@interval;
+
+					if (.@interval >= 60) {
+						.@mins = .@interval / 60;
+						if (.@mins == 1) {
+							announce "[Server] Server restarting in 1 minute!",bc_all,"0xFFFF00";
+						}
+						else {
+							announce "[Server] Server restarting in " + .@mins + " minutes!",bc_all,"0xFFFF00";
+						}
+					}
+					else {
+						announce "[Server] Server restarting in " + .@interval + " seconds!",bc_all,"0xFFFF00";
+					}
+					// debugmes "Announced: " + .@interval + " seconds";
+					break;
+				}
+			}
+		}
+	}
+	else {
+		// No pending shutdown, reset tracker
+		if (.current_schedule_id != 0) {
+			.current_schedule_id = 0;
+			.last_announced_interval = 9999;
+		}
+	}
+
+	// Restart timer for next poll
+	initnpctimer;
+	end;
+}
