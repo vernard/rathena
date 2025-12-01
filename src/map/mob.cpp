@@ -40,6 +40,7 @@
 #include "pc.hpp"
 #include "pet.hpp"
 #include "quest.hpp"
+#include "raredrop.hpp"
 
 using namespace rathena;
 
@@ -2852,12 +2853,10 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 
 			ditem = mob_setdropitem(&md->db->dropitem[i], 1, md->mob_id);
 
-			//A Rare Drop Global Announce by Lupus
-			if( mvp_sd && md->db->dropitem[i].rate <= battle_config.rare_drop_announce ) {
-				char message[128];
-				sprintf (message, msg_txt(NULL,541), mvp_sd->status.name, md->name, it->ename.c_str(), (float)drop_rate/100);
-				//MSG: "'%s' won %s's %s (chance: %0.02f%%)"
-				intif_broadcast(message,strlen(message)+1,BC_DEFAULT);
+			// Enhanced Rare Drop Tracking - records and announces rare drops with kill statistics
+			if (mvp_sd != nullptr) {
+				raredrop_record_and_announce(mvp_sd, md->db->dropitem[i].nameid, it->ename.c_str(),
+					RAREDROP_SOURCE_MOB, md->mob_id, md->name, drop_rate, battle_config.rare_drop_announce);
 			}
 			// Announce first, or else ditem will be freed. [Lance]
 			// By popular demand, use base drop rate for autoloot code. [Skotlex]
@@ -3098,6 +3097,9 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 				else
 					achievement_update_objective(sd, AG_BATTLE, 1, md->mob_id);
 			}
+
+			// Rare Drop Tracking - record kill for drop announcements
+			raredrop_record_kill(sd, md->mob_id);
 
 			// The master or Mercenary can increase the kill count
 			if (sd->md && src && (src->type == BL_PC || src->type == BL_MER) && mob->lv > sd->status.base_level / 2)
