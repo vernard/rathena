@@ -21,7 +21,6 @@
 #include "mob.hpp"
 #include "pc.hpp"
 #include "status.hpp"
-#include "raredrop.hpp"
 
 using namespace rathena;
 
@@ -1409,16 +1408,6 @@ static void itemdb_pc_get_itemgroup_sub(map_session_data *sd, bool identify, std
 		}
 		else if (!flag && data->isAnnounced)
 			intif_broadcast_obtain_special_item(sd, data->nameid, sd->itemid, ITEMOBTAIN_TYPE_BOXITEM);
-
-		// Enhanced Rare Drop Tracking - records and announces rare item box drops with statistics
-		if (!flag && data->rate > 0 && data->rate <= (uint16)battle_config.rare_drop_announce) {
-			std::shared_ptr<item_data> i_data = item_db.find(data->nameid);
-			std::shared_ptr<item_data> source_data = item_db.find(sd->itemid);
-			if (i_data != nullptr && source_data != nullptr) {
-				raredrop_record_and_announce(sd, data->nameid, i_data->ename.c_str(),
-					RAREDROP_SOURCE_ITEM, sd->itemid, source_data->ename.c_str(), data->rate, battle_config.rare_drop_announce);
-			}
-		}
 	}
 }
 

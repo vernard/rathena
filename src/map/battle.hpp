@@ -440,6 +440,9 @@ struct Battle_Config
 	int character_size; // if riders have size=2, and baby class riders size=1 [Lupus]
 	int mob_max_skilllvl; // Max possible skill level [Lupus]
 	int rare_drop_announce; // chance <= to show rare drops global announces
+	// PATCH START: Rare drop autoloot config
+	int rare_drop_autoloot; // automatically loot rare drops (1=yes, 0=no)
+	// PATCH END: Rare drop autoloot config
 	int drop_rate_cap;  // Drop rate can't be raised above this amount by drop bonus items
 	int drop_rate_cap_vip;
 

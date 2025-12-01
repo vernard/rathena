@@ -61,6 +61,9 @@
 #include "pet.hpp"
 #include "quest.hpp"
 #include "storage.hpp"
+// PATCH START: Rare drop tracking for item boxes
+#include "raredrop.hpp"
+// PATCH END: Rare drop tracking for item boxes
 
 using namespace rathena;
 
@@ -22203,6 +22206,25 @@ BUILDIN_FUNC(getrandgroupitem) {
 				if (pc_candrop(sd,&item_tmp))
 					map_addflooritem(&item_tmp,item_tmp.amount,sd->bl.m,sd->bl.x,sd->bl.y,0,0,0,0,0);
 			}
+			// PATCH START: Rare drop tracking for boss/MVP cards from item boxes
+			else {
+				// Item was successfully added to inventory
+				// Only announce boss/MVP cards (not all cards from OCA)
+				if (raredrop_is_boss_card(entry->nameid)) {
+					std::shared_ptr<item_data> i_data = item_db.find(entry->nameid);
+					// sd->itemid is set by pc_useitem() before running the script
+					t_itemid source_item_id = sd->itemid;
+					std::shared_ptr<item_data> source_data = item_db.find(source_item_id);
+
+					if (i_data != nullptr && source_data != nullptr) {
+						// Use a fixed rate (100 = 1%) since OCA cards have equal chance
+						raredrop_record_and_announce(sd, entry->nameid, i_data->ename.c_str(),
+							RAREDROP_SOURCE_ITEM, source_item_id, source_data->ename.c_str(),
+							100, battle_config.rare_drop_announce);
+					}
+				}
+			}
+			// PATCH END: Rare drop tracking for boss/MVP cards from item boxes
 		}
 	}
 

@@ -6,6 +6,9 @@
 
 #include "../common/cbasetypes.hpp"
 #include "../common/mmo.hpp"
+#include "../common/mapindex.hpp"
+
+#include <unordered_set>
 
 struct map_session_data;
 
@@ -24,5 +27,10 @@ void raredrop_record_and_announce(map_session_data* sd, t_itemid item_id,
                                    const char* item_name, e_raredrop_source source_type,
                                    uint32 source_id, const char* source_name,
                                    int32 drop_rate, int32 announce_threshold);
+
+// Boss/MVP card lookup for item box tracking
+extern std::unordered_set<t_itemid> boss_card_ids;
+void raredrop_init_boss_cards();
+bool raredrop_is_boss_card(t_itemid item_id);
 
 #endif /* _RAREDROP_HPP_ */

@@ -40,7 +40,9 @@
 #include "pc.hpp"
 #include "pet.hpp"
 #include "quest.hpp"
+// PATCH START: Rare drop tracking module
 #include "raredrop.hpp"
+// PATCH END: Rare drop tracking module
 
 using namespace rathena;
 
@@ -2853,11 +2855,30 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 
 			ditem = mob_setdropitem(&md->db->dropitem[i], 1, md->mob_id);
 
-			// Enhanced Rare Drop Tracking - records and announces rare drops with kill statistics
+			// PATCH START: Rare drop tracking and autoloot
 			if (mvp_sd != nullptr) {
 				raredrop_record_and_announce(mvp_sd, md->db->dropitem[i].nameid, it->ename.c_str(),
 					RAREDROP_SOURCE_MOB, md->mob_id, md->name, drop_rate, battle_config.rare_drop_announce);
+
+				// Force autoloot for rare drops if enabled
+				if (battle_config.rare_drop_autoloot && drop_rate <= battle_config.rare_drop_announce) {
+					struct item item_data;
+					memset(&item_data, 0, sizeof(item_data));
+					item_data.nameid = md->db->dropitem[i].nameid;
+					item_data.amount = 1;
+					item_data.identify = itemdb_isidentified(md->db->dropitem[i].nameid);
+					mob_setdropitem_option(&item_data, &md->db->dropitem[i]);
+
+					// Try to add to inventory - if successful, skip normal drop
+					if (pc_additem(mvp_sd, &item_data, 1, LOG_TYPE_PICKDROP_PLAYER) == 0) {
+						ers_free(item_drop_ers, ditem);
+						continue; // Item added to inventory, skip mob_item_drop
+					}
+					// If pc_additem failed (inventory full), fall through to normal drop
+				}
 			}
+			// PATCH END: Rare drop tracking and autoloot
+
 			// Announce first, or else ditem will be freed. [Lance]
 			// By popular demand, use base drop rate for autoloot code. [Skotlex]
 			mob_item_drop(md, dlist, ditem, 0, battle_config.autoloot_adjust ? drop_rate : md->db->dropitem[i].rate, homkillonly || merckillonly);
@@ -4963,6 +4984,10 @@ void MobDatabase::loadingFinished() {
 		mob->status.hp = mob->status.max_hp;
 		mob->status.sp = mob->status.max_sp;
 	}
+
+	// PATCH START: Initialize boss card lookup after mob_db loads
+	raredrop_init_boss_cards();
+	// PATCH END: Initialize boss card lookup after mob_db loads
 }
 
 MobDatabase mob_db;
