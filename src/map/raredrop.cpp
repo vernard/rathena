@@ -60,14 +60,15 @@ uint32 raredrop_get_kill_count(uint32 char_id, int32 mob_id) {
 
 /**
  * Log a rare drop to the unified rare_drop_log table
+ * @param kill_count Mob kill count at time of drop (0 for item boxes, will be stored as NULL)
  */
-static void raredrop_log_drop(map_session_data* sd, t_itemid item_id, e_raredrop_source source_type, uint32 source_id, int32 drop_rate) {
+static void raredrop_log_drop(map_session_data* sd, t_itemid item_id, e_raredrop_source source_type, uint32 source_id, int32 drop_rate, uint32 kill_count) {
 	const char* map_name = mapindex_id2name(sd->mapindex);
 
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
-		"INSERT INTO `rare_drop_log` (`char_id`, `item_id`, `source_type`, `source_id`, `drop_rate`, `map_name`) "
-		"VALUES ('%u', '%u', '%d', '%u', '%d', '%s')",
-		sd->status.char_id, item_id, (int)source_type, source_id, drop_rate, map_name))
+		"INSERT INTO `rare_drop_log` (`char_id`, `item_id`, `source_type`, `source_id`, `drop_rate`, `kill_count`, `map_name`) "
+		"VALUES ('%u', '%u', '%d', '%u', '%d', NULLIF('%u', 0), '%s')",
+		sd->status.char_id, item_id, (int)source_type, source_id, drop_rate, kill_count, map_name))
 	{
 		Sql_ShowDebug(mmysql_handle);
 	}
@@ -147,19 +148,19 @@ void raredrop_record_and_announce(map_session_data* sd, t_itemid item_id,
 		return;
 	}
 
-	// Log the drop to the unified table
-	raredrop_log_drop(sd, item_id, source_type, source_id, drop_rate);
-
-	// Get drop count from log table for the "Nth drop" message
-	uint32 drop_count = raredrop_get_drop_count(sd->status.char_id, item_id);
-
-	// Get kill count (only relevant for mob sources)
-	// Record the kill first so the count is accurate for the announcement
+	// Get kill count first (only relevant for mob sources)
+	// Record the kill so the count includes this kill for the announcement
 	uint32 kill_count = 0;
 	if (source_type == RAREDROP_SOURCE_MOB) {
 		raredrop_record_kill(sd, source_id);
 		kill_count = raredrop_get_kill_count(sd->status.char_id, source_id);
 	}
+
+	// Log the drop to the unified table (includes kill_count snapshot)
+	raredrop_log_drop(sd, item_id, source_type, source_id, drop_rate, kill_count);
+
+	// Get drop count from log table for the "Nth drop" message
+	uint32 drop_count = raredrop_get_drop_count(sd->status.char_id, item_id);
 
 	// Prepare the announcement message
 	char message[256];

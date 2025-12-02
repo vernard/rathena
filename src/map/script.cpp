@@ -64,6 +64,9 @@
 // PATCH START: Rare drop tracking for item boxes
 #include "raredrop.hpp"
 // PATCH END: Rare drop tracking for item boxes
+// PATCH START: Maintenance mode script command
+#include "maintenance.hpp"
+// PATCH END: Maintenance mode script command
 
 using namespace rathena;
 
@@ -25568,6 +25571,22 @@ BUILDIN_FUNC(preg_match) {
 #endif
 }
 
+// PATCH START: Maintenance mode script command
+/**
+ * maintenance;
+ * Enters maintenance mode:
+ * - Force-saves all connected players
+ * - Kicks all connected players
+ * - Blocks new connections
+ * - Keeps server process alive (waiting for Docker container replacement)
+ */
+BUILDIN_FUNC(maintenance)
+{
+	do_maintenance();
+	return SCRIPT_CMD_SUCCESS;
+}
+// PATCH END: Maintenance mode script command
+
 /// script command definitions
 /// for an explanation on args, see add_buildin_func
 struct script_function buildin_func[] = {
@@ -26221,6 +26240,11 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(mob_setidleevent, "is"),
 
 	BUILDIN_DEF(setinstancevar,"rvi"),
+
+	// PATCH START: Maintenance mode script command
+	BUILDIN_DEF(maintenance,""),  // No arguments - triggers maintenance mode
+	// PATCH END: Maintenance mode script command
+
 #include "../custom/script_def.inc"
 
 	{NULL,NULL,NULL},

@@ -1,49 +1,95 @@
 //===== rAthena Script =======================================
-//= Shutdown Countdown Announcer
+//= Shutdown Countdown Announcer with Maintenance Mode
 //===== Description: =========================================
 //= Polls database for scheduled shutdowns and broadcasts
 //= countdown messages to all players.
 //=
+//= Features:
+//= - Announces at 10min, 5min, 2min, 1min intervals
+//= - Second-by-second countdown from 30 to 1
+//= - Triggers maintenance mode at the end (force-save + kick)
+//=
 //= Triggered by webhook: /api_shutdown.php
 //============================================================
 
--	script	ShutdownAnnouncer	-1,{
+-	script	ShutdownAnnouncer	FAKE_NPC,{
 OnInit:
-	// Announcement intervals in seconds (10min, 5min, 2min, 1min, 30sec)
-	setarray .intervals[0], 600, 300, 120, 60, 30;
-	.interval_count = 5;
+	// Announcement intervals in seconds (10min, 5min, 2min, 1min)
+	// Note: 30 seconds triggers the final countdown instead of a single announcement
+	setarray .intervals[0], 600, 300, 120, 60;
+	.interval_count = 4;
 
 	// Track the current schedule ID and last announced interval
 	.current_schedule_id = 0;
 	.last_announced_interval = 9999;  // High value so first interval always triggers
 
-	// Start the polling timer
+	// Clear ALL maintenance flags - server is starting fresh
+	// This ensures a newly started container won't think it's in maintenance
+	query_sql("UPDATE shutdown_schedule SET is_maintenance = 0");
+
+	debugmes "[ShutdownAnnouncer] NPC initialized, cleared maintenance flags, starting 5-second polling timer";
+
+	// Start the polling timer (5 second intervals for normal polling)
 	initnpctimer;
 	end;
 
 OnTimer5000:
+	// Normal polling - check for shutdown schedule every 5 seconds
+	debugmes "[ShutdownAnnouncer] OnTimer5000 fired, polling database...";
+
 	// Check for pending shutdown schedule
 	.@count = query_sql("SELECT id, TIMESTAMPDIFF(SECOND, initiated_at, NOW()) as elapsed, countdown_minutes * 60 as total_seconds FROM shutdown_schedule WHERE processed = 0 ORDER BY id DESC LIMIT 1", .@id, .@elapsed, .@total);
 
 	if (.@count > 0) {
 		.@remaining = .@total[0] - .@elapsed[0];
 
+		debugmes "[ShutdownAnnouncer] Found schedule ID " + .@id[0] + ", remaining: " + .@remaining + " seconds";
+
 		// New schedule? Reset tracking
 		if (.current_schedule_id != .@id[0]) {
 			.current_schedule_id = .@id[0];
 			.last_announced_interval = 9999;
-			// debugmes "New shutdown schedule detected, ID: " + .@id[0];
+			debugmes "[ShutdownAnnouncer] New shutdown schedule detected, ID: " + .@id[0];
 		}
 
-		// debugmes "Shutdown: " + .@remaining + " seconds remaining";
+		// Check if we should start final countdown (30 seconds or less)
+		if (.@remaining <= 30 && .@remaining > 0) {
+			debugmes "[ShutdownAnnouncer] Starting final countdown from " + .@remaining + " seconds";
+			announce "[Server] Final countdown begins!",bc_all,0xFF0000;
 
-		if (.@remaining <= 0) {
-			// Countdown complete
-			query_sql("UPDATE shutdown_schedule SET processed = 1 WHERE id = " + .@id[0]);
-			announce "[Server] Server restart imminent. Goodbye!",bc_all,"0xFFFF00";
+			// Stop the 5-second timer during countdown
+			stopnpctimer;
+
+			// Second-by-second countdown using sleep (no player needed)
+			for (.@i = .@remaining; .@i > 0; .@i--) {
+				announce "[Server] Shutdown in " + .@i + "...",bc_all,0xFF0000;
+				debugmes "[ShutdownAnnouncer] Countdown: " + .@i;
+				sleep 1000;
+			}
+
+			// Countdown complete - trigger maintenance mode
+			debugmes "[ShutdownAnnouncer] Countdown complete! Triggering maintenance mode";
+			query_sql("UPDATE shutdown_schedule SET processed = 1, is_maintenance = 1 WHERE id = " + .@id[0]);
+			announce "[Server] Saving all players and entering maintenance mode...",bc_all,0xFFFF00;
+			maintenance;
+
+			// Reset state
 			.current_schedule_id = 0;
 			.last_announced_interval = 9999;
-			// debugmes "Shutdown countdown complete";
+
+			// Resume normal 5-second polling
+			initnpctimer;
+			end;
+		}
+
+		if (.@remaining <= 0) {
+			// Time's up - trigger maintenance immediately
+			debugmes "[ShutdownAnnouncer] Time's up! Triggering maintenance mode";
+			query_sql("UPDATE shutdown_schedule SET processed = 1, is_maintenance = 1 WHERE id = " + .@id[0]);
+			announce "[Server] Saving all players and entering maintenance mode...",bc_all,0xFFFF00;
+			maintenance;
+			.current_schedule_id = 0;
+			.last_announced_interval = 9999;
 		}
 		else {
 			// Check each interval - announce when we drop below it for the first time
@@ -51,7 +97,6 @@ OnTimer5000:
 				.@interval = .intervals[.@i];
 
 				// Skip intervals that are > the total countdown time
-				// (e.g., don't announce "10 minutes" for a 1-minute countdown)
 				if (.@interval > .@total[0]) {
 					continue;
 				}
@@ -60,33 +105,30 @@ OnTimer5000:
 				if (.@remaining <= .@interval && .last_announced_interval > .@interval) {
 					.last_announced_interval = .@interval;
 
-					if (.@interval >= 60) {
-						.@mins = .@interval / 60;
-						if (.@mins == 1) {
-							announce "[Server] Server restarting in 1 minute!",bc_all,"0xFFFF00";
-						}
-						else {
-							announce "[Server] Server restarting in " + .@mins + " minutes!",bc_all,"0xFFFF00";
-						}
+					.@mins = .@interval / 60;
+					if (.@mins == 1) {
+						announce "[Server] Server restarting in 1 minute!",bc_all,0xFFFF00;
 					}
 					else {
-						announce "[Server] Server restarting in " + .@interval + " seconds!",bc_all,"0xFFFF00";
+						announce "[Server] Server restarting in " + .@mins + " minutes!",bc_all,0xFFFF00;
 					}
-					// debugmes "Announced: " + .@interval + " seconds";
+					debugmes "[ShutdownAnnouncer] Announced: " + .@interval + " seconds remaining";
 					break;
 				}
 			}
 		}
 	}
 	else {
-		// No pending shutdown, reset tracker
+		// No pending shutdown, reset tracker if needed
 		if (.current_schedule_id != 0) {
+			debugmes "[ShutdownAnnouncer] Shutdown cancelled or completed, resetting tracker";
 			.current_schedule_id = 0;
 			.last_announced_interval = 9999;
 		}
 	}
 
-	// Restart timer for next poll
+	// Restart 5-second timer for next poll
 	initnpctimer;
 	end;
+
 }

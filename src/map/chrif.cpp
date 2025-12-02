@@ -32,6 +32,9 @@
 #include "pet.hpp"
 #include "script.hpp" // script_config
 #include "storage.hpp"
+// PATCH START: Maintenance mode support
+#include "maintenance.hpp"
+// PATCH END: Maintenance mode support
 
 static TIMER_FUNC(check_connect_char_server);
 
@@ -731,6 +734,15 @@ void chrif_authok(int fd) {
 	}
 
 	sd = node->sd;
+
+	// PATCH START: Block connections during maintenance mode
+	if (is_maintenance_mode()) {
+		ShowInfo("chrif_authok: Rejecting connection for account %d (maintenance mode)\n", account_id);
+		clif_authfail_fd(node->fd, 1);  // Type 1 = "Server closed"
+		chrif_auth_delete(account_id, char_id, ST_LOGIN);
+		return;
+	}
+	// PATCH END: Block connections during maintenance mode
 
 	if( runflag == MAPSERVER_ST_RUNNING &&
 		node->char_dat == NULL &&
