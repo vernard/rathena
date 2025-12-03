@@ -1,0 +1,174 @@
+//===== rAthena Script =======================================
+//= Hourly Points System
+//===== Description: =========================================
+//= Account-wide point system that grants points passively
+//= while players are online. Points can be exchanged for
+//= Elite Siege Supply Boxes at NPCs in major cities.
+//=
+//= - 10 points granted every hour of accumulated online time
+//= - 30 points = 1 Elite Siege Supply Box (Item ID: 14003)
+//= - Points are account-wide (shared across characters)
+//= - Partial time tracking (logout saves progress in minutes)
+//===== Changelog: ==========================================
+//= 1.0 Initial implementation
+//= 1.1 Simplified to track minutes instead of seconds
+//============================================================
+
+// Timer Controller (invisible floating NPC)
+// Handles login/logout events and hourly point grants
+-	script	HourlyPointsTimer	-1,{
+	end;
+
+OnInit:
+	// Configuration
+	.check_interval = 60000;	// Fire every 60 seconds (1 minute)
+	.minutes_per_grant = 60;	// 60 minutes = 1 hour
+	.points_per_grant = 10;		// Points granted per hour
+	end;
+
+OnPCLoginEvent:
+	// Start the periodic check timer
+	addtimer .check_interval, strnpcinfo(3) + "::OnTimeCheck";
+
+	// Show current balance on login (if player has points or progress)
+	if (#HOURLY_POINTS > 0 || #HOURLY_MINUTES > 0) {
+		dispbottom "[Hourly Points] Balance: " + #HOURLY_POINTS + " points | Progress: " + #HOURLY_MINUTES + "/60 minutes";
+	}
+	end;
+
+OnPCLogoutEvent:
+	// Cancel the timer - minutes already saved from last tick
+	deltimer strnpcinfo(3) + "::OnTimeCheck";
+	end;
+
+OnTimeCheck:
+	// Skip if player is autotrading (checkvending returns 2 for autotrade)
+	if (checkvending() == 2) {
+		addtimer .check_interval, strnpcinfo(3) + "::OnTimeCheck";
+		end;
+	}
+
+	// Add 1 minute
+	#HOURLY_MINUTES += 1;
+
+	// Grant points for each complete hour
+	while (#HOURLY_MINUTES >= .minutes_per_grant) {
+		#HOURLY_POINTS += .points_per_grant;
+		#HOURLY_MINUTES -= .minutes_per_grant;
+		dispbottom "[Hourly Points] +" + .points_per_grant + " points! (Total: " + #HOURLY_POINTS + ")";
+	}
+
+	// Restart timer for next minute
+	addtimer .check_interval, strnpcinfo(3) + "::OnTimeCheck";
+	end;
+}
+
+// Master Exchange NPC (Prontera)
+prontera,138,172,4	script	Point Exchange	4_F_TELEPORTER,{
+	.@cost = 30;		// Points per box
+	.@item_id = 14003;	// Elite Siege Supply Box
+	.@item_name$ = getitemname(.@item_id);
+
+	mes "[Point Exchange]";
+	mes "Welcome to the ^0055FFHourly Points^000000 exchange!";
+	mes " ";
+	mes "You earn ^00FF0010 points^000000 for every";
+	mes "hour you're online.";
+	next;
+
+	// Show balance and progress
+	mes "[Point Exchange]";
+	mes "^0055FFYour Balance^000000";
+	mes "Points: ^00FF00" + #HOURLY_POINTS + "^000000";
+	mes "Progress: ^FFA500" + #HOURLY_MINUTES + "/60^000000 minutes";
+	mes " ";
+	mes "^0055FFExchange Rate^000000";
+	mes "^FF0000" + .@cost + "^000000 points = 1 " + .@item_name$;
+	next;
+
+	switch(select("Exchange Points:Cancel")) {
+	case 1:
+		if (#HOURLY_POINTS < .@cost) {
+			mes "[Point Exchange]";
+			mes "You don't have enough points.";
+			mes " ";
+			mes "You need ^FF0000" + .@cost + "^000000 points,";
+			mes "but only have ^0055FF" + #HOURLY_POINTS + "^000000.";
+			close;
+		}
+
+		// Calculate max boxes player can afford
+		.@max_boxes = #HOURLY_POINTS / .@cost;
+
+		mes "[Point Exchange]";
+		mes "You can exchange up to";
+		mes "^0055FF" + .@max_boxes + "^000000 " + .@item_name$ + "(s).";
+		mes " ";
+		mes "How many would you like?";
+		next;
+
+		input .@quantity;
+
+		if (.@quantity < 1) {
+			mes "[Point Exchange]";
+			mes "Maybe next time!";
+			close;
+		}
+
+		if (.@quantity > .@max_boxes) {
+			mes "[Point Exchange]";
+			mes "You can only afford ^0055FF" + .@max_boxes + "^000000.";
+			mes "Exchange ^0055FF" + .@max_boxes + "^000000 instead?";
+			next;
+			if (select("Yes:No") == 2) {
+				mes "[Point Exchange]";
+				mes "Alright, come back anytime!";
+				close;
+			}
+			.@quantity = .@max_boxes;
+		}
+
+		// Check inventory space
+		if (checkweight(.@item_id, .@quantity) == 0) {
+			mes "[Point Exchange]";
+			mes "Your inventory is too full!";
+			mes "Please make some room.";
+			close;
+		}
+
+		// Perform exchange
+		.@total_cost = .@quantity * .@cost;
+		#HOURLY_POINTS -= .@total_cost;
+		getitem .@item_id, .@quantity;
+
+		mes "[Point Exchange]";
+		mes "Exchange complete!";
+		mes " ";
+		mes "You received:";
+		mes "^0055FF" + .@quantity + "x " + .@item_name$ + "^000000";
+		mes " ";
+		mes "Remaining points: ^0055FF" + #HOURLY_POINTS + "^000000";
+		specialeffect2 EF_STEAL;
+		close;
+
+	case 2:
+		mes "[Point Exchange]";
+		mes "See you next time!";
+		close;
+	}
+}
+
+// Duplicate NPCs for other cities
+// Coordinates placed near existing service NPCs
+
+// Geffen - near center of town
+geffen,120,68,4	duplicate(Point Exchange)	Point Exchange#gef	4_F_TELEPORTER
+
+// Payon - near Kafra
+payon,179,100,4	duplicate(Point Exchange)	Point Exchange#pay	4_F_TELEPORTER
+
+// Alberta - near docks
+alberta,28,240,4	duplicate(Point Exchange)	Point Exchange#alb	4_F_TELEPORTER
+
+// Izlude - near center
+izlude,128,114,4	duplicate(Point Exchange)	Point Exchange#izl	4_F_TELEPORTER

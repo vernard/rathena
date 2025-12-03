@@ -35,8 +35,6 @@ OnInit:
 
 OnTimer5000:
 	// Normal polling - check for shutdown schedule every 5 seconds
-	debugmes "[ShutdownAnnouncer] OnTimer5000 fired, polling database...";
-
 	// Check for pending shutdown schedule
 	.@count = query_sql("SELECT id, TIMESTAMPDIFF(SECOND, initiated_at, NOW()) as elapsed, countdown_minutes * 60 as total_seconds FROM shutdown_schedule WHERE processed = 0 ORDER BY id DESC LIMIT 1", .@id, .@elapsed, .@total);
 
