@@ -27,7 +27,11 @@ OnInit:
 	// This ensures a newly started container won't think it's in maintenance
 	query_sql("UPDATE shutdown_schedule SET is_maintenance = 0");
 
-	debugmes "[ShutdownAnnouncer] NPC initialized, cleared maintenance flags, starting 5-second polling timer";
+	// Cancel any pending shutdowns from before the restart
+	// This prevents interrupted shutdowns from resuming after a crash/restart
+	query_sql("UPDATE shutdown_schedule SET processed = 1 WHERE processed = 0");
+
+	debugmes "[ShutdownAnnouncer] NPC initialized, cleared maintenance flags and pending shutdowns, starting 5-second polling timer";
 
 	// Start the polling timer (5 second intervals for normal polling)
 	initnpctimer;
