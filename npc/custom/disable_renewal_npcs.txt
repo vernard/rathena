@@ -1,9 +1,10 @@
 //===== rAthena Script =======================================
 //= Disable Renewal-Only NPCs
 //===== Description: =========================================
-//= Disables Healer and Warpra NPCs on Renewal-only maps
-//= that are inaccessible in Pre-Renewal mode.
+//= Disables Healer NPCs on Renewal-only maps that are
+//= inaccessible in Pre-Renewal mode.
 //= Maps: Brasilis, Dewata, Eclage, El Dicastes, Manuk, Mora, Splendide
+//= Note: Warpra NPCs were removed directly from quest_warper.txt override
 //============================================================
 
 -	script	DisableRenewalNPCs	-1,{
@@ -17,14 +18,5 @@ OnInit:
 	disablenpc "Healer#dic";    // El Dicastes
 	disablenpc "Healer#mora";   // Mora
 	// Note: Eclage has no Healer
-
-	// Disable Warpra on Renewal-only maps
-	disablenpc "Warpra#36";     // Brasilis
-	disablenpc "Warpra#37";     // El Dicastes
-	disablenpc "Warpra#38";     // Manuk
-	disablenpc "Warpra#39";     // Mora
-	disablenpc "Warpra#42";     // Splendide
-	disablenpc "Warpra#44";     // Dewata
-	disablenpc "Warpra#45";     // Eclage
 	end;
 }

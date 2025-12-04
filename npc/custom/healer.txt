@@ -26,7 +26,7 @@
 
 	.@IdentifyItems = 1;	// Identify all unidentified equipment? (1: yes / 0: no)
 
-	// Configurable settings from environment variables
+	// Configurable settings (values baked in at build time from environment variables)
 	.@BasicPrice = 1000;
 	.@BuffsPrice = 5000;
 	.@FreeLevel = 30;
