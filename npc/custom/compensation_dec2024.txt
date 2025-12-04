@@ -1,0 +1,47 @@
+//===================================================================
+// DOWNTIME COMPENSATION - December 2024
+//
+// Purpose: Give 1 Elite Siege Supply Box to players as compensation
+//          for unplanned server downtime.
+//
+// Eligibility:
+//   - Must login before December 6, 2025 23:59:59 UTC
+//   - One-time per character
+//
+// Item given:
+//   - 14003 = Elite Siege Supply Box (character-bound)
+//
+// To remove: Delete this file from npc_overrides/custom/ AND remove
+// the line from scripts_custom.conf, then restart the server.
+// The COMP_DEC2024 variable remains harmlessly in player data.
+//===================================================================
+
+-	script	Compensation_Dec2024	FAKE_NPC,{
+OnInit:
+    // EXPIRY TIMESTAMP: December 6, 2025 23:59:59 UTC
+    // Generated with: date +%s -d "2025-12-06 23:59:59 UTC"
+    // After this time, no more rewards will be given.
+    .expiry_time = 1764979199;
+    end;
+
+OnPCLoginEvent:
+    // Check 1: Has this character already received the reward?
+    // COMP_DEC2024 is a permanent character variable (stored in DB)
+    if (COMP_DEC2024) end;
+
+    // Check 2: Has the claim window expired?
+    // gettimetick(2) returns current Unix timestamp
+    if (gettimetick(2) > .expiry_time) end;
+
+    // All checks passed - give the reward!
+    // getitembound: item_id, quantity, bound_type
+    // Bound type 4 = Character-bound (cannot trade/drop/store)
+    getitembound 14003, 1, 4;
+
+    // Mark as received so they can't claim again
+    COMP_DEC2024 = 1;
+
+    // Notify the player
+    dispbottom "You received 1 Elite Siege Supply Box as compensation for the recent downtime!";
+    end;
+}
