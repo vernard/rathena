@@ -80,29 +80,9 @@
 	specialeffect2 EF_HEAL2;
 	percentheal 100,100;
 	if (.@IdentifyItems) {
-		// Identify all unidentified equipment in inventory
-		.@identified = 0;
-		getinventorylist;
-		.@inventorysize = getarraysize(@inventorylist_id);
-		for (.@i = 0; .@i < .@inventorysize; .@i++) {
-			// Check if item is not identified
-			if (@inventorylist_identify[.@i] == 0) {
-				// Get item type (4 = armor, 5 = weapon, 8 = pet armor)
-				.@type = getiteminfo(@inventorylist_id[.@i], ITEMINFO_TYPE);
-				if (.@type == IT_WEAPON || .@type == IT_ARMOR || .@type == IT_PETARMOR) {
-					// Remove unidentified item and add identified version
-					delitem2 @inventorylist_id[.@i], 1, 0, @inventorylist_refine[.@i],
-						@inventorylist_attribute[.@i], @inventorylist_card1[.@i],
-						@inventorylist_card2[.@i], @inventorylist_card3[.@i],
-						@inventorylist_card4[.@i];
-					getitem2 @inventorylist_id[.@i], 1, 1, @inventorylist_refine[.@i],
-						@inventorylist_attribute[.@i], @inventorylist_card1[.@i],
-						@inventorylist_card2[.@i], @inventorylist_card3[.@i],
-						@inventorylist_card4[.@i];
-					.@identified++;
-				}
-			}
-		}
+		// Identify all unidentified items in inventory using built-in command
+		// identifyall() returns count of items identified and identifies them atomically
+		.@identified = identifyall();
 		if (.@identified > 0) {
 			specialeffect2 EF_MAGNIFIERITEM;
 			message strcharinfo(0), "Identified " + .@identified + " item(s).";
