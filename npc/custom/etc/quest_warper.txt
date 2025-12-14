@@ -606,7 +606,7 @@ function	script	QWS_TownStamps	{
 
 function	script	QWS_DungeonStamps	{
 	set @Dstamp,0;
-	set @MaxDstamp,29; //maximum number of dungeons
+	set @MaxDstamp,35; //maximum number of dungeons (updated for GH split)
 	set @binvalue,1;
 	set @Dstamploop,0;
 	do {
@@ -1177,19 +1177,103 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 10;
 
-//----------------GLAST HEIM
-	setarray @pDmenuitems$[@Di], "Glast Heim Dungeon";
+//----------------GH ENTRANCE
+	setarray @pDmenuitems$[@Di], "GH Entrance";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
-	setarray @DLevels[@Di], 17;
+	setarray @DLevels[@Di], 1;
 
-	setarray @DGat$[@Dref], "glast_01", "gl_church", "gl_chyard", "gl_in01", "gl_cas01", "gl_cas02", "gl_knt01", "gl_knt02", "gl_prison", "gl_prison1", "gl_step", "gl_sew01", "gl_sew02", "gl_sew03", "gl_sew04", "gl_dun01", "gl_dun02";
-	setarray @DLevelName$[@Dref], "Glast Heim Entrance", "St. Abbey", "Churchyard", "Inside Glast Heim", "Castle 1", "Castle 2", "Chivalry 1", "Chivalry 2", "Prison 1", "Prison 2", "Steps", "Sewers 1", "Sewers 2", "Sewers 3", "Sewers 4", "Lowest Cave 1", "Lowest Cave 2";
-	setarray @DXcoords[@Dref], 370, 156, 147, 121, 199, 104, 150, 157, 14, 150, 117, 258, 108, 171, 68, 133, 224;
-	setarray @DYcoords[@Dref], 300, 8, 15, 59, 29, 25, 10, 287, 70, 14, 124, 255, 291, 273, 277, 271, 274;
-	setarray @DDepth[@Dref], 0, 1, 2, 1, 1, 2, 1, 2, 2, 3, 1, 4, 2, 3, 4, 5, 6;
+	setarray @DGat$[@Dref], "glast_01";
+	setarray @DLevelName$[@Dref], "Glast Heim Entrance";
+	setarray @DXcoords[@Dref], 370;
+	setarray @DYcoords[@Dref], 300;
+	setarray @DDepth[@Dref], 0;
 
 	QWS_Make_Dungeon_Menu 11;
+
+//----------------GH CASTLE
+	setarray @pDmenuitems$[@Di], "GH Castle";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 3;
+
+	setarray @DGat$[@Dref], "gl_cas01", "gl_cas02", "gl_in01";
+	setarray @DLevelName$[@Dref], "Castle 1", "Castle 2", "Inside Glast Heim";
+	setarray @DXcoords[@Dref], 199, 104, 121;
+	setarray @DYcoords[@Dref], 29, 25, 59;
+	setarray @DDepth[@Dref], 0, 1, 1;
+
+	QWS_Make_Dungeon_Menu 29;
+
+//----------------GH CHURCH
+	setarray @pDmenuitems$[@Di], "GH Church";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 2;
+
+	setarray @DGat$[@Dref], "gl_church", "gl_chyard";
+	setarray @DLevelName$[@Dref], "St. Abbey", "Churchyard";
+	setarray @DXcoords[@Dref], 156, 147;
+	setarray @DYcoords[@Dref], 8, 15;
+	setarray @DDepth[@Dref], 0, 1;
+
+	QWS_Make_Dungeon_Menu 30;
+
+//----------------GH CHIVALRY
+	setarray @pDmenuitems$[@Di], "GH Chivalry";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 2;
+
+	setarray @DGat$[@Dref], "gl_knt01", "gl_knt02";
+	setarray @DLevelName$[@Dref], "Chivalry 1", "Chivalry 2";
+	setarray @DXcoords[@Dref], 150, 157;
+	setarray @DYcoords[@Dref], 10, 287;
+	setarray @DDepth[@Dref], 0, 1;
+
+	QWS_Make_Dungeon_Menu 31;
+
+//----------------GH PRISON
+	setarray @pDmenuitems$[@Di], "GH Prison";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 2;
+
+	setarray @DGat$[@Dref], "gl_prison", "gl_prison1";
+	setarray @DLevelName$[@Dref], "Prison 1", "Prison 2";
+	setarray @DXcoords[@Dref], 14, 150;
+	setarray @DYcoords[@Dref], 70, 14;
+	setarray @DDepth[@Dref], 0, 1;
+
+	QWS_Make_Dungeon_Menu 32;
+
+//----------------GH SEWERS
+	setarray @pDmenuitems$[@Di], "GH Sewers";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 4;
+
+	setarray @DGat$[@Dref], "gl_sew01", "gl_sew02", "gl_sew03", "gl_step";
+	setarray @DLevelName$[@Dref], "Sewers 1", "Sewers 2", "Sewers 3", "Steps";
+	setarray @DXcoords[@Dref], 258, 108, 171, 117;
+	setarray @DYcoords[@Dref], 255, 291, 273, 124;
+	setarray @DDepth[@Dref], 0, 1, 2, 0;
+
+	QWS_Make_Dungeon_Menu 33;
+
+//----------------GH LOWEST CAVE
+	setarray @pDmenuitems$[@Di], "GH Lowest Cave";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 2;
+
+	setarray @DGat$[@Dref], "gl_dun01", "gl_dun02";
+	setarray @DLevelName$[@Dref], "Lowest Cave 1", "Lowest Cave 2";
+	setarray @DXcoords[@Dref], 133, 224;
+	setarray @DYcoords[@Dref], 271, 274;
+	setarray @DDepth[@Dref], 0, 1;
+
+	QWS_Make_Dungeon_Menu 34;
 
 //----------------KUNLUN DUNGEON
 	setarray @pDmenuitems$[@Di], "Kunlun Dungeon";
@@ -1650,7 +1734,14 @@ mjo_dun02,39,25,4	script	Warpra Helper#7	112,{ callfunc "QWS_Dungeon_Warpra",6,"
 prt_sewb2,176,30,3	script	Warpra Helper#8	112,{ callfunc "QWS_Dungeon_Warpra",7,"Culvert Dungeon"; close; }
 gefenia03,137,34,0	script	Warpra Helper#9	112,{ callfunc "QWS_Dungeon_Warpra",9,"Gefenia Dungeon"; close; }
 gef_dun02,218,61,2	script	Warpra Helper#10	112,{ callfunc "QWS_Dungeon_Warpra",10,"Gefen Dungeon"; close; }
-glast_01,371,308,3	script	Warpra Helper#11	112,{ callfunc "QWS_Dungeon_Warpra",11,"Glast Heim Dungeon"; close; }
+// GH Region Helpers (split into 7 regions for exploration)
+glast_01,371,308,3	script	Warpra Helper#11	112,{ callfunc "QWS_Dungeon_Warpra",11,"GH Entrance"; close; }
+gl_cas02,105,33,3	script	Warpra Helper#29	112,{ callfunc "QWS_Dungeon_Warpra",29,"GH Castle"; close; }
+gl_chyard,148,149,3	script	Warpra Helper#30	112,{ callfunc "QWS_Dungeon_Warpra",30,"GH Church"; close; }
+gl_knt02,165,292,3	script	Warpra Helper#31	112,{ callfunc "QWS_Dungeon_Warpra",31,"GH Chivalry"; close; }
+gl_prison1,150,29,3	script	Warpra Helper#32	112,{ callfunc "QWS_Dungeon_Warpra",32,"GH Prison"; close; }
+gl_sew03,167,281,3	script	Warpra Helper#33	112,{ callfunc "QWS_Dungeon_Warpra",33,"GH Sewers"; close; }
+gl_dun02,224,268,3	script	Warpra Helper#34	112,{ callfunc "QWS_Dungeon_Warpra",34,"GH Lowest Cave"; close; }
 gon_dun01,167,273,4	script	Warpra Helper#12	112,{ callfunc "QWS_Dungeon_Warpra",12,"Kunlun Dungeon"; close; }
 juperos_02,127,154,5	script	Warpra Helper#13	112,{ callfunc "QWS_Dungeon_Warpra",14,"Juperos Cave"; close; }
 kh_dun01,14,224,3	script	Warpra Helper#14	112,{ callfunc "QWS_Dungeon_Warpra",28,"Kiel Dungeon"; close; }
