@@ -635,13 +635,13 @@ function	script	QWS_MMarray	{
 	set @Mi,@Mi+1;
 //----------------Last-Warp
 	if (#QW_LastMap$ != "") {
-		// Format: [Last] mapname Level X DungeonName
+		// Format: [Last mapname] TownName or [Last mapname] Level X DungeonName
 		if (#QW_LastLevel$ == "") {
 			// Town - no level
-			set @Mmenulist$[@Mj],"[Last] "+#QW_LastMap$+" - "+#QW_LastName$;
+			set @Mmenulist$[@Mj],"[Last "+#QW_LastMap$+"] "+#QW_LastName$;
 		} else {
 			// Dungeon - show level and name
-			set @Mmenulist$[@Mj],"[Last] "+#QW_LastMap$+" "+#QW_LastLevel$+" "+#QW_LastName$;
+			set @Mmenulist$[@Mj],"[Last "+#QW_LastMap$+"] "+#QW_LastLevel$+" "+#QW_LastName$;
 		}
 		set @Mmenuref[@Mj],@Mi;
 		set @Mj,@Mj+1;
