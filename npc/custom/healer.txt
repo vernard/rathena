@@ -82,7 +82,6 @@
 			mes "Welcome back, brave adventurer!";
 			mes " ";
 			mes "Let me tend to your wounds.";
-			mes "^777777(" + .@remaining + "s grace remaining)^000000";
 			close2;
 			goto L_ApplyBuffs;
 		}
@@ -117,7 +116,7 @@
 			mes "Bless you, kind adventurer!";
 			mes " ";
 			mes "May these blessings protect you.";
-			mes "^777777(Free rebuffs for " + .@grace + " seconds)^000000";
+			mes "Return to me if you fall in battle.";
 			close2;
 			goto L_ApplyBuffs;
 	}
