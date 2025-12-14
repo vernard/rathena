@@ -2,16 +2,19 @@
 //= Hourly Points System
 //===== Description: =========================================
 //= Account-wide point system that grants points passively
-//= while players are online. Points can be exchanged for
-//= Elite Siege Supply Boxes at NPCs in major cities.
+//= while players are online. Points can be spent at shops
+//= in major cities for various items.
 //=
 //= - 10 points granted every hour of accumulated online time
-//= - 30 points = 1 Elite Siege Supply Box (Item ID: 14003)
 //= - Points are account-wide (shared across characters)
 //= - Partial time tracking (logout saves progress in minutes)
+//= - Maximum 100 points cap (must redeem before earning more)
+//= - Shop items: Siege Box, Poison Bottle, Speed Pot, etc.
 //===== Changelog: ==========================================
 //= 1.0 Initial implementation
 //= 1.1 Simplified to track minutes instead of seconds
+//= 1.2 Added 100 point cap to prevent AFK abuse
+//= 1.3 Converted to shop interface with multiple items
 //============================================================
 
 // Timer Controller (invisible floating NPC)
@@ -24,6 +27,7 @@ OnInit:
 	.check_interval = 60000;	// Fire every 60 seconds (1 minute)
 	.minutes_per_grant = 60;	// 60 minutes = 1 hour
 	.points_per_grant = 10;		// Points granted per hour
+	.max_points = 100;			// Maximum points cap (prevents AFK abuse)
 	end;
 
 OnPCLoginEvent:
@@ -32,7 +36,11 @@ OnPCLoginEvent:
 
 	// Show current balance on login (if player has points or progress)
 	if (#HOURLY_POINTS > 0 || #HOURLY_MINUTES > 0) {
-		dispbottom "[Hourly Points] Balance: " + #HOURLY_POINTS + " points | Progress: " + #HOURLY_MINUTES + "/60 minutes";
+		if (#HOURLY_POINTS >= .max_points) {
+			dispbottom "[Hourly Points] Balance: " + #HOURLY_POINTS + "/" + .max_points + " points (CAP REACHED - redeem to earn more!)";
+		} else {
+			dispbottom "[Hourly Points] Balance: " + #HOURLY_POINTS + "/" + .max_points + " points | Progress: " + #HOURLY_MINUTES + "/60 minutes";
+		}
 	}
 	end;
 
@@ -48,6 +56,21 @@ OnTimeCheck:
 		end;
 	}
 
+	// Check if at point cap - stop earning until they redeem
+	if (#HOURLY_POINTS >= .max_points) {
+		// Only notify once per hour (when minutes reset)
+		if (#HOURLY_MINUTES == 0) {
+			dispbottom "[Hourly Points] You have " + #HOURLY_POINTS + "/" + .max_points + " points. Redeem some to earn more!";
+		}
+		// Still track minutes but don't grant points
+		#HOURLY_MINUTES += 1;
+		if (#HOURLY_MINUTES >= .minutes_per_grant) {
+			#HOURLY_MINUTES = 0;  // Reset but don't grant points
+		}
+		addtimer .check_interval, strnpcinfo(3) + "::OnTimeCheck";
+		end;
+	}
+
 	// Add 1 minute
 	#HOURLY_MINUTES += 1;
 
@@ -55,7 +78,14 @@ OnTimeCheck:
 	while (#HOURLY_MINUTES >= .minutes_per_grant) {
 		#HOURLY_POINTS += .points_per_grant;
 		#HOURLY_MINUTES -= .minutes_per_grant;
-		dispbottom "[Hourly Points] +" + .points_per_grant + " points! (Total: " + #HOURLY_POINTS + ")";
+
+		// Check if we hit the cap
+		if (#HOURLY_POINTS >= .max_points) {
+			dispbottom "[Hourly Points] +" + .points_per_grant + " points! You've reached the " + .max_points + " point cap!";
+			dispbottom "[Hourly Points] Redeem points at a Point Exchange NPC to earn more.";
+		} else {
+			dispbottom "[Hourly Points] +" + .points_per_grant + " points! (Total: " + #HOURLY_POINTS + "/" + .max_points + ")";
+		}
 	}
 
 	// Restart timer for next minute
@@ -63,112 +93,159 @@ OnTimeCheck:
 	end;
 }
 
-// Master Exchange NPC (Prontera)
-prontera,138,172,4	script	Point Exchange	4_F_TELEPORTER,{
-	.@cost = 30;		// Points per box
-	.@item_id = 14003;	// Elite Siege Supply Box
-	.@item_name$ = getitemname(.@item_id);
+// ============================================================
+// Hourly Points Exchange NPC
+// ============================================================
 
-	mes "[Point Exchange]";
-	mes "Welcome to the ^0055FFHourly Points^000000 exchange!";
+// Master NPC in Prontera
+prontera,164,168,4	script	Hourly Rewards	4_F_TELEPORTER,{
+	mes "[Hourly Rewards]";
+	mes "Welcome! I can exchange your";
+	mes "^0055FFHourly Points^000000 for useful items.";
 	mes " ";
 	mes "You earn ^00FF0010 points^000000 for every";
 	mes "hour you're online.";
+	mes " ";
+	mes "^FF0000Max: 100 points^000000 - redeem to earn more!";
 	next;
 
 	// Show balance and progress
-	mes "[Point Exchange]";
+	mes "[Hourly Rewards]";
 	mes "^0055FFYour Balance^000000";
-	mes "Points: ^00FF00" + #HOURLY_POINTS + "^000000";
+	if (#HOURLY_POINTS >= 100) {
+		mes "Points: ^FF0000" + #HOURLY_POINTS + "/100 (CAPPED)^000000";
+	} else {
+		mes "Points: ^00FF00" + #HOURLY_POINTS + "/100^000000";
+	}
 	mes "Progress: ^FFA500" + #HOURLY_MINUTES + "/60^000000 minutes";
-	mes " ";
-	mes "^0055FFExchange Rate^000000";
-	mes "^FF0000" + .@cost + "^000000 points = 1 " + .@item_name$;
 	next;
 
-	switch(select("Exchange Points:Cancel")) {
+	switch(select("Browse Shop:Point Information:Cancel")) {
 	case 1:
-		if (#HOURLY_POINTS < .@cost) {
-			mes "[Point Exchange]";
-			mes "You don't have enough points.";
-			mes " ";
-			mes "You need ^FF0000" + .@cost + "^000000 points,";
-			mes "but only have ^0055FF" + #HOURLY_POINTS + "^000000.";
-			close;
-		}
+		callshop "hourly_points_shop", 1;
+		npcshopattach "hourly_points_shop";
+		end;
 
-		// Calculate max boxes player can afford
-		.@max_boxes = #HOURLY_POINTS / .@cost;
-
-		mes "[Point Exchange]";
-		mes "You can exchange up to";
-		mes "^0055FF" + .@max_boxes + "^000000 " + .@item_name$ + "(s).";
+	case 2:
+		mes "[Hourly Rewards]";
+		mes "^0055FFHow It Works:^000000";
 		mes " ";
-		mes "How many would you like?";
+		mes "Every hour you're online,";
+		mes "you earn 10 points automatically.";
+		mes " ";
+		mes "Points cap at 100 - spend some";
+		mes "to keep earning!";
 		next;
+		mes "[Hourly Rewards]";
+		mes "^0055FFNotes:^000000";
+		mes " ";
+		mes "- Points are account-wide";
+		mes "- AFK/Autotrade doesn't count";
+		mes "- Progress saves on logout";
+		close;
 
-		input .@quantity;
+	case 3:
+		mes "[Hourly Rewards]";
+		mes "Come back anytime!";
+		close;
+	}
+	end;
 
-		if (.@quantity < 1) {
-			mes "[Point Exchange]";
-			mes "Maybe next time!";
-			close;
-		}
+OnBuyItem:
+	// Calculate total cost of purchase
+	.@size = getarraysize(@bought_nameid);
+	.@total_cost = 0;
 
-		if (.@quantity > .@max_boxes) {
-			mes "[Point Exchange]";
-			mes "You can only afford ^0055FF" + .@max_boxes + "^000000.";
-			mes "Exchange ^0055FF" + .@max_boxes + "^000000 instead?";
-			next;
-			if (select("Yes:No") == 2) {
-				mes "[Point Exchange]";
-				mes "Alright, come back anytime!";
-				close;
+	for (.@i = 0; .@i < .@size; .@i++) {
+		// Find this item's price in our shop arrays
+		for (.@j = 0; .@j < getarraysize(.ShopItems); .@j++) {
+			if (@bought_nameid[.@i] == .ShopItems[.@j]) {
+				.@total_cost += (.ShopPrices[.@j] * @bought_quantity[.@i]);
+				break;
 			}
-			.@quantity = .@max_boxes;
 		}
+	}
 
-		// Check inventory space
-		if (checkweight(.@item_id, .@quantity) == 0) {
-			mes "[Point Exchange]";
+	mes "[Hourly Rewards]";
+
+	if (#HOURLY_POINTS < .@total_cost) {
+		mes "You don't have enough points!";
+		mes " ";
+		mes "Cost: ^FF0000" + .@total_cost + "^000000 points";
+		mes "Have: ^0055FF" + #HOURLY_POINTS + "^000000 points";
+		close;
+	}
+
+	// Check inventory space
+	for (.@i = 0; .@i < .@size; .@i++) {
+		if (checkweight(@bought_nameid[.@i], @bought_quantity[.@i]) == 0) {
 			mes "Your inventory is too full!";
 			mes "Please make some room.";
 			close;
 		}
-
-		// Perform exchange
-		.@total_cost = .@quantity * .@cost;
-		#HOURLY_POINTS -= .@total_cost;
-		getitem .@item_id, .@quantity;
-
-		mes "[Point Exchange]";
-		mes "Exchange complete!";
-		mes " ";
-		mes "You received:";
-		mes "^0055FF" + .@quantity + "x " + .@item_name$ + "^000000";
-		mes " ";
-		mes "Remaining points: ^0055FF" + #HOURLY_POINTS + "^000000";
-		specialeffect2 EF_STEAL;
-		close;
-
-	case 2:
-		mes "[Point Exchange]";
-		mes "See you next time!";
-		close;
 	}
+
+	// Deduct points and give items
+	#HOURLY_POINTS -= .@total_cost;
+
+	for (.@i = 0; .@i < .@size; .@i++) {
+		getitem @bought_nameid[.@i], @bought_quantity[.@i];
+	}
+
+	// Show confirmation
+	mes "Purchase complete!";
+	mes " ";
+	mes "^0055FFPoints spent: " + .@total_cost + "^000000";
+	mes "^0055FFRemaining: " + #HOURLY_POINTS + " points^000000";
+
+	specialeffect2 EF_STEAL;
+
+	// Cleanup
+	deletearray @bought_nameid[0], .@size;
+	deletearray @bought_quantity[0], .@size;
+	close;
+
+OnInit:
+	// Define shop items and their point costs
+	// Format: Item ID, Point Cost
+	setarray .ShopItems[0],
+		14003,   // Elite Siege Supply Box
+		678,     // Poison Bottle
+		12016,   // Speed Potion
+		12210;   // Bubble Gum
+
+	setarray .ShopPrices[0],
+		30,      // Elite Siege Supply = 30 pts
+		5,       // Poison Bottle = 5 pts
+		10,      // Speed Potion = 10 pts
+		100;     // Bubble Gum = 100 pts
+
+	// Build the visual shop (prices shown are point costs)
+	npcshopdelitem "hourly_points_shop", 512;
+	for (.@i = 0; .@i < getarraysize(.ShopItems); .@i++) {
+		npcshopdelitem "hourly_points_shop", .ShopItems[.@i];
+	}
+	for (.@i = 0; .@i < getarraysize(.ShopItems); .@i++) {
+		npcshopadditem "hourly_points_shop", .ShopItems[.@i], .ShopPrices[.@i];
+	}
+	end;
 }
 
-// Duplicate NPCs for other cities
-// Coordinates placed near existing service NPCs
+// Dummy shop container (required for callshop)
+-	shop	hourly_points_shop	-1,no,512:-1
+
+// ============================================================
+// Duplicate NPCs in other cities
+// ============================================================
 
 // Geffen - near center of town
-geffen,120,68,4	duplicate(Point Exchange)	Point Exchange#gef	4_F_TELEPORTER
+geffen,120,64,4	duplicate(Hourly Rewards)	Hourly Rewards#gef	4_F_TELEPORTER
 
 // Payon - near Kafra
-payon,179,100,4	duplicate(Point Exchange)	Point Exchange#pay	4_F_TELEPORTER
+payon,179,96,4	duplicate(Hourly Rewards)	Hourly Rewards#pay	4_F_TELEPORTER
 
 // Alberta - near docks
-alberta,28,240,4	duplicate(Point Exchange)	Point Exchange#alb	4_F_TELEPORTER
+alberta,32,240,4	duplicate(Hourly Rewards)	Hourly Rewards#alb	4_F_TELEPORTER
 
 // Izlude - near center
-izlude,128,114,4	duplicate(Point Exchange)	Point Exchange#izl	4_F_TELEPORTER
+izlude,128,110,4	duplicate(Hourly Rewards)	Hourly Rewards#izl	4_F_TELEPORTER
