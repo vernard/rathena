@@ -209,15 +209,19 @@ OnInit:
 	// Define shop items and their point costs
 	// Format: Item ID, Point Cost
 	setarray .ShopItems[0],
-		14003,   // Elite Siege Supply Box
+		662,     // Authoritative Badge (3 min, +25% speed)
+		12028,   // Box of Thunder (45 sec, +40% speed)
+		12016,   // Speed Potion (15 sec, +60% speed)
 		678,     // Poison Bottle
-		12016,   // Speed Potion
+		14003,   // Elite Siege Supply Box
 		12210;   // Bubble Gum
 
 	setarray .ShopPrices[0],
-		30,      // Elite Siege Supply = 30 pts
+		3,       // Authoritative Badge = 3 pts (cheap walking buff)
+		10,      // Box of Thunder = 10 pts (mid-tier speed)
+		10,      // Speed Potion = 10 pts (burst speed)
 		5,       // Poison Bottle = 5 pts
-		10,      // Speed Potion = 10 pts
+		30,      // Elite Siege Supply = 30 pts
 		100;     // Bubble Gum = 100 pts
 
 	// Build the visual shop (prices shown are point costs)

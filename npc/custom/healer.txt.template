@@ -1,0 +1,219 @@
+//===== rAthena Script =======================================
+//= Healer (Enhanced with 8 Buffs + Free Heal/Identify)
+//===== By: ==================================================
+//= Euphy (original)
+//= Modified by Claude Code
+//===== Current Version: =====================================
+//= 2.0
+//===== Compatible With: =====================================
+//= rAthena Project
+//===== Description: =========================================
+//= Enhanced healer with free heal+identify, paid buffs with
+//= grace period for MVP hunters, and 8 total buffs.
+//===== Additional Comments: =================================
+//= 1.0 Initial script.
+//= 1.1 Aligned coordinates with @go.
+//= 1.2 Added 5 buffs: Increase Agi, Blessing, Impositio Manus,
+//=     Magnificat, and Angelus (4 minute duration, level 10)
+//= 1.3 Added equipment identification feature with configurable
+//=     buff duration (10 minutes default)
+//= 1.4 Fixed heal order: buffs applied before heal so Blessing's
+//=     INT bonus is reflected in max SP before percentheal
+//= 1.5 Two-tier pricing: 1k for heal+identify, 5k for heal+buffs+identify
+//= 1.6 Configurable pricing via env vars, free for low-level players
+//= 2.0 Major restructure:
+//=     - Heal + identify always FREE for everyone
+//=     - Only buffs cost money (for level 61+)
+//=     - Added grace period after paying (3 min, 10s for Monks)
+//=     - Added 3 new buffs: Kyrie Eleison, Gloria, Assumptio
+//============================================================
+
+-	script	Healer	-1,{
+
+	.@IdentifyItems = 1;	// Identify all unidentified equipment? (1: yes / 0: no)
+
+	// Configurable settings (values baked in at build time from environment variables)
+	.@BuffsPrice = ${HEALER_BUFFS_PRICE};
+	.@FreeLevel = ${HEALER_FREE_LEVEL};
+	.@BuffDuration = ${HEALER_BUFF_DURATION};
+	.@GracePeriod = ${HEALER_GRACE_PERIOD};
+	.@MonkGrace = ${HEALER_MONK_GRACE};
+
+	// ============================================================
+	// Step 1: Always provide free healing + identify
+	// ============================================================
+	specialeffect2 EF_HEAL2;
+	percentheal 100,100;
+
+	if (.@IdentifyItems) {
+		.@identified = identifyall();
+		if (.@identified > 0) {
+			specialeffect2 EF_MAGNIFIERITEM;
+			message strcharinfo(0), "Identified " + .@identified + " item(s).";
+		}
+	}
+
+	// ============================================================
+	// Step 2: Check if player qualifies for free buffs
+	// ============================================================
+
+	// Low-level players get everything free
+	if (.@FreeLevel > 0 && BaseLevel <= .@FreeLevel) {
+		message strcharinfo(0), "Free service for adventurers level " + .@FreeLevel + " and below!";
+		goto L_ApplyBuffs;
+	}
+
+	// Check grace period (healer_paid_until is a permanent player variable)
+	.@now = gettimetick(2);
+	if (healer_paid_until > .@now) {
+		// Check if they've used up their 10 free uses
+		if (healer_grace_uses >= 10) {
+			mes "[Healer]";
+			mes "Oh my, you've been through quite a lot!";
+			mes " ";
+			mes "I've healed you many times now...";
+			mes "Perhaps a small donation would help me continue my work?";
+			next;
+			// Fall through to payment menu
+		} else {
+			healer_grace_uses = healer_grace_uses + 1;
+			.@remaining = healer_paid_until - .@now;
+			mes "[Healer]";
+			mes "Welcome back, brave adventurer!";
+			mes " ";
+			mes "Let me tend to your wounds.";
+			close2;
+			goto L_ApplyBuffs;
+		}
+	}
+
+	// ============================================================
+	// Step 3: Offer paid buffs to level 61+ players
+	// ============================================================
+	switch(select("Done (just healing):Add Buffs (" + .@BuffsPrice + "z)")) {
+		case 1:
+			// Player chose to leave without buffs
+			end;
+		case 2:
+			// Player wants buffs - check payment
+			if (Zeny < .@BuffsPrice) {
+				message strcharinfo(0), "You need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny for buffs.";
+				end;
+			}
+			Zeny -= .@BuffsPrice;
+
+			// Set grace period based on class
+			// Monks and Champions get shorter grace to prevent Asura Strike abuse
+			if ((eaclass()&EAJ_UPPERMASK) == EAJ_MONK) {
+				.@grace = .@MonkGrace;
+			} else {
+				.@grace = .@GracePeriod;
+			}
+
+			healer_paid_until = .@now + .@grace;
+			healer_grace_uses = 0;  // Reset usage counter on payment
+			mes "[Healer]";
+			mes "Bless you, kind adventurer!";
+			mes " ";
+			mes "May these blessings protect you.";
+			mes "Return to me if you fall in battle.";
+			close2;
+			goto L_ApplyBuffs;
+	}
+	end;
+
+	// ============================================================
+	// Apply all 8 buffs
+	// ============================================================
+L_ApplyBuffs:
+	// 1. Increase Agi (+12 AGI, +25% move speed)
+	specialeffect2 EF_INCAGILITY;
+	sc_start SC_INCREASEAGI,.@BuffDuration,10;
+
+	// 2. Blessing (+10 STR/INT/DEX)
+	specialeffect2 EF_BLESSING;
+	sc_start SC_BLESSING,.@BuffDuration,10;
+
+	// 3. Impositio Manus (+25 ATK)
+	specialeffect2 EF_IMPOSITIO;
+	sc_start SC_IMPOSITIO,.@BuffDuration,10;
+
+	// 4. Magnificat (2x SP regen)
+	specialeffect2 EF_MAGNIFICAT;
+	sc_start SC_MAGNIFICAT,.@BuffDuration,10;
+
+	// 5. Angelus (+50% DEF)
+	specialeffect2 EF_ANGELUS;
+	sc_start SC_ANGELUS,.@BuffDuration,10;
+
+	// 6. Kyrie Eleison (blocks hits/damage shield)
+	// Level 10: blocks 10 hits or 30% of MaxHP damage
+	specialeffect2 EF_KYRIE;
+	sc_start SC_KYRIE,.@BuffDuration,10;
+
+	// 7. Gloria (+30 LUK)
+	specialeffect2 EF_GLORIA;
+	sc_start SC_GLORIA,.@BuffDuration,10;
+
+	// 8. Assumptio (halves damage in pre-renewal)
+	// Note: In pre-renewal, Assumptio reduces all damage by 50%
+	specialeffect2 EF_ASSUMPTIO;
+	sc_start SC_ASSUMPTIO,.@BuffDuration,5;
+
+	// Re-heal after buffs so Blessing's INT bonus affects max SP
+	percentheal 100,100;
+	end;
+}
+
+
+// Duplicates
+//============================================================
+alberta,25,240,6	duplicate(Healer)	Healer#alb	909
+aldebaran,135,118,6	duplicate(Healer)	Healer#alde	909
+amatsu,200,79,4	duplicate(Healer)	Healer#ama	909
+ayothaya,207,169,6	duplicate(Healer)	Healer#ayo	909
+comodo,184,158,6	duplicate(Healer)	Healer#com	909
+einbech,57,36,6	duplicate(Healer)	Healer#einbe	909
+einbroch,57,202,6	duplicate(Healer)	Healer#einbr	909
+geffen,115,72,6	duplicate(Healer)	Healer#gef	909
+gonryun,156,122,6	duplicate(Healer)	Healer#gon	909
+hugel,89,150,6	duplicate(Healer)	Healer#hug	909
+izlude,124,114,4	duplicate(Healer)	Healer#izl	909
+jawaii,250,139,4	duplicate(Healer)	Healer#jaw	909
+lighthalzen,152,100,6	duplicate(Healer)	Healer#lhz	909
+louyang,226,103,4	duplicate(Healer)	Healer#lou	909
+manuk,272,144,6	duplicate(Healer)	Healer#man	909
+mid_camp,203,289,6	duplicate(Healer)	Healer#mid	909
+moc_ruins,72,164,4	duplicate(Healer)	Healer#moc	909
+morocc,153,97,6	duplicate(Healer)	Healer#mor	909
+moscovia,220,191,4	duplicate(Healer)	Healer#mos	909
+niflheim,212,182,5	duplicate(Healer)	Healer#nif	909
+payon,179,106,4	duplicate(Healer)	Healer#pay	909
+prontera,162,193,4	duplicate(Healer)	Healer#prt	909
+rachel,125,116,6	duplicate(Healer)	Healer#rac	909
+splendide,201,153,4	duplicate(Healer)	Healer#spl	909
+thor_camp,249,74,4	duplicate(Healer)	Healer#thor	909
+umbala,105,148,3	duplicate(Healer)	Healer#umb	909
+veins,217,121,4	duplicate(Healer)	Healer#ve	909
+xmas,143,136,4	duplicate(Healer)	Healer#xmas	909
+yuno,164,45,4	duplicate(Healer)	Healer#yuno	909
+
+// Duplicates (Renewal)
+//============================================================
+brasilis,194,221,6	duplicate(Healer)	Healer#bra	909
+dewata,195,187,4	duplicate(Healer)	Healer#dew	909
+dicastes01,201,194,4	duplicate(Healer)	Healer#dic	909
+ecl_in01,45,60,4	duplicate(Healer)	Healer#ecl	909
+malangdo,132,114,6	duplicate(Healer)	Healer#mal	909
+malaya,227,204,6	duplicate(Healer)	Healer#ma	909
+mora,55,152,4	duplicate(Healer)	Healer#mora	909
+
+// Field Healers (near Quest Warpers)
+//============================================================
+ama_fild01,183,325,4	duplicate(Healer)	Healer#ama_fld	909
+gef_fild10,76,339,4	duplicate(Healer)	Healer#gef_fld	909
+mjolnir_02,90,363,4	duplicate(Healer)	Healer#mjo_fld	909
+moc_fild04,212,331,4	duplicate(Healer)	Healer#moc_fld04	909
+moc_fild19,111,97,4	duplicate(Healer)	Healer#moc_fld19	909
+prt_fild05,278,215,4	duplicate(Healer)	Healer#prt_fld	909
+yuno_fild03,42,135,4	duplicate(Healer)	Healer#yuno_fld	909

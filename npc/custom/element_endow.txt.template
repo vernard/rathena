@@ -1,0 +1,208 @@
+//===== rAthena Script =======================================
+//= Element Endow NPC
+//===== By: ==================================================
+//= Claude Code
+//===== Current Version: =====================================
+//= 1.1
+//===== Compatible With: =====================================
+//= rAthena Project
+//===== Description: =========================================
+//= NPC that provides elemental weapon enchantments for zeny.
+//= Offers Fire, Water, Wind, Earth, and Holy (Aspersio).
+//===== Additional Comments: =================================
+//= 1.0 Initial script - placed near healers for convenience
+//= 1.1 Added 3-minute grace period for free re-endow (for MVP hunters who die)
+//============================================================
+
+-	script	Enchanter	-1,{
+
+	// Configurable settings (values baked in at build time from environment variables)
+	.@Price = ${ENDOW_PRICE};           // Zeny cost per endow
+	.@Duration = ${ENDOW_DURATION};     // Duration in milliseconds
+	.@FreeLevel = ${ENDOW_FREE_LEVEL};  // Free service for players at or below this level
+	.@GracePeriod = 180;                // Grace period in seconds (3 minutes)
+
+	// Check for grace period (recent endow within 3 minutes)
+	.@TimeSinceLast = gettimetick(2) - ENDOW_LAST_TIME;
+	.@InGrace = (ENDOW_LAST_TIME > 0 && .@TimeSinceLast < .@GracePeriod);
+
+	// Free service for low-level adventurers
+	if (.@FreeLevel > 0 && BaseLevel <= .@FreeLevel) {
+		.@Price = 0;
+		message strcharinfo(0), "Free enchantment for adventurers level " + .@FreeLevel + " and below!";
+	}
+
+	// If in grace period, offer free re-endow option
+	if (.@InGrace && .@Price > 0) {
+		// Check if they've exhausted their free uses
+		if (ENDOW_GRACE_USES >= 10) {
+			mes "[Elemental Enchanter]";
+			mes "Ah, back so soon? Again?";
+			mes " ";
+			mes "My magical reserves aren't infinite, you know.";
+			mes "Even a Sage needs compensation~";
+			next;
+			.@choice = 0;  // Force normal menu
+		} else {
+			.@TimeLeft = .@GracePeriod - .@TimeSinceLast;
+			.@LastElement$ = "";
+			switch(ENDOW_LAST_ELEMENT) {
+				case 1: .@LastElement$ = "^FF0000Fire^000000"; break;
+				case 2: .@LastElement$ = "^0000FFWater^000000"; break;
+				case 3: .@LastElement$ = "^00FF00Wind^000000"; break;
+				case 4: .@LastElement$ = "^8B4513Earth^000000"; break;
+				case 5: .@LastElement$ = "^FFFF00Holy^000000"; break;
+			}
+			mes "[Elemental Enchanter]";
+			mes "Ah, you've returned!";
+			mes "Lost your enchantment already?";
+			mes " ";
+			mes "No matter. I still sense the " + .@LastElement$ + " residue.";
+			next;
+			switch(select("Re-apply " + .@LastElement$ + " (Free):Choose different element:Cancel")) {
+				case 1:
+					// Free re-apply of last element
+					.@choice = ENDOW_LAST_ELEMENT;
+					.@Price = 0;
+					ENDOW_GRACE_USES = ENDOW_GRACE_USES + 1;
+					break;
+				case 2:
+					// Continue to normal menu
+					.@choice = 0;
+					break;
+				case 3:
+					close;
+			}
+		}
+	} else {
+		.@choice = 0;
+	}
+
+	// Normal menu if no grace re-apply chosen
+	if (.@choice == 0) {
+		mes "[Elemental Enchanter]";
+		mes "I can imbue your weapon with elemental power.";
+		mes " ";
+		if (.@Price > 0) {
+			mes "Cost: ^0000FF" + callfunc("F_InsertComma", .@Price) + " Zeny^000000";
+		} else {
+			mes "Cost: ^00FF00Free^000000 (for new adventurers)";
+		}
+		mes "Duration: ^0000FF10 minutes^000000";
+		next;
+
+		.@choice = select("^FF0000Fire^000000 (vs Earth/Undead):^0000FFWater^000000 (vs Fire):^00FF00Wind^000000 (vs Water):^8B4513Earth^000000 (vs Wind):^FFFF00Holy^000000 (vs Shadow/Undead):Cancel");
+		if (.@choice == 6) close;
+	}
+
+	// Set element based on choice
+	switch(.@choice) {
+		case 1:
+			.@element$ = "Fire";
+			.@sc = SC_FIREWEAPON;
+			.@effect = EF_FLAMELAUNCHER;
+			break;
+		case 2:
+			.@element$ = "Water";
+			.@sc = SC_WATERWEAPON;
+			.@effect = EF_FROSTWEAPON;
+			break;
+		case 3:
+			.@element$ = "Wind";
+			.@sc = SC_WINDWEAPON;
+			.@effect = EF_LIGHTNINGLOADER;
+			break;
+		case 4:
+			.@element$ = "Earth";
+			.@sc = SC_EARTHWEAPON;
+			.@effect = EF_SEISMICWEAPON;
+			break;
+		case 5:
+			.@element$ = "Holy";
+			.@sc = SC_ASPERSIO;
+			.@effect = EF_ASPERSIO;
+			break;
+	}
+
+	// Check zeny
+	if (Zeny < .@Price) {
+		mes "[Elemental Enchanter]";
+		mes "You need " + callfunc("F_InsertComma", .@Price) + " Zeny for this service.";
+		close;
+	}
+
+	// Deduct zeny and apply enchantment
+	if (.@Price > 0) {
+		Zeny -= .@Price;
+		ENDOW_GRACE_USES = 0;  // Reset usage counter on payment
+	}
+	specialeffect2 .@effect;
+	sc_start .@sc, .@Duration, 5;  // Level 5 for maximum effectiveness
+
+	// Store last endow for grace period
+	ENDOW_LAST_ELEMENT = .@choice;
+	ENDOW_LAST_TIME = gettimetick(2);
+
+	mes "[Elemental Enchanter]";
+	mes "Your weapon now burns with ^FF0000" + .@element$ + "^000000 power!";
+	mes " ";
+	mes "The enchantment will last for 10 minutes.";
+	if (.@Price > 0) {
+		mes " ";
+		mes "^777777(Free re-endow available for 3 minutes)^000000";
+	}
+	close;
+}
+
+
+// Pre-Renewal Town Duplicates (next to Healers)
+//============================================================
+alberta,27,240,6	duplicate(Enchanter)	Enchanter#alb	4_M_SAGE_A
+aldebaran,137,118,6	duplicate(Enchanter)	Enchanter#alde	4_M_SAGE_A
+amatsu,202,79,4	duplicate(Enchanter)	Enchanter#ama	4_M_SAGE_A
+ayothaya,209,169,6	duplicate(Enchanter)	Enchanter#ayo	4_M_SAGE_A
+comodo,186,158,6	duplicate(Enchanter)	Enchanter#com	4_M_SAGE_A
+einbech,59,36,6	duplicate(Enchanter)	Enchanter#einbe	4_M_SAGE_A
+einbroch,59,202,6	duplicate(Enchanter)	Enchanter#einbr	4_M_SAGE_A
+geffen,117,72,6	duplicate(Enchanter)	Enchanter#gef	4_M_SAGE_A
+gonryun,158,122,6	duplicate(Enchanter)	Enchanter#gon	4_M_SAGE_A
+hugel,91,150,6	duplicate(Enchanter)	Enchanter#hug	4_M_SAGE_A
+izlude,126,114,4	duplicate(Enchanter)	Enchanter#izl	4_M_SAGE_A
+jawaii,252,139,4	duplicate(Enchanter)	Enchanter#jaw	4_M_SAGE_A
+lighthalzen,154,100,6	duplicate(Enchanter)	Enchanter#lhz	4_M_SAGE_A
+louyang,228,103,4	duplicate(Enchanter)	Enchanter#lou	4_M_SAGE_A
+mid_camp,205,289,6	duplicate(Enchanter)	Enchanter#mid	4_M_SAGE_A
+moc_ruins,74,164,4	duplicate(Enchanter)	Enchanter#moc	4_M_SAGE_A
+morocc,155,97,6	duplicate(Enchanter)	Enchanter#mor	4_M_SAGE_A
+moscovia,222,191,4	duplicate(Enchanter)	Enchanter#mos	4_M_SAGE_A
+niflheim,214,182,5	duplicate(Enchanter)	Enchanter#nif	4_M_SAGE_A
+payon,181,106,4	duplicate(Enchanter)	Enchanter#pay	4_M_SAGE_A
+prontera,164,193,4	duplicate(Enchanter)	Enchanter#prt	4_M_SAGE_A
+rachel,127,116,6	duplicate(Enchanter)	Enchanter#rac	4_M_SAGE_A
+thor_camp,251,74,4	duplicate(Enchanter)	Enchanter#thor	4_M_SAGE_A
+umbala,107,148,3	duplicate(Enchanter)	Enchanter#umb	4_M_SAGE_A
+veins,219,121,4	duplicate(Enchanter)	Enchanter#ve	4_M_SAGE_A
+xmas,145,136,4	duplicate(Enchanter)	Enchanter#xmas	4_M_SAGE_A
+yuno,166,45,4	duplicate(Enchanter)	Enchanter#yuno	4_M_SAGE_A
+
+// Renewal Town Duplicates
+//============================================================
+brasilis,196,221,6	duplicate(Enchanter)	Enchanter#bra	4_M_SAGE_A
+dewata,197,187,4	duplicate(Enchanter)	Enchanter#dew	4_M_SAGE_A
+dicastes01,203,194,4	duplicate(Enchanter)	Enchanter#dic	4_M_SAGE_A
+ecl_in01,47,60,4	duplicate(Enchanter)	Enchanter#ecl	4_M_SAGE_A
+malangdo,134,114,6	duplicate(Enchanter)	Enchanter#mal	4_M_SAGE_A
+malaya,229,204,6	duplicate(Enchanter)	Enchanter#ma	4_M_SAGE_A
+mora,57,152,4	duplicate(Enchanter)	Enchanter#mora	4_M_SAGE_A
+manuk,274,144,6	duplicate(Enchanter)	Enchanter#man	4_M_SAGE_A
+splendide,203,153,4	duplicate(Enchanter)	Enchanter#spl	4_M_SAGE_A
+
+// Field Enchanters (near Quest Warpers, alongside Healers)
+//============================================================
+ama_fild01,185,325,4	duplicate(Enchanter)	Enchanter#ama_fld	4_M_SAGE_A
+gef_fild10,78,339,4	duplicate(Enchanter)	Enchanter#gef_fld	4_M_SAGE_A
+mjolnir_02,92,363,4	duplicate(Enchanter)	Enchanter#mjo_fld	4_M_SAGE_A
+moc_fild04,214,331,4	duplicate(Enchanter)	Enchanter#moc_fld04	4_M_SAGE_A
+moc_fild19,113,97,4	duplicate(Enchanter)	Enchanter#moc_fld19	4_M_SAGE_A
+prt_fild05,280,215,4	duplicate(Enchanter)	Enchanter#prt_fld	4_M_SAGE_A
+yuno_fild03,44,135,4	duplicate(Enchanter)	Enchanter#yuno_fld	4_M_SAGE_A
