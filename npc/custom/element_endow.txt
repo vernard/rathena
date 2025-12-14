@@ -19,7 +19,7 @@
 	// Configurable settings (values baked in at build time from environment variables)
 	.@Price = 2500;           // Zeny cost per endow
 	.@Duration = 600000;     // Duration in milliseconds
-	.@FreeLevel = 30;  // Free service for players at or below this level
+	.@FreeLevel = 60;  // Free service for players at or below this level
 	.@GracePeriod = 180;                // Grace period in seconds (3 minutes)
 
 	// Check for grace period (recent endow within 3 minutes)
