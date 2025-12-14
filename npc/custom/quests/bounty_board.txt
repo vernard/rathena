@@ -409,6 +409,22 @@ OnInit:
 		"pay_dun03", "pay_dun04", "gef_dun01", "moc_pryd04", "iz_dun03",
 		// High-Level Dungeons (Lv 55-80)
 		"c_tower1", "c_tower3", "gef_dun02", "iz_dun04",
+		// Glast Heim (Lv 41-79) - NEW
+		"gl_in01", "gl_prison", "gl_cas01", "gl_cas02", "gl_knt01", "gl_knt02", "gl_chyard", "gl_sew03", "gl_sew04",
+		// Sphinx (Lv 52-75) - NEW
+		"in_sphinx4", "in_sphinx5",
+		// Turtle Island (Lv 61-75) - NEW
+		"tur_dun01", "tur_dun02", "tur_dun03",
+		// Coal Mine (Lv 43-78) - NEW
+		"mag_dun01", "mag_dun02",
+		// Ice Cave (Lv 42-60) - NEW
+		"ice_dun02", "ice_dun03",
+		// Amatsu Dungeon (Lv 47-69) - NEW
+		"ama_dun03",
+		// Nameless Abbey (Lv 71-81) - NEW
+		"abbey01", "abbey02", "abbey03",
+		// Thor Volcano (Lv 76-91) - NEW
+		"thor_v01", "thor_v02",
 		// Themed Variety
 		"treasure01", "xmas_dun01", "beach_dun";
 
@@ -461,6 +477,38 @@ OnInit:
 	set .MapName_treasure01$, "Sunken Ship F1";
 	set .MapName_xmas_dun01$, "Toy Factory F1";
 	set .MapName_beach_dun$, "Comodo Beach Cave";
+	// Glast Heim (Lv 41-79)
+	set .MapName_gl_in01$, "Glast Heim Inner";
+	set .MapName_gl_prison$, "GH Underprison F1";
+	set .MapName_gl_cas01$, "GH Castle F1";
+	set .MapName_gl_cas02$, "GH Castle F2";
+	set .MapName_gl_knt01$, "GH Chivalry F1";
+	set .MapName_gl_knt02$, "GH Chivalry F2";
+	set .MapName_gl_chyard$, "GH Churchyard";
+	set .MapName_gl_sew03$, "GH Culvert F3";
+	set .MapName_gl_sew04$, "GH Culvert F4";
+	// Sphinx (Lv 52-75)
+	set .MapName_in_sphinx4$, "Sphinx F4";
+	set .MapName_in_sphinx5$, "Sphinx F5";
+	// Turtle Island (Lv 61-75)
+	set .MapName_tur_dun01$, "Turtle Island F1";
+	set .MapName_tur_dun02$, "Turtle Island F2";
+	set .MapName_tur_dun03$, "Turtle Island F3";
+	// Coal Mine (Lv 43-78)
+	set .MapName_mag_dun01$, "Magma Dungeon F1";
+	set .MapName_mag_dun02$, "Magma Dungeon F2";
+	// Ice Cave (Lv 42-60)
+	set .MapName_ice_dun02$, "Ice Cave F2";
+	set .MapName_ice_dun03$, "Ice Cave F3";
+	// Amatsu Dungeon (Lv 47-69)
+	set .MapName_ama_dun03$, "Amatsu Dungeon F3";
+	// Nameless Abbey (Lv 71-81)
+	set .MapName_abbey01$, "Nameless Abbey F1";
+	set .MapName_abbey02$, "Nameless Abbey F2";
+	set .MapName_abbey03$, "Nameless Abbey F3";
+	// Thor Volcano (Lv 76-91)
+	set .MapName_thor_v01$, "Thor Volcano F1";
+	set .MapName_thor_v02$, "Thor Volcano F2";
 
 	// ==================== MONSTER LISTS ====================
 	// Format: setarray .Mobs_<mapname>[0], <mob_id1>, <mob_id2>, ...
@@ -591,6 +639,110 @@ OnInit:
 
 	setarray .Mobs_beach_dun[0], 1148, 1255;  // Medusa (1148), Nereid (1255)
 	set .Mobs_beach_dun_count, 2;
+
+	// ==================== GLAST HEIM (Lv 41-79) ====================
+	// gl_in01 - Glast Heim Inner (Lv 41-59)
+	setarray .Mobs_gl_in01[0], 1143, 1195, 1260;  // Marionette (Lv 41), Rideword (Lv 58), Dark Frame (Lv 59)
+	set .Mobs_gl_in01_count, 3;
+
+	// gl_prison - GH Underprison F1 (Lv 51-71)
+	setarray .Mobs_gl_prison[0], 1257, 1197, 1201;  // Injustice (Lv 51), Zombie Prisoner (Lv 53), Rybio (Lv 71)
+	set .Mobs_gl_prison_count, 3;
+
+	// gl_cas01 - GH Castle F1 (Lv 51-75)
+	setarray .Mobs_gl_cas01[0], 1267, 1195, 1260, 1320;  // Carat (Lv 51), Rideword (Lv 58), Dark Frame (Lv 59), Owl Duke (Lv 75)
+	set .Mobs_gl_cas01_count, 4;
+
+	// gl_cas02 - GH Castle F2 (Lv 52-79)
+	setarray .Mobs_gl_cas02[0], 1163, 1208, 1132, 1219;  // Raydric (Lv 52), Wanderer (Lv 74), Khalitzburg (Lv 63), Abysmal Knight (Lv 79)
+	set .Mobs_gl_cas02_count, 4;
+
+	// gl_knt01 - GH Chivalry F1 (Lv 52-79)
+	setarray .Mobs_gl_knt01[0], 1163, 1276, 1132, 1219;  // Raydric (Lv 52), Raydric Archer (Lv 55), Khalitzburg (Lv 63), Abysmal Knight (Lv 79)
+	set .Mobs_gl_knt01_count, 4;
+
+	// gl_knt02 - GH Chivalry F2 (Lv 52-79)
+	setarray .Mobs_gl_knt02[0], 1163, 1132, 1219;  // Raydric (Lv 52), Khalitzburg (Lv 63), Abysmal Knight (Lv 79)
+	set .Mobs_gl_knt02_count, 3;
+
+	// gl_chyard - GH Churchyard (Lv 40-58)
+	setarray .Mobs_gl_chyard[0], 1036, 1192, 1117;  // Ghoul (Lv 40), Wraith (Lv 53), Evil Druid (Lv 58)
+	set .Mobs_gl_chyard_count, 3;
+
+	// gl_sew03 - GH Culvert F3 (Lv 48-61)
+	setarray .Mobs_gl_sew03[0], 1207, 1253;  // Sting (Lv 61), Gargoyle (Lv 48)
+	set .Mobs_gl_sew03_count, 2;
+
+	// gl_sew04 - GH Culvert F4 (Lv 48-61)
+	setarray .Mobs_gl_sew04[0], 1206, 1253;  // Anolian (Lv 61), Gargoyle (Lv 48)
+	set .Mobs_gl_sew04_count, 2;
+
+	// ==================== SPHINX (Lv 52-75) ====================
+	// in_sphinx4 - Sphinx F4 (Lv 52-75)
+	setarray .Mobs_in_sphinx4[0], 1149, 1098, 1154;  // Minorous (Lv 52), Anubis (Lv 75), Pasana (Lv 61)
+	set .Mobs_in_sphinx4_count, 3;
+
+	// in_sphinx5 - Sphinx F5 (Lv 37-75)
+	setarray .Mobs_in_sphinx5[0], 1154, 1098, 1037;  // Pasana (Lv 61), Anubis (Lv 75), Side Winder (Lv 37)
+	set .Mobs_in_sphinx5_count, 3;
+
+	// ==================== TURTLE ISLAND (Lv 58-75) ====================
+	// tur_dun01 - Turtle Island F1 (Lv 40-63)
+	setarray .Mobs_tur_dun01[0], 1321, 1314, 1322;  // Dragon Tail (Lv 61), Permeter (Lv 63), Spring Rabbit (Lv 58)
+	set .Mobs_tur_dun01_count, 3;
+
+	// tur_dun02 - Turtle Island F2 (Lv 63-72)
+	setarray .Mobs_tur_dun02[0], 1314, 1316, 1319;  // Permeter (Lv 63), Solider (Lv 70), Freezer (Lv 72)
+	set .Mobs_tur_dun02_count, 3;
+
+	// tur_dun03 - Turtle Island F3 (Lv 63-75)
+	setarray .Mobs_tur_dun03[0], 1319, 1315, 1318;  // Freezer (Lv 72), Assaulter (Lv 71), Heater (Lv 68)
+	set .Mobs_tur_dun03_count, 3;
+
+	// ==================== COAL MINE (Lv 43-78) ====================
+	// mag_dun01 - Magma Dungeon F1 (Lv 43-77)
+	setarray .Mobs_mag_dun01[0], 1367, 1366, 1072;  // Blazer (Lv 43), Lava Golem (Lv 77), Kaho (Lv 60)
+	set .Mobs_mag_dun01_count, 3;
+
+	// mag_dun02 - Magma Dungeon F2 (Lv 66-78)
+	setarray .Mobs_mag_dun02[0], 1384, 1379, 1382;  // Deleter (Lv 66), Nightmare Terror (Lv 78), Diabolic (Lv 67)
+	set .Mobs_mag_dun02_count, 3;
+
+	// ==================== ICE CAVE (Lv 42-60) ====================
+	// ice_dun02 - Ice Cave F2 (Lv 42-60)
+	setarray .Mobs_ice_dun02[0], 1775, 1776, 1777;  // Snowier (Lv 60), Siroma (Lv 42), Ice Titan (Lv 60)
+	set .Mobs_ice_dun02_count, 3;
+
+	// ice_dun03 - Ice Cave F3 (Lv 42-60)
+	setarray .Mobs_ice_dun03[0], 1775, 1778, 1777;  // Snowier (Lv 60), Gazeti (Lv 55), Ice Titan (Lv 60)
+	set .Mobs_ice_dun03_count, 3;
+
+	// ==================== AMATSU DUNGEON (Lv 47-69) ====================
+	// ama_dun03 - Amatsu Dungeon F3 (Lv 47-69)
+	setarray .Mobs_ama_dun03[0], 1401, 1405, 1403;  // Shinobi (Lv 69), Tengu (Lv 65), Firelock Soldier (Lv 47)
+	set .Mobs_ama_dun03_count, 3;
+
+	// ==================== NAMELESS ABBEY (Lv 60-81) ====================
+	// abbey01 - Nameless Abbey F1 (Lv 60-81)
+	setarray .Mobs_abbey01[0], 1867, 1866, 1864;  // Banshee (Lv 81), Hell Poodle (Lv 71), Zombie Slaughter (Lv 77)
+	set .Mobs_abbey01_count, 3;
+
+	// abbey02 - Nameless Abbey F2 (Lv 60-81)
+	setarray .Mobs_abbey02[0], 1867, 1865, 1864;  // Banshee (Lv 81), Ragged Zombie (Lv 75), Zombie Slaughter (Lv 77)
+	set .Mobs_abbey02_count, 3;
+
+	// abbey03 - Nameless Abbey F3 (Lv 60-81)
+	setarray .Mobs_abbey03[0], 1867, 1869, 1864;  // Banshee (Lv 81), Flame Skull (Lv 60), Zombie Slaughter (Lv 77)
+	set .Mobs_abbey03_count, 3;
+
+	// ==================== THOR VOLCANO (Lv 76-91) ====================
+	// thor_v01 - Thor Volcano F1 (Lv 76-91)
+	setarray .Mobs_thor_v01[0], 1833, 1837, 1831;  // Kasa (Lv 85), Imp (Lv 76), Salamander (Lv 91)
+	set .Mobs_thor_v01_count, 3;
+
+	// thor_v02 - Thor Volcano F2 (Lv 76-91)
+	setarray .Mobs_thor_v02[0], 1833, 1837, 1836;  // Kasa (Lv 85), Imp (Lv 76), Magmaring (Lv 40)
+	set .Mobs_thor_v02_count, 3;
 
 	end;
 }
@@ -775,6 +927,110 @@ xmas_dun01,203,15,4	duplicate(BountyBoard)	Bounty Board#xmas_dun01	4_BOARD3
 xmas_dun01,150,150,4	duplicate(BountyBoard)	Bounty Board#xmas_dun01_2	4_BOARD3
 beach_dun,274,69,4	duplicate(BountyBoard)	Bounty Board#beach_dun	4_BOARD3
 beach_dun,150,150,4	duplicate(BountyBoard)	Bounty Board#beach_dun_2	4_BOARD3
+
+// ==================== GLAST HEIM (Lv 41-79) ====================
+// gl_in01 - Glast Heim Inner (entry from glast_01)
+gl_in01,100,100,4	duplicate(BountyBoard)	Bounty Board#gl_in01	4_BOARD3
+gl_in01,80,150,4	duplicate(BountyBoard)	Bounty Board#gl_in01_2	4_BOARD3
+
+// gl_prison - GH Underprison F1 (entry from gl_cas01 at 14,70)
+gl_prison,20,75,4	duplicate(BountyBoard)	Bounty Board#gl_prison	4_BOARD3
+gl_prison,100,120,4	duplicate(BountyBoard)	Bounty Board#gl_prison_2	4_BOARD3
+
+// gl_cas01 - GH Castle F1 (entry from glast_01 at 199,29)
+gl_cas01,200,35,4	duplicate(BountyBoard)	Bounty Board#gl_cas01	4_BOARD3
+gl_cas01,170,200,4	duplicate(BountyBoard)	Bounty Board#gl_cas01_2	4_BOARD3
+
+// gl_cas02 - GH Castle F2 (entry from gl_cas01 at 104,25)
+gl_cas02,104,30,4	duplicate(BountyBoard)	Bounty Board#gl_cas02	4_BOARD3
+gl_cas02,150,100,4	duplicate(BountyBoard)	Bounty Board#gl_cas02_2	4_BOARD3
+
+// gl_knt01 - GH Chivalry F1 (entry from glast_01 at 150,15)
+gl_knt01,150,20,4	duplicate(BountyBoard)	Bounty Board#gl_knt01	4_BOARD3
+gl_knt01,150,150,4	duplicate(BountyBoard)	Bounty Board#gl_knt01_2	4_BOARD3
+
+// gl_knt02 - GH Chivalry F2 (entry from gl_knt01)
+gl_knt02,150,150,4	duplicate(BountyBoard)	Bounty Board#gl_knt02	4_BOARD3
+gl_knt02,200,200,4	duplicate(BountyBoard)	Bounty Board#gl_knt02_2	4_BOARD3
+
+// gl_chyard - GH Churchyard (entry from gl_church)
+gl_chyard,147,280,4	duplicate(BountyBoard)	Bounty Board#gl_chyard	4_BOARD3
+gl_chyard,100,150,4	duplicate(BountyBoard)	Bounty Board#gl_chyard_2	4_BOARD3
+
+// gl_sew03 - GH Culvert F3 (entry from gl_sew02)
+gl_sew03,171,280,4	duplicate(BountyBoard)	Bounty Board#gl_sew03	4_BOARD3
+gl_sew03,100,150,4	duplicate(BountyBoard)	Bounty Board#gl_sew03_2	4_BOARD3
+
+// gl_sew04 - GH Culvert F4 (entry from gl_sew03)
+gl_sew04,68,275,4	duplicate(BountyBoard)	Bounty Board#gl_sew04	4_BOARD3
+gl_sew04,100,150,4	duplicate(BountyBoard)	Bounty Board#gl_sew04_2	4_BOARD3
+
+// ==================== SPHINX (Lv 52-75) ====================
+// in_sphinx4 - Sphinx F4 (entry at 10,224)
+in_sphinx4,15,220,4	duplicate(BountyBoard)	Bounty Board#in_sphinx4	4_BOARD3
+in_sphinx4,100,150,4	duplicate(BountyBoard)	Bounty Board#in_sphinx4_2	4_BOARD3
+
+// in_sphinx5 - Sphinx F5 (entry at 100,99)
+in_sphinx5,100,103,4	duplicate(BountyBoard)	Bounty Board#in_sphinx5	4_BOARD3
+in_sphinx5,100,150,4	duplicate(BountyBoard)	Bounty Board#in_sphinx5_2	4_BOARD3
+
+// ==================== TURTLE ISLAND (Lv 58-75) ====================
+// tur_dun01 - Turtle Island F1 (warp to F2 at 154,241)
+tur_dun01,154,237,4	duplicate(BountyBoard)	Bounty Board#tur_dun01	4_BOARD3
+tur_dun01,100,100,4	duplicate(BountyBoard)	Bounty Board#tur_dun01_2	4_BOARD3
+
+// tur_dun02 - Turtle Island F2 (entry at 148,268)
+tur_dun02,148,264,4	duplicate(BountyBoard)	Bounty Board#tur_dun02	4_BOARD3
+tur_dun02,150,100,4	duplicate(BountyBoard)	Bounty Board#tur_dun02_2	4_BOARD3
+
+// tur_dun03 - Turtle Island F3 (entry at 132,193)
+tur_dun03,132,189,4	duplicate(BountyBoard)	Bounty Board#tur_dun03	4_BOARD3
+tur_dun03,150,100,4	duplicate(BountyBoard)	Bounty Board#tur_dun03_2	4_BOARD3
+
+// ==================== COAL MINE (Lv 43-78) ====================
+// mag_dun01 - Magma Dungeon F1 (entry at 126,66)
+mag_dun01,126,70,4	duplicate(BountyBoard)	Bounty Board#mag_dun01	4_BOARD3
+mag_dun01,200,200,4	duplicate(BountyBoard)	Bounty Board#mag_dun01_2	4_BOARD3
+
+// mag_dun02 - Magma Dungeon F2 (entry at 47,30)
+mag_dun02,47,35,4	duplicate(BountyBoard)	Bounty Board#mag_dun02	4_BOARD3
+mag_dun02,150,150,4	duplicate(BountyBoard)	Bounty Board#mag_dun02_2	4_BOARD3
+
+// ==================== ICE CAVE (Lv 42-60) ====================
+// ice_dun02 - Ice Cave F2 (entry at 151,139)
+ice_dun02,151,143,4	duplicate(BountyBoard)	Bounty Board#ice_dun02	4_BOARD3
+ice_dun02,100,200,4	duplicate(BountyBoard)	Bounty Board#ice_dun02_2	4_BOARD3
+
+// ice_dun03 - Ice Cave F3 (entry at 149,24)
+ice_dun03,149,28,4	duplicate(BountyBoard)	Bounty Board#ice_dun03	4_BOARD3
+ice_dun03,100,100,4	duplicate(BountyBoard)	Bounty Board#ice_dun03_2	4_BOARD3
+
+// ==================== AMATSU DUNGEON (Lv 47-69) ====================
+// ama_dun03 - Amatsu Dungeon F3 (entry at 120,12)
+ama_dun03,120,16,4	duplicate(BountyBoard)	Bounty Board#ama_dun03	4_BOARD3
+ama_dun03,100,100,4	duplicate(BountyBoard)	Bounty Board#ama_dun03_2	4_BOARD3
+
+// ==================== NAMELESS ABBEY (Lv 60-81) ====================
+// abbey01 - Nameless Abbey F1 (entry at 51,9 from nameless_n)
+abbey01,55,15,4	duplicate(BountyBoard)	Bounty Board#abbey01	4_BOARD3
+abbey01,200,200,4	duplicate(BountyBoard)	Bounty Board#abbey01_2	4_BOARD3
+
+// abbey02 - Nameless Abbey F2 (entry at 149,11)
+abbey02,149,15,4	duplicate(BountyBoard)	Bounty Board#abbey02	4_BOARD3
+abbey02,150,150,4	duplicate(BountyBoard)	Bounty Board#abbey02_2	4_BOARD3
+
+// abbey03 - Nameless Abbey F3 (entry at 119,8)
+abbey03,119,12,4	duplicate(BountyBoard)	Bounty Board#abbey03	4_BOARD3
+abbey03,100,100,4	duplicate(BountyBoard)	Bounty Board#abbey03_2	4_BOARD3
+
+// ==================== THOR VOLCANO (Lv 76-91) ====================
+// thor_v01 - Thor Volcano F1 (entry at 21,229)
+thor_v01,25,225,4	duplicate(BountyBoard)	Bounty Board#thor_v01	4_BOARD3
+thor_v01,150,150,4	duplicate(BountyBoard)	Bounty Board#thor_v01_2	4_BOARD3
+
+// thor_v02 - Thor Volcano F2 (entry at 78,203)
+thor_v02,80,200,4	duplicate(BountyBoard)	Bounty Board#thor_v02	4_BOARD3
+thor_v02,150,100,4	duplicate(BountyBoard)	Bounty Board#thor_v02_2	4_BOARD3
 
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
