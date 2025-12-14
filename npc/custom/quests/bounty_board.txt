@@ -778,7 +778,7 @@ beach_dun,150,150,4	duplicate(BountyBoard)	Bounty Board#beach_dun_2	4_BOARD3
 
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
-prontera,150,180,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
+prontera,164,164,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 	mes "[Monster Hunter Guild]";
 	mes "Welcome, hunter!";
 	mes " ";
