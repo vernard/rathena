@@ -1513,6 +1513,90 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 27;
 
+//----------------BEACH DUNGEON
+	setarray @pDmenuitems$[@Di], "Beach Dungeon";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 3;
+
+	setarray @DGat$[@Dref], "beach_dun", "beach_dun2", "beach_dun3";
+	setarray @DLevelName$[@Dref], "Beach Cave", "Beach 2F", "Beach 3F";
+	setarray @DXcoords[@Dref], 266, 154, 23;
+	setarray @DYcoords[@Dref], 67, 25, 260;
+	setarray @DDepth[@Dref], 0, 1, 2;
+
+	QWS_Make_Dungeon_Menu 35;
+
+//----------------ICE DUNGEON
+	setarray @pDmenuitems$[@Di], "Ice Dungeon";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 3;
+
+	setarray @DGat$[@Dref], "ice_dun01", "ice_dun02", "ice_dun03";
+	setarray @DLevelName$[@Dref], "Ice Cave 1F", "Ice Cave 2F", "Ice Cave 3F";
+	setarray @DXcoords[@Dref], 157, 151, 149;
+	setarray @DYcoords[@Dref], 17, 139, 24;
+	setarray @DDepth[@Dref], 0, 1, 2;
+
+	QWS_Make_Dungeon_Menu 36;
+
+//----------------THOR VOLCANO
+	setarray @pDmenuitems$[@Di], "Thor Volcano";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 3;
+
+	setarray @DGat$[@Dref], "thor_v01", "thor_v02", "thor_v03";
+	setarray @DLevelName$[@Dref], "Thor 1F", "Thor 2F", "Thor 3F";
+	setarray @DXcoords[@Dref], 21, 78, 35;
+	setarray @DYcoords[@Dref], 229, 203, 262;
+	setarray @DDepth[@Dref], 0, 1, 2;
+
+	QWS_Make_Dungeon_Menu 37;
+
+//----------------MOSCOVIA DUNGEON
+	setarray @pDmenuitems$[@Di], "Moscovia Dungeon";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 3;
+
+	setarray @DGat$[@Dref], "mosk_dun01", "mosk_dun02", "mosk_dun03";
+	setarray @DLevelName$[@Dref], "Forest 1F", "Forest 2F", "Forest 3F";
+	setarray @DXcoords[@Dref], 189, 165, 117;
+	setarray @DYcoords[@Dref], 45, 30, 36;
+	setarray @DDepth[@Dref], 0, 1, 2;
+
+	QWS_Make_Dungeon_Menu 38;
+
+//----------------RACHEL SANCTUARY
+	setarray @pDmenuitems$[@Di], "Rachel Sanctuary";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 5;
+
+	setarray @DGat$[@Dref], "ra_san01", "ra_san02", "ra_san03", "ra_san04", "ra_san05";
+	setarray @DLevelName$[@Dref], "Sanctuary Entrance", "Sanctuary East", "Sanctuary Central", "Sanctuary West", "Sanctuary Inner";
+	setarray @DXcoords[@Dref], 140, 213, 119, 119, 150;
+	setarray @DYcoords[@Dref], 75, 275, 283, 110, 145;
+	setarray @DDepth[@Dref], 0, 1, 1, 1, 2;
+
+	QWS_Make_Dungeon_Menu 39;
+
+//----------------ABBEY (NAMELESS ISLAND)
+	setarray @pDmenuitems$[@Di], "Abbey";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 4;
+
+	setarray @DGat$[@Dref], "nameless_n", "abbey01", "abbey02", "abbey03";
+	setarray @DLevelName$[@Dref], "Nameless Island", "Abbey 1F", "Abbey 2F", "Abbey 3F";
+	setarray @DXcoords[@Dref], 160, 51, 149, 119;
+	setarray @DYcoords[@Dref], 179, 15, 11, 8;
+	setarray @DDepth[@Dref], 0, 1, 2, 3;
+
+	QWS_Make_Dungeon_Menu 40;
+
 //----------------Cancel
 	setarray @pDmenuitems$[@Di], "Cancel";
 	setarray @pDprice[@Di], 0;
@@ -1759,3 +1843,10 @@ xmas_dun02,124,131,3	script	Warpra Helper#25	112,{ callfunc "QWS_Dungeon_Warpra"
 um_dun02,44,28,3	script	Warpra Helper#26	112,{ callfunc "QWS_Dungeon_Warpra",27,"Umbala Dungeon"; close; }
 tur_dun02,162,23,3	script	Warpra Helper#27	112,{ callfunc "QWS_Dungeon_Warpra",26,"Turtle Island Dungeon"; close; }
 prt_maze02,102,69,4	script	Warpra Helper#28	112,{ callfunc "QWS_Dungeon_Warpra",13,"Hidden Dungeon"; close; }
+// New dungeon helpers (placed on deeper floors to reward exploration)
+beach_dun2,154,35,3	script	Warpra Helper#35	112,{ callfunc "QWS_Dungeon_Warpra",35,"Beach Dungeon"; close; }
+ice_dun02,151,150,3	script	Warpra Helper#36	112,{ callfunc "QWS_Dungeon_Warpra",36,"Ice Dungeon"; close; }
+thor_v02,85,195,3	script	Warpra Helper#37	112,{ callfunc "QWS_Dungeon_Warpra",37,"Thor Volcano"; close; }
+mosk_dun02,165,40,3	script	Warpra Helper#38	112,{ callfunc "QWS_Dungeon_Warpra",38,"Moscovia Dungeon"; close; }
+ra_san03,125,275,3	script	Warpra Helper#39	112,{ callfunc "QWS_Dungeon_Warpra",39,"Rachel Sanctuary"; close; }
+abbey02,149,20,3	script	Warpra Helper#40	112,{ callfunc "QWS_Dungeon_Warpra",40,"Abbey"; close; }
