@@ -81,20 +81,27 @@ function	script	Q_Warpra	{
 
 	switch(@Mmenuref[@MMenu-1]+1){
 	case 1: goto GM_Menu;
-	case 2:
+	case 2: goto L_LastWarp;
+	case 3:
 		warp $QW_SP_WarpMap$, $QW_SP_WarpX, $QW_SP_WarpY;
+		set #QW_LastMap$, $QW_SP_WarpMap$;
+		set #QW_LastX, $QW_SP_WarpX;
+		set #QW_LastY, $QW_SP_WarpY;
+		set #QW_LastName$, $QW_SP_Warpname$;
+		set #QW_LastLevel$, "";
+		set #QW_LastPrice, 0;
 		close2;
 		debugmes "Please check your special warp menu settings on the Warpra.";
 		end;
-	case 3: goto L_town;
-	case 4: goto L_dungeon;
-	case 5: goto L_FewWarps;
-	case 6: goto L_NoUnlock;
-	case 7: goto L_heal_Full;
-	case 8: goto L_heal_Part;
-	case 9: goto L_Storage;
-	case 10: goto L_GStorage;
-	case 11:
+	case 4: goto L_town;
+	case 5: goto L_dungeon;
+	case 6: goto L_FewWarps;
+	case 7: goto L_NoUnlock;
+	case 8: goto L_heal_Full;
+	case 9: goto L_heal_Part;
+	case 10: goto L_Storage;
+	case 11: goto L_GStorage;
+	case 12:
 	default:
 		goto L_end;
 	}
@@ -311,6 +318,16 @@ DungeonLevelLimit:
 		end;
 	}
 
+//==========================Last=Warp==============================
+
+L_LastWarp:
+	if(Zeny<#QW_LastPrice) callsub L_Short_on_zeny,0;
+	set Zeny, Zeny-#QW_LastPrice;
+	if ($QW_KPoint == 1) set RESRVPTS, RESRVPTS + (#QW_LastPrice/16);
+	warp #QW_LastMap$,#QW_LastX,#QW_LastY;
+	close2;
+	end;
+
 //===========================Towns=================================
 
 L_town:
@@ -327,6 +344,13 @@ L_town:
 	if(Zeny<@pTprice[@Tmenuref[@TWMenu-1]]) callsub L_Short_on_zeny,0;
 	set Zeny, Zeny-@pTprice[@Tmenuref[@TWMenu-1]];
 	if ($QW_KPoint == 1) set RESRVPTS, RESRVPTS + (@pTprice[@Tmenuref[@TWMenu-1]]/16);
+	// Save last warp location
+	set #QW_LastMap$, @pTmap$[@Tmenuref[@TWMenu-1]];
+	set #QW_LastX, @pTXcoords[@Tmenuref[@TWMenu-1]];
+	set #QW_LastY, @pTYcoords[@Tmenuref[@TWMenu-1]];
+	set #QW_LastName$, @pTmenuitems$[@Tmenuref[@TWMenu-1]];
+	set #QW_LastLevel$, "";
+	set #QW_LastPrice, @pTprice[@Tmenuref[@TWMenu-1]];
 	warp @pTmap$[@Tmenuref[@TWMenu-1]],@pTXcoords[@Tmenuref[@TWMenu-1]],@pTYcoords[@Tmenuref[@TWMenu-1]];
 	close2;
 	set Zeny, Zeny+@pTprice[@Tmenuref[@TWMenu-1]];
@@ -365,6 +389,13 @@ L_dungeon:
 	if(Zeny<@warpprice) callsub L_Short_on_zeny,1;
 	set Zeny, Zeny-(@warpprice);
 	if ($QW_KPoint == 1) set RESRVPTS, RESRVPTS + (@warpprice/16);
+	// Save last warp location
+	set #QW_LastMap$, @DGat$[@Darrayref];
+	set #QW_LastX, @DXcoords[@Darrayref];
+	set #QW_LastY, @DYcoords[@Darrayref];
+	set #QW_LastName$, @pDmenuitems$[@Dmenuref[@DWMenu-1]];
+	set #QW_LastLevel$, @DLevelName$[@Darrayref];
+	set #QW_LastPrice, @warpprice;
 	warp @DGat$[@Darrayref],@DXcoords[@Darrayref],@DYcoords[@Darrayref];
 	close2;
 	set Zeny, Zeny+@pTprice[@Tmenuref[@DWMenu-1]];
@@ -590,14 +621,28 @@ function	script	QWS_DungeonStamps	{
 
 function	script	QWS_MMarray	{
 
-	// Currently 9 items
-	setarray @pMmenuitems$[0], "GameMaster Menu", $QW_SP_Warpname$, "Warp to Towns", "Warp to Dungeons", "Why so few warps?", "Why don't you unlock this location?", "Heal", "Heal", "Storage", "Guild Storage", "Cancel";
+	// Currently 12 items (added Last Warp at index 1)
+	setarray @pMmenuitems$[0], "GameMaster Menu", "Last Warp", $QW_SP_Warpname$, "Warp to Towns", "Warp to Dungeons", "Why so few warps?", "Why don't you unlock this location?", "Heal", "Heal", "Storage", "Guild Storage", "Cancel";
 	set @Mi,0; // loop counter
 	set @Mj,0; // menu line counter
 
 //----------------GameMaster-Menu
 	if (getgmlevel()>= 80) {
 		set @Mmenulist$[@Mj],@pMmenuitems$[@Mi];
+		set @Mmenuref[@Mj],@Mi;
+		set @Mj,@Mj+1;
+	}
+	set @Mi,@Mi+1;
+//----------------Last-Warp
+	if (#QW_LastMap$ != "") {
+		// Format: [Last] mapname Level X DungeonName
+		if (#QW_LastLevel$ == "") {
+			// Town - no level
+			set @Mmenulist$[@Mj],"[Last] "+#QW_LastMap$+" - "+#QW_LastName$;
+		} else {
+			// Dungeon - show level and name
+			set @Mmenulist$[@Mj],"[Last] "+#QW_LastMap$+" "+#QW_LastLevel$+" "+#QW_LastName$;
+		}
 		set @Mmenuref[@Mj],@Mi;
 		set @Mj,@Mj+1;
 	}
