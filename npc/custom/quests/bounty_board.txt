@@ -13,22 +13,22 @@
 
 // ==================== HELPER FUNCTION ====================
 // Calculate overleveled penalty (returns 20-100 as percentage)
-// 15 level grace period, then -5% per level, minimum 50%, severe cap 20% at 40+ levels
+// 30 level grace period, then -5% per level, minimum 50%, severe cap 20% at 55+ levels
 function	script	F_OverlevelPenalty	{
 	.@player_lv = getarg(0);
 	.@mob_lv = getarg(1);
 	.@level_diff = .@player_lv - .@mob_lv;
 
 	// No penalty for hunting same level or higher monsters
-	if (.@level_diff <= 15)
+	if (.@level_diff <= 30)
 		return 100;
 
-	// Severe penalty for huge gaps (40+ levels over)
-	if (.@level_diff > 40)
+	// Severe penalty for huge gaps (55+ levels over)
+	if (.@level_diff > 55)
 		return 20;
 
-	// Moderate penalty: -5% per level over 15, minimum 50%
-	.@penalty = 100 - ((.@level_diff - 15) * 5);
+	// Moderate penalty: -5% per level over 30, minimum 50%
+	.@penalty = 100 - ((.@level_diff - 30) * 5);
 	return max(50, .@penalty);
 }
 
@@ -426,7 +426,19 @@ OnInit:
 		// Thor Volcano (Lv 76-91) - NEW
 		"thor_v01", "thor_v02",
 		// Themed Variety
-		"treasure01", "xmas_dun01", "beach_dun";
+		"treasure01", "xmas_dun01", "beach_dun",
+		// Additional Ice Cave floor
+		"ice_dun01",
+		// Additional Thor Volcano floor
+		"thor_v03",
+		// Additional Beach Dungeon floors
+		"beach_dun2", "beach_dun3",
+		// Moscovia Dungeon (Lv 39-63)
+		"mosk_dun01", "mosk_dun02", "mosk_dun03",
+		// Rachel Sanctuary (Lv 53-65)
+		"ra_san01", "ra_san03",
+		// Additional GH maps (separated regions)
+		"gl_church", "gl_prison1", "gl_sew01", "gl_sew02", "gl_dun01", "gl_dun02";
 
 	// ==================== MAP NAMES ====================
 	// Beginner Fields
@@ -509,6 +521,27 @@ OnInit:
 	// Thor Volcano (Lv 76-91)
 	set .MapName_thor_v01$, "Thor Volcano F1";
 	set .MapName_thor_v02$, "Thor Volcano F2";
+	// Additional Ice Cave floor
+	set .MapName_ice_dun01$, "Ice Cave F1";
+	// Additional Thor Volcano floor
+	set .MapName_thor_v03$, "Thor Volcano F3";
+	// Additional Beach Dungeon floors
+	set .MapName_beach_dun2$, "Beach Cave F2";
+	set .MapName_beach_dun3$, "Beach Cave F3";
+	// Moscovia Dungeon (Lv 39-63)
+	set .MapName_mosk_dun01$, "Moscovia Forest F1";
+	set .MapName_mosk_dun02$, "Moscovia Forest F2";
+	set .MapName_mosk_dun03$, "Moscovia Forest F3";
+	// Rachel Sanctuary (Lv 53-65)
+	set .MapName_ra_san01$, "Rachel Sanctuary Entrance";
+	set .MapName_ra_san03$, "Rachel Sanctuary Central";
+	// Additional GH maps
+	set .MapName_gl_church$, "GH Church";
+	set .MapName_gl_prison1$, "GH Underprison F2";
+	set .MapName_gl_sew01$, "GH Culvert F1";
+	set .MapName_gl_sew02$, "GH Culvert F2";
+	set .MapName_gl_dun01$, "GH Lowest Cave F1";
+	set .MapName_gl_dun02$, "GH Lowest Cave F2";
 
 	// ==================== MONSTER LISTS ====================
 	// Format: setarray .Mobs_<mapname>[0], <mob_id1>, <mob_id2>, ...
@@ -743,6 +776,72 @@ OnInit:
 	// thor_v02 - Thor Volcano F2 (Lv 76-91)
 	setarray .Mobs_thor_v02[0], 1833, 1837, 1836;  // Kasa (Lv 85), Imp (Lv 76), Magmaring (Lv 40)
 	set .Mobs_thor_v02_count, 3;
+
+	// ==================== ADDITIONAL ICE CAVE FLOOR ====================
+	// ice_dun01 - Ice Cave F1 (Lv 31-57)
+	setarray .Mobs_ice_dun01[0], 1776, 1778, 1782;  // Siroma (Lv 42), Gazeti (Lv 55), Roween (Lv 31)
+	set .Mobs_ice_dun01_count, 3;
+
+	// ==================== ADDITIONAL THOR VOLCANO FLOOR ====================
+	// thor_v03 - Thor Volcano F3 (Lv 80-91) - Ifrit MVP floor
+	setarray .Mobs_thor_v03[0], 1833, 1831;  // Kasa (Lv 85), Salamander (Lv 91)
+	set .Mobs_thor_v03_count, 2;
+
+	// ==================== ADDITIONAL BEACH FLOORS ====================
+	// beach_dun2 - Beach Cave F2 (Lv 32-60)
+	setarray .Mobs_beach_dun2[0], 1278, 1274, 1279;  // Stalactic Golem (Lv 60), Megalith (Lv 45), Tri Joint (Lv 32)
+	set .Mobs_beach_dun2_count, 3;
+
+	// beach_dun3 - Beach Cave F3 (Lv 14-40)
+	setarray .Mobs_beach_dun3[0], 1034, 1064, 1255;  // Thara Frog (Lv 22), Megalodon (Lv 24), Nereid (Lv 40)
+	set .Mobs_beach_dun3_count, 3;
+
+	// ==================== MOSCOVIA DUNGEON (Lv 39-63) ====================
+	// mosk_dun01 - Moscovia Forest F1 (Lv 39-42)
+	setarray .Mobs_mosk_dun01[0], 1880, 1881;  // Wood Goblin (Lv 42), Les (Lv 39)
+	set .Mobs_mosk_dun01_count, 2;
+
+	// mosk_dun02 - Moscovia Forest F2 (Lv 39-61)
+	setarray .Mobs_mosk_dun02[0], 1880, 1881, 1882, 1883;  // Wood Goblin (Lv 42), Les (Lv 39), Baba Yaga (Lv 49), Uzhas (Lv 61)
+	set .Mobs_mosk_dun02_count, 4;
+
+	// mosk_dun03 - Moscovia Forest F3 (Lv 49-63) - Gopinich MVP floor
+	setarray .Mobs_mosk_dun03[0], 1882, 1883, 1884;  // Baba Yaga (Lv 49), Uzhas (Lv 61), Mavka (Lv 63)
+	set .Mobs_mosk_dun03_count, 3;
+
+	// ==================== RACHEL SANCTUARY (Lv 53-65) ====================
+	// ra_san01 - Rachel Sanctuary Entrance (Lv 53-62)
+	setarray .Mobs_ra_san01[0], 1771, 1772, 1773;  // Vanberk (Lv 59), Isilla (Lv 62), Hodremlin (Lv 61)
+	set .Mobs_ra_san01_count, 3;
+
+	// ra_san03 - Rachel Sanctuary Central (Lv 53-65)
+	setarray .Mobs_ra_san03[0], 1773, 1774;  // Hodremlin (Lv 61), Seeker (Lv 65)
+	set .Mobs_ra_san03_count, 2;
+
+	// ==================== ADDITIONAL GH MAPS ====================
+	// gl_church - GH Church (Lv 40-58)
+	setarray .Mobs_gl_church[0], 1036, 1117, 1192;  // Ghoul (Lv 40), Evil Druid (Lv 58), Wraith (Lv 53)
+	set .Mobs_gl_church_count, 3;
+
+	// gl_prison1 - GH Underprison F2 (Lv 42-73)
+	setarray .Mobs_gl_prison1[0], 1196, 1257, 1201, 1202;  // Skeleton Prisoner (Lv 52), Injustice (Lv 51), Rybio (Lv 71), Phendark (Lv 73)
+	set .Mobs_gl_prison1_count, 4;
+
+	// gl_sew01 - GH Culvert F1 (Lv 34-59)
+	setarray .Mobs_gl_sew01[0], 1253, 1194, 1179;  // Gargoyle (Lv 48), Arclouze (Lv 59), Whisper (Lv 34)
+	set .Mobs_gl_sew01_count, 3;
+
+	// gl_sew02 - GH Culvert F2 (Lv 34-59)
+	setarray .Mobs_gl_sew02[0], 1253, 1194, 1179;  // Gargoyle (Lv 48), Arclouze (Lv 59), Whisper (Lv 34)
+	set .Mobs_gl_sew02_count, 3;
+
+	// gl_dun01 - GH Lowest Cave F1 (Lv 59-61)
+	setarray .Mobs_gl_dun01[0], 1194, 1207;  // Arclouze (Lv 59), Sting (Lv 61)
+	set .Mobs_gl_dun01_count, 2;
+
+	// gl_dun02 - GH Lowest Cave F2 (Lv 59-61)
+	setarray .Mobs_gl_dun02[0], 1194, 1207;  // Arclouze (Lv 59), Sting (Lv 61)
+	set .Mobs_gl_dun02_count, 2;
 
 	end;
 }
@@ -1031,6 +1130,72 @@ thor_v01,195,40,4	duplicate(BountyBoard)	Bounty Board#thor_v01_2	4_BOARD3
 // thor_v02 - Thor Volcano F2 (entry at 78,203)
 thor_v02,80,200,4	duplicate(BountyBoard)	Bounty Board#thor_v02	4_BOARD3
 thor_v02,185,60,4	duplicate(BountyBoard)	Bounty Board#thor_v02_2	4_BOARD3
+
+// ==================== ADDITIONAL ICE CAVE FLOOR ====================
+// ice_dun01 - Ice Cave F1 (entry at 157,10)
+ice_dun01,155,15,4	duplicate(BountyBoard)	Bounty Board#ice_dun01	4_BOARD3
+ice_dun01,145,155,4	duplicate(BountyBoard)	Bounty Board#ice_dun01_2	4_BOARD3
+
+// ==================== ADDITIONAL THOR VOLCANO FLOOR ====================
+// thor_v03 - Thor Volcano F3 (entry at 35,262)
+thor_v03,40,260,4	duplicate(BountyBoard)	Bounty Board#thor_v03	4_BOARD3
+thor_v03,185,55,4	duplicate(BountyBoard)	Bounty Board#thor_v03_2	4_BOARD3
+
+// ==================== ADDITIONAL BEACH FLOORS ====================
+// beach_dun2 - Beach Cave F2 (entry at 154,25)
+beach_dun2,154,30,4	duplicate(BountyBoard)	Bounty Board#beach_dun2	4_BOARD3
+beach_dun2,150,150,4	duplicate(BountyBoard)	Bounty Board#beach_dun2_2	4_BOARD3
+
+// beach_dun3 - Beach Cave F3 (entry at 23,260)
+beach_dun3,28,260,4	duplicate(BountyBoard)	Bounty Board#beach_dun3	4_BOARD3
+beach_dun3,280,60,4	duplicate(BountyBoard)	Bounty Board#beach_dun3_2	4_BOARD3
+
+// ==================== MOSCOVIA DUNGEON (Lv 39-63) ====================
+// mosk_dun01 - Moscovia Forest F1 (entry at 189,45)
+mosk_dun01,185,50,4	duplicate(BountyBoard)	Bounty Board#mosk_dun01	4_BOARD3
+mosk_dun01,170,170,4	duplicate(BountyBoard)	Bounty Board#mosk_dun01_2	4_BOARD3
+
+// mosk_dun02 - Moscovia Forest F2 (entry at 165,30)
+mosk_dun02,165,35,4	duplicate(BountyBoard)	Bounty Board#mosk_dun02	4_BOARD3
+mosk_dun02,260,120,4	duplicate(BountyBoard)	Bounty Board#mosk_dun02_2	4_BOARD3
+
+// mosk_dun03 - Moscovia Forest F3 (entry at 117,36)
+mosk_dun03,117,40,4	duplicate(BountyBoard)	Bounty Board#mosk_dun03	4_BOARD3
+mosk_dun03,30,130,4	duplicate(BountyBoard)	Bounty Board#mosk_dun03_2	4_BOARD3
+
+// ==================== RACHEL SANCTUARY (Lv 53-65) ====================
+// ra_san01 - Rachel Sanctuary Entrance (entry at 140,75)
+ra_san01,144,75,4	duplicate(BountyBoard)	Bounty Board#ra_san01	4_BOARD3
+ra_san01,140,130,4	duplicate(BountyBoard)	Bounty Board#ra_san01_2	4_BOARD3
+
+// ra_san03 - Rachel Sanctuary Central (entry at 119,283)
+ra_san03,119,279,4	duplicate(BountyBoard)	Bounty Board#ra_san03	4_BOARD3
+ra_san03,145,145,4	duplicate(BountyBoard)	Bounty Board#ra_san03_2	4_BOARD3
+
+// ==================== ADDITIONAL GH MAPS ====================
+// gl_church - GH Church (entry from gl_chyard)
+gl_church,120,45,4	duplicate(BountyBoard)	Bounty Board#gl_church	4_BOARD3
+gl_church,80,140,4	duplicate(BountyBoard)	Bounty Board#gl_church_2	4_BOARD3
+
+// gl_prison1 - GH Underprison F2 (entry from gl_prison)
+gl_prison1,145,30,4	duplicate(BountyBoard)	Bounty Board#gl_prison1	4_BOARD3
+gl_prison1,80,120,4	duplicate(BountyBoard)	Bounty Board#gl_prison1_2	4_BOARD3
+
+// gl_sew01 - GH Culvert F1 (entry from glast_01)
+gl_sew01,130,275,4	duplicate(BountyBoard)	Bounty Board#gl_sew01	4_BOARD3
+gl_sew01,170,70,4	duplicate(BountyBoard)	Bounty Board#gl_sew01_2	4_BOARD3
+
+// gl_sew02 - GH Culvert F2 (entry from gl_sew01)
+gl_sew02,80,270,4	duplicate(BountyBoard)	Bounty Board#gl_sew02	4_BOARD3
+gl_sew02,165,70,4	duplicate(BountyBoard)	Bounty Board#gl_sew02_2	4_BOARD3
+
+// gl_dun01 - GH Lowest Cave F1 (entry from gl_step)
+gl_dun01,275,165,4	duplicate(BountyBoard)	Bounty Board#gl_dun01	4_BOARD3
+gl_dun01,140,250,4	duplicate(BountyBoard)	Bounty Board#gl_dun01_2	4_BOARD3
+
+// gl_dun02 - GH Lowest Cave F2 (entry from gl_dun01)
+gl_dun02,220,270,4	duplicate(BountyBoard)	Bounty Board#gl_dun02	4_BOARD3
+gl_dun02,140,140,4	duplicate(BountyBoard)	Bounty Board#gl_dun02_2	4_BOARD3
 
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
