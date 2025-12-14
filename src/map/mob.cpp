@@ -2856,12 +2856,14 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 			ditem = mob_setdropitem(&md->db->dropitem[i], 1, md->mob_id);
 
 			// PATCH START: Rare drop tracking and autoloot
+			// Use base rate for threshold checks, not modified rate (Bubblegum shouldn't disqualify rare drops)
+			int base_rate = md->db->dropitem[i].rate;
 			if (mvp_sd != nullptr) {
 				raredrop_record_and_announce(mvp_sd, md->db->dropitem[i].nameid, it->ename.c_str(),
-					RAREDROP_SOURCE_MOB, md->mob_id, md->name, drop_rate, battle_config.rare_drop_announce);
+					RAREDROP_SOURCE_MOB, md->mob_id, md->name, base_rate, battle_config.rare_drop_announce);
 
 				// Force autoloot for rare drops if enabled
-				if (battle_config.rare_drop_autoloot && drop_rate <= battle_config.rare_drop_announce) {
+				if (battle_config.rare_drop_autoloot && base_rate <= battle_config.rare_drop_announce) {
 					struct item item_data;
 					memset(&item_data, 0, sizeof(item_data));
 					item_data.nameid = md->db->dropitem[i].nameid;
