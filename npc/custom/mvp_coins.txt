@@ -3,16 +3,16 @@
 //===== Description: =========================================
 //= Tradeable MVP coins dropped when killing MVP monsters.
 //= Coins are tiered by MVP EXP reward (better difficulty scaling):
-//=   - Bronze MVP Coin (30010): < 25k MvpExp - 1 point
-//=   - Silver MVP Coin (30011): 25k-60k MvpExp - 5 points
-//=   - Gold MVP Coin (30012): 60k-500k MvpExp - 20 points
-//=   - Platinum MVP Coin (30013): 500k+ MvpExp - 100 points
+//=   - Silver MVP Coin (30010): < 25k MvpExp - 1 point
+//=   - Gold MVP Coin (30011): 25k-500k MvpExp - 3 points
+//=   - Mithril MVP Coin (30012): 500k+ MvpExp - 10 points
 //=
 //= When in a party, a random member on the same map receives
 //= the coin. Exchange coins at NPC for exclusive items.
 //===== Changelog: ==========================================
 //= 1.0 Initial implementation (level-based)
 //= 1.1 Switched to EXP-based tiers, added Platinum tier
+//= 1.2 Simplified to 3 tiers with matching client sprites
 //============================================================
 
 // Invisible NPC for MVP kill detection
@@ -27,26 +27,21 @@ OnNPCKillEvent:
 	.@mob_name$ = getmonsterinfo(killedrid, MOB_NAME);
 
 	// Determine coin tier by MVP EXP (better difficulty scaling than level)
-	// Platinum: 500k+ MvpExp (Fallen Bishop, Kiel, Bio Labs, Beelzebub)
-	// Gold: 60k-500k MvpExp (Dracula, LoD, Atroce, Gloom)
-	// Silver: 25k-60k MvpExp (Doppel, Dark Lord, Amon Ra, Baphomet)
-	// Bronze: <25k MvpExp (GTB, Eddga, Drake, Maya, Moonlight)
+	// Mithril: 500k+ MvpExp (Fallen Bishop, Kiel, Bio Labs, Beelzebub)
+	// Gold: 25k-500k MvpExp (Doppel, Dark Lord, Amon Ra, Baphomet, Dracula, LoD, Atroce, Gloom)
+	// Silver: <25k MvpExp (GTB, Eddga, Drake, Maya, Moonlight)
 	if (.@mvp_exp >= 500000) {
-		.@coin_id = 30013;  // Platinum MVP Coin
-		.@coin_name$ = "^E5E4E2Platinum MVP Coin^000000";
-		.@coin_color = 0xE5E4E2;
-	} else if (.@mvp_exp >= 60000) {
-		.@coin_id = 30012;  // Gold MVP Coin
+		.@coin_id = 30012;  // Mithril MVP Coin
+		.@coin_name$ = "^87CEEBMithril MVP Coin^000000";
+		.@coin_color = 0x87CEEB;
+	} else if (.@mvp_exp >= 25000) {
+		.@coin_id = 30011;  // Gold MVP Coin
 		.@coin_name$ = "^FFD700Gold MVP Coin^000000";
 		.@coin_color = 0xFFD700;
-	} else if (.@mvp_exp >= 25000) {
-		.@coin_id = 30011;  // Silver MVP Coin
+	} else {
+		.@coin_id = 30010;  // Silver MVP Coin
 		.@coin_name$ = "^C0C0C0Silver MVP Coin^000000";
 		.@coin_color = 0xC0C0C0;
-	} else {
-		.@coin_id = 30010;  // Bronze MVP Coin
-		.@coin_name$ = "^CD7F32Bronze MVP Coin^000000";
-		.@coin_color = 0xCD7F32;
 	}
 
 	// Get killer's current map position
@@ -127,18 +122,16 @@ prontera,164,172,4	script	MVP Coin Exchange	4_M_MASKMAN,{
 	next;
 
 	// Calculate current balance
-	.@bronze = countitem(30010);
-	.@silver = countitem(30011);
-	.@gold = countitem(30012);
-	.@platinum = countitem(30013);
-	.@total_points = .@bronze + (.@silver * 5) + (.@gold * 20) + (.@platinum * 100);
+	.@silver = countitem(30010);
+	.@gold = countitem(30011);
+	.@mithril = countitem(30012);
+	.@total_points = .@silver + (.@gold * 3) + (.@mithril * 10);
 
 	mes "[MVP Coin Exchange]";
 	mes "^0055FFYour MVP Coins:^000000";
-	mes "^CD7F32Bronze^000000: " + .@bronze + " (1 pt each)";
-	mes "^C0C0C0Silver^000000: " + .@silver + " (5 pts each)";
-	mes "^FFD700Gold^000000: " + .@gold + " (20 pts each)";
-	mes "^E5E4E2Platinum^000000: " + .@platinum + " (100 pts each)";
+	mes "^C0C0C0Silver^000000: " + .@silver + " (1 pt each)";
+	mes "^FFD700Gold^000000: " + .@gold + " (3 pts each)";
+	mes "^87CEEBMithril^000000: " + .@mithril + " (10 pts each)";
 	mes " ";
 	mes "^0055FFTotal Value: ^FF0000" + .@total_points + " points^000000";
 	next;
@@ -154,21 +147,17 @@ prontera,164,172,4	script	MVP Coin Exchange	4_M_MASKMAN,{
 		mes "^0055FFMVP Coin Tiers:^000000";
 		mes "(based on MVP EXP reward)";
 		mes " ";
-		mes "^CD7F32Bronze^000000: Easy MVPs (1 pt)";
+		mes "^C0C0C0Silver^000000: Easy MVPs (1 pt)";
 		mes "GTB, Eddga, Drake, Maya...";
 		next;
 		mes "[MVP Coin Exchange]";
-		mes "^C0C0C0Silver^000000: Medium MVPs (5 pts)";
+		mes "^FFD700Gold^000000: Medium/Hard MVPs (3 pts)";
 		mes "Doppelganger, Dark Lord,";
-		mes "Amon Ra, Baphomet...";
+		mes "Amon Ra, Baphomet, Dracula,";
+		mes "Lord of Death, Atroce, Gloom...";
 		next;
 		mes "[MVP Coin Exchange]";
-		mes "^FFD700Gold^000000: Hard MVPs (20 pts)";
-		mes "Dracula, Lord of Death,";
-		mes "Atroce, Gloom Under Night...";
-		next;
-		mes "[MVP Coin Exchange]";
-		mes "^E5E4E2Platinum^000000: Extreme MVPs (100 pts)";
+		mes "^87CEEBMithril^000000: Extreme MVPs (10 pts)";
 		mes "Fallen Bishop, Kiel D-01,";
 		mes "Bio Lab MVPs, Beelzebub...";
 		next;
@@ -202,11 +191,10 @@ OnBuyItem:
 	}
 
 	// Calculate player's total points from coins
-	.@bronze = countitem(30010);
-	.@silver = countitem(30011);
-	.@gold = countitem(30012);
-	.@platinum = countitem(30013);
-	.@player_points = .@bronze + (.@silver * 5) + (.@gold * 20) + (.@platinum * 100);
+	.@silver = countitem(30010);
+	.@gold = countitem(30011);
+	.@mithril = countitem(30012);
+	.@player_points = .@silver + (.@gold * 3) + (.@mithril * 10);
 
 	mes "[MVP Coin Exchange]";
 
@@ -227,31 +215,24 @@ OnBuyItem:
 		}
 	}
 
-	// Consume coins (use highest value first: Platinum -> Gold -> Silver -> Bronze)
+	// Consume coins (use highest value first: Mithril -> Gold -> Silver)
 	.@remaining = .@total_cost;
 
-	// Spend platinum coins first (100 pts each)
-	.@platinum_spend = min(.@platinum, .@remaining / 100);
-	if (.@platinum_spend > 0) {
-		delitem 30013, .@platinum_spend;
-		.@remaining -= .@platinum_spend * 100;
+	// Spend mithril coins first (10 pts each)
+	.@mithril_spend = min(.@mithril, .@remaining / 10);
+	if (.@mithril_spend > 0) {
+		delitem 30012, .@mithril_spend;
+		.@remaining -= .@mithril_spend * 10;
 	}
 
-	// Spend gold coins next (20 pts each)
-	.@gold_spend = min(countitem(30012), .@remaining / 20);
+	// Spend gold coins next (3 pts each)
+	.@gold_spend = min(countitem(30011), .@remaining / 3);
 	if (.@gold_spend > 0) {
-		delitem 30012, .@gold_spend;
-		.@remaining -= .@gold_spend * 20;
+		delitem 30011, .@gold_spend;
+		.@remaining -= .@gold_spend * 3;
 	}
 
-	// Spend silver coins next (5 pts each)
-	.@silver_spend = min(countitem(30011), .@remaining / 5);
-	if (.@silver_spend > 0) {
-		delitem 30011, .@silver_spend;
-		.@remaining -= .@silver_spend * 5;
-	}
-
-	// Spend bronze coins last (1 pt each)
+	// Spend silver coins last (1 pt each)
 	if (.@remaining > 0) {
 		delitem 30010, .@remaining;
 	}
@@ -267,11 +248,10 @@ OnBuyItem:
 	mes "^0055FFCoins spent: " + .@total_cost + " points^000000";
 
 	// Show new balance
-	.@new_bronze = countitem(30010);
-	.@new_silver = countitem(30011);
-	.@new_gold = countitem(30012);
-	.@new_platinum = countitem(30013);
-	.@new_total = .@new_bronze + (.@new_silver * 5) + (.@new_gold * 20) + (.@new_platinum * 100);
+	.@new_silver = countitem(30010);
+	.@new_gold = countitem(30011);
+	.@new_mithril = countitem(30012);
+	.@new_total = .@new_silver + (.@new_gold * 3) + (.@new_mithril * 10);
 	mes "^0055FFRemaining: " + .@new_total + " points^000000";
 
 	specialeffect2 EF_STEAL;
