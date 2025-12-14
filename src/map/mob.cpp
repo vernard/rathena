@@ -2857,10 +2857,11 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 
 			// PATCH START: Rare drop tracking and autoloot
 			// Use base rate for threshold checks, not modified rate (Bubblegum shouldn't disqualify rare drops)
+			// But log/display the modified rate so we can see who benefited from Bubblegum
 			int base_rate = md->db->dropitem[i].rate;
 			if (mvp_sd != nullptr) {
 				raredrop_record_and_announce(mvp_sd, md->db->dropitem[i].nameid, it->ename.c_str(),
-					RAREDROP_SOURCE_MOB, md->mob_id, md->name, base_rate, battle_config.rare_drop_announce);
+					RAREDROP_SOURCE_MOB, md->mob_id, md->name, drop_rate, base_rate, battle_config.rare_drop_announce);
 
 				// Force autoloot for rare drops if enabled
 				if (battle_config.rare_drop_autoloot && base_rate <= battle_config.rare_drop_announce) {

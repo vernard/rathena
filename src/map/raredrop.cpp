@@ -135,16 +135,20 @@ static void raredrop_format_number(uint32 n, char* buf, size_t buf_size) {
 
 /**
  * Record a rare drop and announce it
+ * @param drop_rate The effective/modified drop rate (for logging and display, e.g. with Bubblegum)
+ * @param base_rate The base drop rate without modifiers (for threshold comparison)
+ * @param announce_threshold The threshold below which drops are considered "rare"
  */
 void raredrop_record_and_announce(map_session_data* sd, t_itemid item_id,
                                    const char* item_name, e_raredrop_source source_type,
                                    uint32 source_id, const char* source_name,
-                                   int32 drop_rate, int32 announce_threshold)
+                                   int32 drop_rate, int32 base_rate, int32 announce_threshold)
 {
 	nullpo_retv(sd);
 
-	// Skip if above announce threshold
-	if (drop_rate > announce_threshold) {
+	// Skip if base rate is above announce threshold
+	// Use base_rate so items with intrinsic rarity are still tracked even with Bubblegum
+	if (base_rate > announce_threshold) {
 		return;
 	}
 

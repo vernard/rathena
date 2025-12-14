@@ -22221,9 +22221,10 @@ BUILDIN_FUNC(getrandgroupitem) {
 
 					if (i_data != nullptr && source_data != nullptr) {
 						// Use a fixed rate (100 = 1%) since OCA cards have equal chance
+						// For item boxes, drop_rate = base_rate (no Bubblegum effect)
 						raredrop_record_and_announce(sd, entry->nameid, i_data->ename.c_str(),
 							RAREDROP_SOURCE_ITEM, source_item_id, source_data->ename.c_str(),
-							100, battle_config.rare_drop_announce);
+							100, 100, battle_config.rare_drop_announce);
 					}
 				}
 			}

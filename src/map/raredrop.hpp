@@ -26,7 +26,7 @@ const char* raredrop_ordinal_suffix(uint32 n);
 void raredrop_record_and_announce(map_session_data* sd, t_itemid item_id,
                                    const char* item_name, e_raredrop_source source_type,
                                    uint32 source_id, const char* source_name,
-                                   int32 drop_rate, int32 announce_threshold);
+                                   int32 drop_rate, int32 base_rate, int32 announce_threshold);
 
 // Boss/MVP card lookup for item box tracking
 extern std::unordered_set<t_itemid> boss_card_ids;
