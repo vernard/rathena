@@ -1,0 +1,938 @@
+//===== Reminisce RO =========================================
+//= Location-Based Bounty Board System
+//===== By: ==================================================
+//= Custom for Reminisce RO
+//===== Description: =========================================
+//= Bounty boards placed on grinding maps offer bounties for
+//= monsters that spawn on that specific map. Players choose
+//= kill quantity (25/50/100/200) with bonus multipliers.
+//= Rewards: EXP, Zeny, and Monster Hunting Points.
+//=
+//= Uses existing char_mob_kills table for kill tracking.
+//============================================================
+
+// ==================== HELPER FUNCTION ====================
+// Calculate overleveled penalty (returns 20-100 as percentage)
+// 15 level grace period, then -5% per level, minimum 50%, severe cap 20% at 40+ levels
+function	script	F_OverlevelPenalty	{
+	.@player_lv = getarg(0);
+	.@mob_lv = getarg(1);
+	.@level_diff = .@player_lv - .@mob_lv;
+
+	// No penalty for hunting same level or higher monsters
+	if (.@level_diff <= 15)
+		return 100;
+
+	// Severe penalty for huge gaps (40+ levels over)
+	if (.@level_diff > 40)
+		return 20;
+
+	// Moderate penalty: -5% per level over 15, minimum 50%
+	.@penalty = 100 - ((.@level_diff - 15) * 5);
+	return max(50, .@penalty);
+}
+
+// Format number as human readable (4200 → "4.2k", 1500000 → "1.5m")
+function	script	F_ShortNum	{
+	.@n = getarg(0);
+	if (.@n >= 1000000) {
+		.@whole = .@n / 1000000;
+		.@decimal = (.@n % 1000000) / 100000;
+		return .@whole + "." + .@decimal + "m";
+	} else if (.@n >= 1000) {
+		.@whole = .@n / 1000;
+		.@decimal = (.@n % 1000) / 100;
+		return .@whole + "." + .@decimal + "k";
+	}
+	return "" + .@n;
+}
+
+// ==================== MASTER NPC SCRIPT ====================
+-	script	BountyBoard	-1,{
+	// Get map-specific configuration
+	// NPC unique name suffix format: "mapname" or "mapname_2", "mapname_3", etc.
+	.@npc_suffix$ = strnpcinfo(4);
+
+	// Strip any "_N" suffix to get the base map name for config lookup
+	// Check if the name ends with _2, _3, etc.
+	.@underscore_pos = getstrlen(.@npc_suffix$) - 2;
+	if (.@underscore_pos > 0 && charat(.@npc_suffix$, .@underscore_pos) == "_") {
+		.@map$ = substr(.@npc_suffix$, 0, .@underscore_pos);
+	} else {
+		.@map$ = .@npc_suffix$;
+	}
+
+	// Find this map in our configuration
+	.@map_idx = inarray(.Maps$, .@map$);
+	if (.@map_idx < 0) {
+		mes "[Bounty Board]";
+		mes "^FF0000Error: This bounty board is not configured.^000000";
+		close;
+	}
+
+	// Get monster IDs for this map
+	.@mob_count = getd(".Mobs_" + .@map$ + "_count");
+	if (.@mob_count < 1) {
+		mes "[Bounty Board]";
+		mes "^FF0000Error: No monsters configured for this location.^000000";
+		close;
+	}
+
+	// Copy monster IDs to local array
+	for (.@i = 0; .@i < .@mob_count; .@i++) {
+		.@mobs[.@i] = getd(".Mobs_" + .@map$ + "[" + .@i + "]");
+	}
+
+	mes "[Bounty Board]";
+	mes "Welcome, adventurer!";
+	mes "This is the ^0055FF" + getd(".MapName_" + .@map$) + "^000000 Bounty Board.";
+	mes " ";
+
+	// Check if player has active bounty
+	if (Bounty_Map$ != "") {
+		if (Bounty_Map$ == .@map$) {
+			mes "^00AA00You have an active bounty here.^000000";
+			mes "Target: ^0055FF" + getmonsterinfo(Bounty_MobID, MOB_NAME) + "^000000";
+			mes "Progress: ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
+		} else {
+			mes "^FF8800You have an active bounty at another location.^000000";
+			mes "Complete or abandon it first.";
+		}
+	} else {
+		mes "Select a bounty to begin hunting!";
+	}
+	next;
+
+	// Menu options
+	if (Bounty_Map$ == "") {
+		// No active bounty - show monster selection
+		mes "[Bounty Board]";
+		mes "Available bounties:";
+		mes " ";
+
+		// Build menu of monsters
+		.@menu$ = "";
+		for (.@i = 0; .@i < .@mob_count; .@i++) {
+			.@mob_id = .@mobs[.@i];
+			.@mob_name$ = getmonsterinfo(.@mob_id, MOB_NAME);
+			.@mob_lv = getmonsterinfo(.@mob_id, MOB_LV);
+			mes "^0055FF[" + (.@i+1) + "]^000000 " + .@mob_name$ + " (Lv " + .@mob_lv + ")";
+			.@menu$ = .@menu$ + " ~ " + .@mob_name$ + ":";
+		}
+		.@menu$ = .@menu$ + " ~ ^777777Cancel^000000";
+		next;
+
+		.@choice = select(.@menu$) - 1;
+		if (.@choice >= .@mob_count) {
+			mes "[Bounty Board]";
+			mes "Come back when you're ready to hunt!";
+			close;
+		}
+
+		// Selected monster
+		.@selected_mob = .@mobs[.@choice];
+		.@mob_name$ = getmonsterinfo(.@selected_mob, MOB_NAME);
+		.@mob_lv = getmonsterinfo(.@selected_mob, MOB_LV);
+
+		mes "[Bounty Board]";
+		mes "Target: ^0055FF" + .@mob_name$ + "^000000 (Lv " + .@mob_lv + ")";
+		mes " ";
+		mes "Select how many to hunt:";
+		mes "^777777Higher tiers give bonus rewards!^000000";
+		next;
+
+		// Calculate rewards for each tier
+		// Get player's EXP to next level for percentage calculation
+		.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
+
+		// Calculate overleveled penalty (applies to all rewards)
+		.@penalty_pct = callfunc("F_OverlevelPenalty", BaseLevel, .@mob_lv);
+
+		for (.@t = 0; .@t < getarraysize(.Tiers); .@t++) {
+			.@kills = .Tiers[.@t];
+			.@mult = .TierMult[.@t];
+
+			// Flattened formula: (base + mob_level * scale) * kills * tier_mult / 100
+			// This reduces the gap between low-level and high-level bounties
+			.@base_exp[.@t] = ((100 + .@mob_lv * 5) * .@kills * .@mult) / 100;
+			.@job_exp[.@t] = ((60 + .@mob_lv * 3) * .@kills * .@mult) / 100;
+			.@zeny[.@t] = ((20 + .@mob_lv) * .@kills * .@mult) / 100;
+			.@points[.@t] = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
+			if (.@points[.@t] < 1) .@points[.@t] = 1;
+
+			// Apply overleveled penalty to all rewards
+			.@base_exp[.@t] = .@base_exp[.@t] * .@penalty_pct / 100;
+			.@job_exp[.@t] = .@job_exp[.@t] * .@penalty_pct / 100;
+			.@zeny[.@t] = .@zeny[.@t] * .@penalty_pct / 100;
+			.@points[.@t] = .@points[.@t] * .@penalty_pct / 100;
+
+			// Minimum rewards after penalty
+			if (.@zeny[.@t] < 2000) .@zeny[.@t] = 2000;  // Minimum 2k zeny for low levels
+			if (.@points[.@t] < 1) .@points[.@t] = 1;
+
+			// Calculate % of player's level
+			.@pct[.@t] = .@base_exp[.@t] * 100 / .@next_exp;
+		}
+
+		mes "[Bounty Board]";
+		// Show overleveled penalty warning
+		if (.@penalty_pct < 100) {
+			mes "^FF8800Warning: Overleveled penalty!^000000";
+			mes "^777777You are Lv " + BaseLevel + " hunting Lv " + .@mob_lv + " monsters.^000000";
+			mes "^FF0000Rewards reduced to " + .@penalty_pct + "%^000000";
+			mes " ";
+		}
+		// Build tier display dynamically
+		.@tier_count = getarraysize(.Tiers);
+		for (.@t = 0; .@t < .@tier_count; .@t++) {
+			.@bonus = .TierMult[.@t] - 100;
+			if (.@bonus > 0)
+				mes "^0055FF[" + (.@t+1) + "]^000000 Hunt " + .Tiers[.@t] + " - ~" + .@pct[.@t] + "% lvl, " + callfunc("F_ShortNum", .@zeny[.@t]) + " zeny, " + .@points[.@t] + " pts ^00AA00(+" + .@bonus + "%)^000000";
+			else
+				mes "^0055FF[" + (.@t+1) + "]^000000 Hunt " + .Tiers[.@t] + " - ~" + .@pct[.@t] + "% lvl, " + callfunc("F_ShortNum", .@zeny[.@t]) + " zeny, " + .@points[.@t] + " pts";
+		}
+		next;
+
+		// Build menu dynamically
+		.@menu$ = "";
+		for (.@t = 0; .@t < .@tier_count; .@t++) {
+			.@bonus = .TierMult[.@t] - 100;
+			if (.@bonus > 0)
+				.@menu$ = .@menu$ + " ~ Hunt " + .Tiers[.@t] + " (+" + .@bonus + "%):";
+			else
+				.@menu$ = .@menu$ + " ~ Hunt " + .Tiers[.@t] + ":";
+		}
+		.@menu$ = .@menu$ + " ~ ^777777Cancel^000000";
+		.@tier_choice = select(.@menu$) - 1;
+
+		if (.@tier_choice >= .@tier_count) {
+			mes "[Bounty Board]";
+			mes "Come back when you're ready!";
+			close;
+		}
+
+		// Level requirement check - player must be within 20 levels of monster
+		.@min_player_lv = max(1, .@mob_lv - 20);
+		if (BaseLevel < .@min_player_lv) {
+			mes "[Bounty Board]";
+			mes "^FF0000You are too low level for this bounty!^000000";
+			mes " ";
+			mes "Target: ^0055FF" + .@mob_name$ + "^000000 (Lv " + .@mob_lv + ")";
+			mes "Required level: ^0055FF" + .@min_player_lv + "+^000000";
+			mes "Your level: ^FF0000" + BaseLevel + "^000000";
+			close;
+		}
+
+		// Accept bounty
+		.@target = .Tiers[.@tier_choice];
+
+		// Get current kill count from char_mob_kills
+		query_sql("SELECT COALESCE(kill_count, 0) FROM `char_mob_kills` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + .@selected_mob, .@start_kills);
+
+		// Store bounty info
+		Bounty_Map$ = .@map$;
+		Bounty_MobID = .@selected_mob;
+		Bounty_Target = .@target;
+		Bounty_Tier = .@tier_choice + 1;
+		Bounty_StartKills = .@start_kills;
+		Bounty_Kills = 0;
+
+		mes "[Bounty Board]";
+		mes "Bounty accepted!";
+		mes " ";
+		mes "Target: ^0055FF" + .@mob_name$ + "^000000";
+		mes "Amount: ^0055FF" + .@target + "^000000";
+		mes " ";
+		mes "Hunt them and return here to claim your reward.";
+		mes "^777777Your kills are tracked automatically.^000000";
+		specialeffect2 EF_STEAL;
+
+		// Show in chat log for quick reference
+		dispbottom "[Bounty] Accepted: Hunt " + .@target + "x " + .@mob_name$ + " on " + .@map$, 0x00AAFF;
+		close;
+
+	} else if (Bounty_Map$ == .@map$) {
+		// Active bounty on THIS map
+		.@mob_name$ = getmonsterinfo(Bounty_MobID, MOB_NAME);
+
+		// Update kill count from database immediately
+		query_sql("SELECT COALESCE(kill_count, 0) FROM `char_mob_kills` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID, .@current_kills);
+		Bounty_Kills = .@current_kills - Bounty_StartKills;
+		if (Bounty_Kills < 0) Bounty_Kills = 0;
+
+		// Auto-claim if bounty is complete
+		if (Bounty_Kills >= Bounty_Target) {
+			// Calculate final rewards (same flattened formula as tier selection)
+			.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
+			.@mult = .TierMult[Bounty_Tier - 1];
+			.@kills = Bounty_Target;
+
+			.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult) / 100;
+			.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult) / 100;
+			.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 100;
+			.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
+			if (.@points < 1) .@points = 1;
+
+			// Apply overleveled penalty to all rewards
+			.@penalty_pct = callfunc("F_OverlevelPenalty", BaseLevel, .@mob_lv);
+			.@base_exp = .@base_exp * .@penalty_pct / 100;
+			.@job_exp = .@job_exp * .@penalty_pct / 100;
+			.@zeny = .@zeny * .@penalty_pct / 100;
+			.@points = .@points * .@penalty_pct / 100;
+
+			// Minimum rewards after penalty
+			if (.@zeny < 2000) .@zeny = 2000;  // Minimum 2k zeny for low levels
+			if (.@points < 1) .@points = 1;
+
+			// Calculate % of player's level for display
+			.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
+			.@pct = .@base_exp * 100 / .@next_exp;
+
+			mes "[Bounty Board]";
+			mes "^00FF00Bounty Complete!^000000";
+			if (.@penalty_pct < 100) {
+				mes "^FF8800(Overleveled: " + .@penalty_pct + "% rewards)^000000";
+			}
+			mes " ";
+			mes "Rewards:";
+			mes "  EXP: ^0055FF~" + .@pct + "% of level^000000";
+			mes "  Zeny: ^0055FF" + callfunc("F_ShortNum", .@zeny) + "^000000";
+			mes "  Hunt Points: ^0055FF" + .@points + "^000000";
+
+			// Grant rewards (getexp handles multi-level ups properly)
+			getexp .@base_exp, .@job_exp;
+			Zeny += .@zeny;
+			#HUNT_POINTS += .@points;
+
+			// Log to database
+			query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" +
+				getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
+
+			// Increment completion counter
+			#HUNT_TOTAL += 1;
+
+			// Clear bounty
+			Bounty_Map$ = "";
+			Bounty_MobID = 0;
+			Bounty_Target = 0;
+			Bounty_Tier = 0;
+			Bounty_StartKills = 0;
+			Bounty_Kills = 0;
+
+			specialeffect2 EF_ANGEL;
+			specialeffect2 EF_TRUESIGHT;
+
+			next;
+			mes "[Bounty Board]";
+			mes "Well done, hunter! You now have ^0055FF" + #HUNT_POINTS + "^000000 Hunt Points.";
+			mes " ";
+			mes "Total bounties completed: ^0055FF" + #HUNT_TOTAL + "^000000";
+			mes " ";
+			mes "Visit the ^0055FFMonster Hunter Guild^000000 in Prontera to spend your points!";
+			close;
+		} else {
+			// Bounty in progress - show status and menu
+			mes "[Bounty Board]";
+			mes "Target: ^0055FF" + .@mob_name$ + "^000000";
+			mes "Progress: ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
+			.@remaining = Bounty_Target - Bounty_Kills;
+			mes "^FF8800" + .@remaining + " more to go!^000000";
+			next;
+
+			switch(select(" ~ Abandon Bounty: ~ ^777777Cancel^000000")) {
+			case 1:
+				// Abandon Bounty
+				mes "[Bounty Board]";
+				mes "Are you sure you want to abandon this bounty?";
+				mes "All progress will be lost.";
+				next;
+				if (select(" ~ Yes, abandon: ~ No, keep it") == 1) {
+					Bounty_Map$ = "";
+					Bounty_MobID = 0;
+					Bounty_Target = 0;
+					Bounty_Tier = 0;
+					Bounty_StartKills = 0;
+					Bounty_Kills = 0;
+					mes "[Bounty Board]";
+					mes "Bounty abandoned.";
+					mes "You can accept a new one anytime.";
+				} else {
+					mes "[Bounty Board]";
+					mes "Good luck with your hunt!";
+				}
+				close;
+
+			case 2:
+				mes "[Bounty Board]";
+				mes "Good luck hunting!";
+				close;
+			}
+		}
+
+	} else {
+		// Active bounty on DIFFERENT map
+		mes "[Bounty Board]";
+		mes "You have an active bounty at:";
+		mes "^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000";
+		mes " ";
+		mes "Complete or abandon it before";
+		mes "accepting a new bounty.";
+		close;
+	}
+	end;
+
+OnInit:
+	// ==================== CONFIGURATION ====================
+
+	// Kill tiers (10 is quick, 200 is for dedicated grinding)
+	setarray .Tiers[0], 10, 50, 200;
+	// Tier multipliers (100 = 1.0x, 105 = 1.05x, etc.)
+	// Lower tiers have smaller bonuses, higher tiers reward commitment
+	setarray .TierMult[0], 100, 110, 125;
+
+	// ==================== MAP DEFINITIONS ====================
+	// Maps array for lookup
+	setarray .Maps$[0],
+		// Beginner Fields (Lv 1-20)
+		"prt_fild05", "prt_fild08", "gef_fild00", "mjolnir_01", "pay_fild01",
+		// Beginner Dungeons (Lv 5-25)
+		"prt_sewb1", "prt_sewb2", "pay_dun00",
+		// Low-Mid Fields (Lv 15-35)
+		"pay_fild06", "moc_fild01", "moc_fild02", "moc_fild17", "moc_fild18", "mjolnir_02",
+		// Low-Mid Dungeons (Lv 20-40)
+		"anthell01", "anthell02", "moc_pryd01", "pay_dun01",
+		// Mid Fields (Lv 30-50)
+		"gef_fild02", "gef_fild03", "gef_fild10",
+		// Mid Dungeons (Lv 30-55)
+		"orcsdun01", "orcsdun02", "pay_dun02", "iz_dun01", "iz_dun02", "gef_dun00",
+		// Upper-Mid Dungeons (Lv 40-65)
+		"pay_dun03", "pay_dun04", "gef_dun01", "moc_pryd04", "iz_dun03",
+		// High-Level Dungeons (Lv 55-80)
+		"c_tower1", "c_tower3", "gef_dun02", "iz_dun04",
+		// Themed Variety
+		"treasure01", "xmas_dun01", "beach_dun";
+
+	// ==================== MAP NAMES ====================
+	// Beginner Fields
+	set .MapName_prt_fild05$, "Prontera Field";
+	set .MapName_prt_fild08$, "Prontera Field";
+	set .MapName_gef_fild00$, "Geffen Field";
+	set .MapName_mjolnir_01$, "Mt. Mjolnir";
+	set .MapName_pay_fild01$, "Payon Forest";
+	// Beginner Dungeons
+	set .MapName_prt_sewb1$, "Prontera Culvert F1";
+	set .MapName_prt_sewb2$, "Prontera Culvert F2";
+	set .MapName_pay_dun00$, "Payon Cave F1";
+	// Low-Mid Fields
+	set .MapName_pay_fild06$, "Payon Forest";
+	set .MapName_moc_fild01$, "Sograt Desert";
+	set .MapName_moc_fild02$, "Sograt Desert";
+	set .MapName_moc_fild17$, "Sograt Desert";
+	set .MapName_moc_fild18$, "Sograt Desert";
+	set .MapName_mjolnir_02$, "Mt. Mjolnir";
+	// Low-Mid Dungeons
+	set .MapName_anthell01$, "Ant Hell F1";
+	set .MapName_anthell02$, "Ant Hell F2";
+	set .MapName_moc_pryd01$, "Pyramid F1";
+	set .MapName_pay_dun01$, "Payon Cave F2";
+	// Mid Fields
+	set .MapName_gef_fild02$, "Geffen Field (Orcs)";
+	set .MapName_gef_fild03$, "Geffen Field (Orcs)";
+	set .MapName_gef_fild10$, "Geffen Field (Orcs)";
+	// Mid Dungeons
+	set .MapName_orcsdun01$, "Orc Dungeon F1";
+	set .MapName_orcsdun02$, "Orc Dungeon F2";
+	set .MapName_pay_dun02$, "Payon Cave F3";
+	set .MapName_iz_dun01$, "Byalan Island F2";
+	set .MapName_iz_dun02$, "Byalan Island F3";
+	set .MapName_gef_dun00$, "Geffen Dungeon F1";
+	// Upper-Mid Dungeons
+	set .MapName_pay_dun03$, "Payon Cave F4";
+	set .MapName_pay_dun04$, "Payon Cave F5";
+	set .MapName_gef_dun01$, "Geffen Dungeon F2";
+	set .MapName_moc_pryd04$, "Pyramid B1";
+	set .MapName_iz_dun03$, "Byalan Island F4";
+	// High-Level Dungeons
+	set .MapName_c_tower1$, "Clock Tower F1";
+	set .MapName_c_tower3$, "Clock Tower F3";
+	set .MapName_gef_dun02$, "Geffen Dungeon F3";
+	set .MapName_iz_dun04$, "Byalan Island F5";
+	// Themed
+	set .MapName_treasure01$, "Sunken Ship F1";
+	set .MapName_xmas_dun01$, "Toy Factory F1";
+	set .MapName_beach_dun$, "Comodo Beach Cave";
+
+	// ==================== MONSTER LISTS ====================
+	// Format: setarray .Mobs_<mapname>[0], <mob_id1>, <mob_id2>, ...
+	// Monster IDs from rAthena mob_db
+
+	// Beginner Fields (Lv 1-20)
+	setarray .Mobs_prt_fild05[0], 1002, 1113;  // Poring (1002), Drops (1113)
+	set .Mobs_prt_fild05_count, 2;
+
+	setarray .Mobs_prt_fild08[0], 1002, 1063;  // Poring (1002), Lunatic (1063)
+	set .Mobs_prt_fild08_count, 2;
+
+	setarray .Mobs_gef_fild00[0], 1002, 1007, 1008;  // Poring, Fabre (1007), Pupa (1008)
+	set .Mobs_gef_fild00_count, 3;
+
+	setarray .Mobs_mjolnir_01[0], 1011, 1104, 1103;  // Chonchon (1011), Coco (1104), Caramel (1103)
+	set .Mobs_mjolnir_01_count, 3;
+
+	setarray .Mobs_pay_fild01[0], 1014, 1167;  // Spore (1014), Savage Babe (1167)
+	set .Mobs_pay_fild01_count, 2;
+
+	// Beginner Dungeons (Lv 5-25)
+	setarray .Mobs_prt_sewb1[0], 1048, 1051;  // Thief Bug Egg (1048), Thief Bug (1051)
+	set .Mobs_prt_sewb1_count, 2;
+
+	setarray .Mobs_prt_sewb2[0], 1051, 1053, 1005;  // Thief Bug (1051), Female Thief Bug (1053), Familiar (1005)
+	set .Mobs_prt_sewb2_count, 3;
+
+	setarray .Mobs_pay_dun00[0], 1076, 1015;  // Skeleton (1076), Zombie (1015)
+	set .Mobs_pay_dun00_count, 2;
+
+	// Low-Mid Fields (Lv 15-35)
+	setarray .Mobs_pay_fild06[0], 1024, 1077;  // Wormtail (1024), Poison Spore (1077)
+	set .Mobs_pay_fild06_count, 2;
+
+	setarray .Mobs_moc_fild01[0], 1014, 1107, 1166;  // Spore (1014), Baby Desert Wolf (1107), Savage (1166)
+	set .Mobs_moc_fild01_count, 3;
+
+	setarray .Mobs_moc_fild02[0], 1055, 1009;  // Muka (1055), Condor (1009)
+	set .Mobs_moc_fild02_count, 2;
+
+	setarray .Mobs_moc_fild17[0], 1127;  // Hode (1127)
+	set .Mobs_moc_fild17_count, 1;
+
+	setarray .Mobs_moc_fild18[0], 1055, 1042;  // Muka (1055), Steel Chonchon (1042)
+	set .Mobs_moc_fild18_count, 2;
+
+	setarray .Mobs_mjolnir_02[0], 1077, 1025;  // Poison Spore (1077), Boa (1025)
+	set .Mobs_mjolnir_02_count, 2;
+
+	// Low-Mid Dungeons (Lv 20-40)
+	setarray .Mobs_anthell01[0], 1160, 1105;  // Piere (1160), Deniro (1105)
+	set .Mobs_anthell01_count, 2;
+
+	setarray .Mobs_anthell02[0], 1176, 1095;  // Vitata (1176), Andre (1095)
+	set .Mobs_anthell02_count, 2;
+
+	setarray .Mobs_moc_pryd01[0], 1005, 1031;  // Familiar (1005), Poporing (1031)
+	set .Mobs_moc_pryd01_count, 2;
+
+	setarray .Mobs_pay_dun01[0], 1028, 1116, 1016;  // Soldier Skeleton (1028), Eggyra (1116), Archer Skeleton (1016)
+	set .Mobs_pay_dun01_count, 3;
+
+	// Mid Fields (Lv 30-50)
+	setarray .Mobs_gef_fild02[0], 1023, 1166;  // Orc Warrior (1023), Savage (1166)
+	set .Mobs_gef_fild02_count, 2;
+
+	setarray .Mobs_gef_fild03[0], 1023, 1166;  // Orc Warrior (1023), Savage (1166)
+	set .Mobs_gef_fild03_count, 2;
+
+	setarray .Mobs_gef_fild10[0], 1273;  // Orc Lady (1273)
+	set .Mobs_gef_fild10_count, 1;
+
+	// Mid Dungeons (Lv 30-55)
+	setarray .Mobs_orcsdun01[0], 1153, 1152;  // Orc Zombie (1153), Orc Skeleton (1152)
+	set .Mobs_orcsdun01_count, 2;
+
+	setarray .Mobs_orcsdun02[0], 1152, 1111;  // Orc Skeleton (1152), Drainliar (1111)
+	set .Mobs_orcsdun02_count, 2;
+
+	setarray .Mobs_pay_dun02[0], 1026, 1188;  // Munak (1026), Bongun (1188)
+	set .Mobs_pay_dun02_count, 2;
+
+	setarray .Mobs_iz_dun01[0], 1066, 1067;  // Vadon (1066), Cornutus (1067)
+	set .Mobs_iz_dun01_count, 2;
+
+	setarray .Mobs_iz_dun02[0], 1068, 1067;  // Hydra (1068), Cornutus (1067)
+	set .Mobs_iz_dun02_count, 2;
+
+	setarray .Mobs_gef_dun00[0], 1035, 1077;  // Hunter Fly (1035), Poison Spore (1077)
+	set .Mobs_gef_dun00_count, 2;
+
+	// Upper-Mid Dungeons (Lv 40-65)
+	setarray .Mobs_pay_dun03[0], 1170;  // Sohee (1170)
+	set .Mobs_pay_dun03_count, 1;
+
+	setarray .Mobs_pay_dun04[0], 1180, 1110, 1188;  // Nine Tail (1180), Dokebi (1110), Bongun (1188)
+	set .Mobs_pay_dun04_count, 3;
+
+	setarray .Mobs_gef_dun01[0], 1061, 1130;  // Nightmare (1061), Jakk (1130)
+	set .Mobs_gef_dun01_count, 2;
+
+	setarray .Mobs_moc_pryd04[0], 1149, 1191;  // Minorous (1149), Mimic (1191)
+	set .Mobs_moc_pryd04_count, 2;
+
+	setarray .Mobs_iz_dun03[0], 1069, 1264;  // Swordfish (1069), Merman (1264)
+	set .Mobs_iz_dun03_count, 2;
+
+	// High-Level Dungeons (Lv 55-80)
+	setarray .Mobs_c_tower1[0], 1199, 1195;  // Punk (1199), Rideword (1195)
+	set .Mobs_c_tower1_count, 2;
+
+	setarray .Mobs_c_tower3[0], 1193, 1195;  // Alarm (1193), Rideword (1195)
+	set .Mobs_c_tower3_count, 2;
+
+	setarray .Mobs_gef_dun02[0], 1143, 1179;  // Marionette (1143), Whisper (1179)
+	set .Mobs_gef_dun02_count, 2;
+
+	setarray .Mobs_iz_dun04[0], 1069, 1264;  // Swordfish (1069), Merman (1264)
+	set .Mobs_iz_dun04_count, 2;
+
+	// Themed Variety
+	setarray .Mobs_treasure01[0], 1179, 1068;  // Whisper (1179), Hydra (1068)
+	set .Mobs_treasure01_count, 2;
+
+	setarray .Mobs_xmas_dun01[0], 1265, 1249;  // Cookie (1265), Myst Case (1249)
+	set .Mobs_xmas_dun01_count, 2;
+
+	setarray .Mobs_beach_dun[0], 1148, 1255;  // Medusa (1148), Nereid (1255)
+	set .Mobs_beach_dun_count, 2;
+
+	end;
+}
+
+// ==================== KILL EVENT HANDLER ====================
+// Single invisible NPC to handle kill notifications (not duplicated)
+-	script	BountyKillTracker	FAKE_NPC,{
+	end;
+
+OnNPCKillEvent:
+	// Save kill info before any context switching
+	.@killed_mob = killedrid;
+	.@mob_name$ = getmonsterinfo(.@killed_mob, MOB_NAME);
+	getmapxy(.@killer_map$, .@kx, .@ky, BL_PC);
+	.@killer_aid = getcharid(3);
+	.@killer_cid = getcharid(0);
+
+	// Check if killer has a bounty for this monster
+	.@killer_has_bounty = (Bounty_Map$ != "" && Bounty_MobID == .@killed_mob);
+
+	// Update killer's bounty progress if they have one
+	if (.@killer_has_bounty) {
+		query_sql("SELECT COALESCE(kill_count, 0) FROM `char_mob_kills` WHERE `char_id` = " + .@killer_cid + " AND `mob_id` = " + Bounty_MobID, .@current_kills);
+		Bounty_Kills = .@current_kills - Bounty_StartKills;
+		if (Bounty_Kills < 0) Bounty_Kills = 0;
+
+		if (Bounty_Kills >= Bounty_Target) {
+			dispbottom "[Bounty] ^00FF00Complete!^000000 " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " - Return to claim reward!", 0x00FF00;
+		} else {
+			dispbottom "[Bounty] " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$, 0x00AAFF;
+		}
+	}
+
+	// ==================== PARTY KILL SHARING ====================
+	.@party_id = getcharid(1);
+	if (.@party_id == 0)
+		end;  // Not in party, done
+
+	// Get party member lists
+	getpartymember .@party_id, 1;  // Account IDs -> $@partymemberaid[]
+	getpartymember .@party_id, 2;  // Char IDs -> $@partymembercid[]
+
+	// Loop through party members
+	for (.@i = 0; .@i < $@partymembercount; .@i++) {
+		// Skip the killer (they already got their kill tracked)
+		if ($@partymemberaid[.@i] == .@killer_aid)
+			continue;
+
+		// Check if party member is online
+		if (!isloggedin($@partymemberaid[.@i], $@partymembercid[.@i]))
+			continue;
+
+		// Check if party member is on same map
+		getmapxy(.@pm_map$, .@px, .@py, BL_PC, rid2name($@partymemberaid[.@i]));
+		if (.@pm_map$ != .@killer_map$)
+			continue;
+
+		// Switch context to party member
+		attachrid($@partymemberaid[.@i]);
+
+		// Check if party member has a bounty for this monster on this map
+		if (Bounty_Map$ == .@killer_map$ && Bounty_MobID == .@killed_mob) {
+			// Increment their kill count in database (share the kill)
+			query_sql("INSERT INTO `char_mob_kills` (`char_id`, `mob_id`, `kill_count`) VALUES (" +
+				getcharid(0) + ", " + .@killed_mob + ", 1) ON DUPLICATE KEY UPDATE `kill_count` = `kill_count` + 1");
+
+			// Update their Bounty_Kills variable
+			query_sql("SELECT COALESCE(kill_count, 0) FROM `char_mob_kills` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + .@killed_mob, .@pm_kills);
+			Bounty_Kills = .@pm_kills - Bounty_StartKills;
+			if (Bounty_Kills < 0) Bounty_Kills = 0;
+
+			// Notify party member
+			if (Bounty_Kills >= Bounty_Target) {
+				dispbottom "[Bounty] ^00FF00Complete!^000000 " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " (party) - Return to claim!", 0x00FF00;
+			} else {
+				dispbottom "[Bounty] " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " (party)", 0x00AAFF;
+			}
+		}
+
+		// Switch back to killer
+		attachrid(.@killer_aid);
+	}
+	end;
+}
+
+// ==================== BOUNTY BOARD NPC DUPLICATES ====================
+// Format: <map>,<x>,<y>,<dir>	duplicate(BountyBoard)	Bounty Board#<map>	4_BOARD3
+// Multiple NPCs per map: one at entrance, others spread centrally
+
+// Beginner Fields (Lv 1-20)
+prt_fild05,272,206,4	duplicate(BountyBoard)	Bounty Board#prt_fild05	4_BOARD3
+prt_fild05,150,150,4	duplicate(BountyBoard)	Bounty Board#prt_fild05_2	4_BOARD3
+prt_fild08,231,22,4	duplicate(BountyBoard)	Bounty Board#prt_fild08	4_BOARD3
+prt_fild08,180,180,4	duplicate(BountyBoard)	Bounty Board#prt_fild08_2	4_BOARD3
+gef_fild00,42,197,4	duplicate(BountyBoard)	Bounty Board#gef_fild00	4_BOARD3
+gef_fild00,200,150,4	duplicate(BountyBoard)	Bounty Board#gef_fild00_2	4_BOARD3
+mjolnir_01,282,23,4	duplicate(BountyBoard)	Bounty Board#mjolnir_01	4_BOARD3
+mjolnir_01,200,180,4	duplicate(BountyBoard)	Bounty Board#mjolnir_01_2	4_BOARD3
+pay_fild01,19,154,4	duplicate(BountyBoard)	Bounty Board#pay_fild01	4_BOARD3
+pay_fild01,150,100,4	duplicate(BountyBoard)	Bounty Board#pay_fild01_2	4_BOARD3
+
+// Beginner Dungeons (Lv 5-25)
+prt_sewb1,137,246,4	duplicate(BountyBoard)	Bounty Board#prt_sewb1	4_BOARD3
+prt_sewb1,100,150,4	duplicate(BountyBoard)	Bounty Board#prt_sewb1_2	4_BOARD3
+prt_sewb2,21,21,4	duplicate(BountyBoard)	Bounty Board#prt_sewb2	4_BOARD3
+prt_sewb2,100,100,4	duplicate(BountyBoard)	Bounty Board#prt_sewb2_2	4_BOARD3
+pay_dun00,23,184,4	duplicate(BountyBoard)	Bounty Board#pay_dun00	4_BOARD3
+pay_dun00,100,100,4	duplicate(BountyBoard)	Bounty Board#pay_dun00_2	4_BOARD3
+
+// Low-Mid Fields (Lv 15-35)
+pay_fild06,152,198,4	duplicate(BountyBoard)	Bounty Board#pay_fild06	4_BOARD3
+pay_fild06,200,100,4	duplicate(BountyBoard)	Bounty Board#pay_fild06_2	4_BOARD3
+moc_fild01,24,240,4	duplicate(BountyBoard)	Bounty Board#moc_fild01	4_BOARD3
+moc_fild01,180,180,4	duplicate(BountyBoard)	Bounty Board#moc_fild01_2	4_BOARD3
+moc_fild02,69,340,4	duplicate(BountyBoard)	Bounty Board#moc_fild02	4_BOARD3
+moc_fild02,200,200,4	duplicate(BountyBoard)	Bounty Board#moc_fild02_2	4_BOARD3
+moc_fild17,216,364,4	duplicate(BountyBoard)	Bounty Board#moc_fild17	4_BOARD3
+moc_fild17,200,200,4	duplicate(BountyBoard)	Bounty Board#moc_fild17_2	4_BOARD3
+moc_fild18,160,377,4	duplicate(BountyBoard)	Bounty Board#moc_fild18	4_BOARD3
+moc_fild18,200,200,4	duplicate(BountyBoard)	Bounty Board#moc_fild18_2	4_BOARD3
+mjolnir_02,152,152,4	duplicate(BountyBoard)	Bounty Board#mjolnir_02	4_BOARD3
+mjolnir_02,250,200,4	duplicate(BountyBoard)	Bounty Board#mjolnir_02_2	4_BOARD3
+
+// Low-Mid Dungeons (Lv 20-40)
+anthell01,37,265,4	duplicate(BountyBoard)	Bounty Board#anthell01	4_BOARD3
+anthell01,150,150,4	duplicate(BountyBoard)	Bounty Board#anthell01_2	4_BOARD3
+anthell02,36,261,4	duplicate(BountyBoard)	Bounty Board#anthell02	4_BOARD3
+anthell02,150,150,4	duplicate(BountyBoard)	Bounty Board#anthell02_2	4_BOARD3
+moc_pryd01,193,11,4	duplicate(BountyBoard)	Bounty Board#moc_pryd01	4_BOARD3
+moc_pryd01,100,100,4	duplicate(BountyBoard)	Bounty Board#moc_pryd01_2	4_BOARD3
+pay_dun01,21,35,4	duplicate(BountyBoard)	Bounty Board#pay_dun01	4_BOARD3
+pay_dun01,150,100,4	duplicate(BountyBoard)	Bounty Board#pay_dun01_2	4_BOARD3
+
+// Mid Fields (Lv 30-50)
+gef_fild02,16,80,4	duplicate(BountyBoard)	Bounty Board#gef_fild02	4_BOARD3
+gef_fild02,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild02_2	4_BOARD3
+gef_fild03,377,79,4	duplicate(BountyBoard)	Bounty Board#gef_fild03	4_BOARD3
+gef_fild03,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild03_2	4_BOARD3
+gef_fild10,365,58,4	duplicate(BountyBoard)	Bounty Board#gef_fild10	4_BOARD3
+gef_fild10,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild10_2	4_BOARD3
+
+// Mid Dungeons (Lv 30-55)
+orcsdun01,34,170,4	duplicate(BountyBoard)	Bounty Board#orcsdun01	4_BOARD3
+orcsdun01,100,100,4	duplicate(BountyBoard)	Bounty Board#orcsdun01_2	4_BOARD3
+orcsdun02,23,183,4	duplicate(BountyBoard)	Bounty Board#orcsdun02	4_BOARD3
+orcsdun02,100,100,4	duplicate(BountyBoard)	Bounty Board#orcsdun02_2	4_BOARD3
+pay_dun02,21,65,4	duplicate(BountyBoard)	Bounty Board#pay_dun02	4_BOARD3
+pay_dun02,150,100,4	duplicate(BountyBoard)	Bounty Board#pay_dun02_2	4_BOARD3
+iz_dun01,251,250,4	duplicate(BountyBoard)	Bounty Board#iz_dun01	4_BOARD3
+iz_dun01,150,150,4	duplicate(BountyBoard)	Bounty Board#iz_dun01_2	4_BOARD3
+iz_dun02,234,196,4	duplicate(BountyBoard)	Bounty Board#iz_dun02	4_BOARD3
+iz_dun02,150,100,4	duplicate(BountyBoard)	Bounty Board#iz_dun02_2	4_BOARD3
+gef_dun00,106,105,4	duplicate(BountyBoard)	Bounty Board#gef_dun00	4_BOARD3
+gef_dun00,150,150,4	duplicate(BountyBoard)	Bounty Board#gef_dun00_2	4_BOARD3
+
+// Upper-Mid Dungeons (Lv 40-65)
+pay_dun03,153,157,4	duplicate(BountyBoard)	Bounty Board#pay_dun03	4_BOARD3
+pay_dun03,80,80,4	duplicate(BountyBoard)	Bounty Board#pay_dun03_2	4_BOARD3
+pay_dun04,42,39,4	duplicate(BountyBoard)	Bounty Board#pay_dun04	4_BOARD3
+pay_dun04,100,100,4	duplicate(BountyBoard)	Bounty Board#pay_dun04_2	4_BOARD3
+gef_dun01,117,238,4	duplicate(BountyBoard)	Bounty Board#gef_dun01	4_BOARD3
+gef_dun01,150,150,4	duplicate(BountyBoard)	Bounty Board#gef_dun01_2	4_BOARD3
+moc_pryd04,14,17,4	duplicate(BountyBoard)	Bounty Board#moc_pryd04	4_BOARD3
+moc_pryd04,100,100,4	duplicate(BountyBoard)	Bounty Board#moc_pryd04_2	4_BOARD3
+iz_dun03,31,65,4	duplicate(BountyBoard)	Bounty Board#iz_dun03	4_BOARD3
+iz_dun03,150,100,4	duplicate(BountyBoard)	Bounty Board#iz_dun03_2	4_BOARD3
+
+// High-Level Dungeons (Lv 55-80)
+c_tower1,198,155,4	duplicate(BountyBoard)	Bounty Board#c_tower1	4_BOARD3
+c_tower1,100,100,4	duplicate(BountyBoard)	Bounty Board#c_tower1_2	4_BOARD3
+c_tower3,62,149,4	duplicate(BountyBoard)	Bounty Board#c_tower3	4_BOARD3
+c_tower3,150,100,4	duplicate(BountyBoard)	Bounty Board#c_tower3_2	4_BOARD3
+gef_dun02,108,132,4	duplicate(BountyBoard)	Bounty Board#gef_dun02	4_BOARD3
+gef_dun02,150,80,4	duplicate(BountyBoard)	Bounty Board#gef_dun02_2	4_BOARD3
+iz_dun04,28,26,4	duplicate(BountyBoard)	Bounty Board#iz_dun04	4_BOARD3
+iz_dun04,150,100,4	duplicate(BountyBoard)	Bounty Board#iz_dun04_2	4_BOARD3
+
+// Themed Variety
+treasure01,70,30,4	duplicate(BountyBoard)	Bounty Board#treasure01	4_BOARD3
+treasure01,130,100,4	duplicate(BountyBoard)	Bounty Board#treasure01_2	4_BOARD3
+xmas_dun01,203,15,4	duplicate(BountyBoard)	Bounty Board#xmas_dun01	4_BOARD3
+xmas_dun01,150,150,4	duplicate(BountyBoard)	Bounty Board#xmas_dun01_2	4_BOARD3
+beach_dun,274,69,4	duplicate(BountyBoard)	Bounty Board#beach_dun	4_BOARD3
+beach_dun,150,150,4	duplicate(BountyBoard)	Bounty Board#beach_dun_2	4_BOARD3
+
+
+// ==================== MONSTER HUNTER GUILD SHOP ====================
+prontera,150,180,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
+	mes "[Monster Hunter Guild]";
+	mes "Welcome, hunter!";
+	mes " ";
+	mes "You have ^0055FF" + #HUNT_POINTS + "^000000 Hunt Points.";
+	mes "Total bounties completed: ^0055FF" + #HUNT_TOTAL + "^000000";
+	next;
+
+	switch(select(" ~ Browse Shop: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+	case 1:
+		goto L_Shop;
+
+	case 2:
+		mes "[Monster Hunter Guild]";
+		mes "The top hunters are:";
+		mes " ";
+		query_sql("SELECT c.`name`, SUM(b.`points_reward`) as total_points, COUNT(*) as bounties FROM `bounty_log` b JOIN `char` c ON b.char_id = c.char_id GROUP BY b.char_id ORDER BY total_points DESC LIMIT 10", .@name$, .@points, .@count);
+		for (.@i = 0; .@i < getarraysize(.@name$); .@i++) {
+			mes "^0055FF#" + (.@i+1) + "^000000 " + .@name$[.@i] + " - " + .@points[.@i] + " pts (" + .@count[.@i] + " bounties)";
+		}
+		if (!getarraysize(.@name$)) {
+			mes "^777777No hunters yet!^000000";
+			mes "Be the first to complete a bounty!";
+		}
+		close;
+
+	case 3:
+		mes "[Monster Hunter Guild]";
+		mes "Hunt Points are earned by";
+		mes "completing bounties at the";
+		mes "^0055FFBounty Boards^000000 placed around";
+		mes "the world.";
+		next;
+		mes "[Monster Hunter Guild]";
+		mes "Find a Bounty Board on a map,";
+		mes "select a monster to hunt,";
+		mes "choose how many to kill,";
+		mes "and return when done!";
+		next;
+		mes "[Monster Hunter Guild]";
+		mes "Higher kill tiers give bonus";
+		mes "rewards:";
+		mes "  10 kills: Base rate";
+		mes "  50 kills: +10% bonus";
+		mes "  200 kills: +25% bonus";
+		close;
+
+	case 4:
+		mes "[Monster Hunter Guild]";
+		mes "Happy hunting!";
+		close;
+	}
+	end;
+
+L_Shop:
+	callshop "hunt_point_shop", 1;
+	npcshopattach "hunt_point_shop";
+	end;
+
+OnBuyItem:
+	// Calculate total cost
+	.@size = getarraysize(@bought_nameid);
+	.@total_cost = 0;
+
+	for (.@i = 0; .@i < .@size; .@i++) {
+		for (.@j = 0; .@j < getarraysize(.ShopItems); .@j++) {
+			if (@bought_nameid[.@i] == .ShopItems[.@j]) {
+				.@total_cost += (.ShopCosts[.@j] * @bought_quantity[.@i]);
+				break;
+			}
+		}
+	}
+
+	mes "[Monster Hunter Guild]";
+
+	if (#HUNT_POINTS < .@total_cost) {
+		mes "You don't have enough Hunt Points!";
+		mes " ";
+		mes "Cost: ^FF0000" + .@total_cost + "^000000 points";
+		mes "Have: ^0055FF" + #HUNT_POINTS + "^000000 points";
+		close;
+	}
+
+	// Check inventory space
+	for (.@i = 0; .@i < .@size; .@i++) {
+		if (checkweight(@bought_nameid[.@i], @bought_quantity[.@i]) == 0) {
+			mes "Your inventory is too full!";
+			mes "Please make some room.";
+			close;
+		}
+	}
+
+	// Deduct Hunt Points
+	#HUNT_POINTS -= .@total_cost;
+
+	// Give purchased items
+	for (.@i = 0; .@i < .@size; .@i++) {
+		getitem @bought_nameid[.@i], @bought_quantity[.@i];
+	}
+
+	mes "Purchase complete!";
+	mes " ";
+	mes "^0055FFPoints spent: " + .@total_cost + "^000000";
+	mes "^0055FFRemaining: " + #HUNT_POINTS + " Hunt Points^000000";
+
+	specialeffect2 EF_STEAL;
+
+	// Cleanup
+	deletearray @bought_nameid[0], .@size;
+	deletearray @bought_quantity[0], .@size;
+	close;
+
+OnInit:
+	// Shop items and costs (parallel arrays)
+	setarray .ShopItems[0],
+		12028,  // Box of Thunder
+		12016,  // Speed Potion
+		608,    // Yggdrasil Leaf
+		607,    // Yggdrasil Berry
+		12075,  // Str Dish10
+		12090,  // Agi Dish10
+		12085,  // Vit Dish10
+		12080,  // Int Dish10
+		12095,  // Dex Dish10
+		12100,  // Luk Dish10
+		4103,   // Horong Card (Sight)
+		4040;   // Creamy Card (Teleport)
+
+	setarray .ShopCosts[0],
+		25,     // Box of Thunder
+		25,     // Speed Potion
+		50,     // Yggdrasil Leaf
+		75,     // Yggdrasil Berry
+		30,     // Str Dish10
+		30,     // Agi Dish10
+		30,     // Vit Dish10
+		30,     // Int Dish10
+		30,     // Dex Dish10
+		30,     // Luk Dish10
+		400,    // Horong Card
+		500;    // Creamy Card
+
+	// Build visual shop (prices shown are point costs)
+	// Clear items first to prevent duplicates on reload
+	npcshopdelitem "hunt_point_shop", 512;
+	for (.@i = 0; .@i < getarraysize(.ShopItems); .@i++) {
+		npcshopdelitem "hunt_point_shop", .ShopItems[.@i];
+	}
+	// Add items fresh
+	for (.@i = 0; .@i < getarraysize(.ShopItems); .@i++) {
+		npcshopadditem "hunt_point_shop", .ShopItems[.@i], .ShopCosts[.@i];
+	}
+	end;
+}
+
+// Dummy shop container for visual interface
+// 'no' disables Discount skill affecting displayed prices
+-	shop	hunt_point_shop	-1,no,512:-1
