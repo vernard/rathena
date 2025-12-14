@@ -931,106 +931,106 @@ beach_dun,150,150,4	duplicate(BountyBoard)	Bounty Board#beach_dun_2	4_BOARD3
 // ==================== GLAST HEIM (Lv 41-79) ====================
 // gl_in01 - Glast Heim Inner (entry from glast_01)
 gl_in01,100,100,4	duplicate(BountyBoard)	Bounty Board#gl_in01	4_BOARD3
-gl_in01,80,150,4	duplicate(BountyBoard)	Bounty Board#gl_in01_2	4_BOARD3
+gl_in01,155,145,4	duplicate(BountyBoard)	Bounty Board#gl_in01_2	4_BOARD3
 
 // gl_prison - GH Underprison F1 (entry from gl_cas01 at 14,70)
 gl_prison,20,75,4	duplicate(BountyBoard)	Bounty Board#gl_prison	4_BOARD3
-gl_prison,100,120,4	duplicate(BountyBoard)	Bounty Board#gl_prison_2	4_BOARD3
+gl_prison,80,100,4	duplicate(BountyBoard)	Bounty Board#gl_prison_2	4_BOARD3
 
 // gl_cas01 - GH Castle F1 (entry from glast_01 at 199,29)
 gl_cas01,200,35,4	duplicate(BountyBoard)	Bounty Board#gl_cas01	4_BOARD3
-gl_cas01,170,200,4	duplicate(BountyBoard)	Bounty Board#gl_cas01_2	4_BOARD3
+gl_cas01,140,310,4	duplicate(BountyBoard)	Bounty Board#gl_cas01_2	4_BOARD3
 
 // gl_cas02 - GH Castle F2 (entry from gl_cas01 at 104,25)
 gl_cas02,104,30,4	duplicate(BountyBoard)	Bounty Board#gl_cas02	4_BOARD3
-gl_cas02,150,100,4	duplicate(BountyBoard)	Bounty Board#gl_cas02_2	4_BOARD3
+gl_cas02,185,15,4	duplicate(BountyBoard)	Bounty Board#gl_cas02_2	4_BOARD3
 
 // gl_knt01 - GH Chivalry F1 (entry from glast_01 at 150,15)
 gl_knt01,150,20,4	duplicate(BountyBoard)	Bounty Board#gl_knt01	4_BOARD3
-gl_knt01,150,150,4	duplicate(BountyBoard)	Bounty Board#gl_knt01_2	4_BOARD3
+gl_knt01,120,265,4	duplicate(BountyBoard)	Bounty Board#gl_knt01_2	4_BOARD3
 
 // gl_knt02 - GH Chivalry F2 (entry from gl_knt01)
-gl_knt02,150,150,4	duplicate(BountyBoard)	Bounty Board#gl_knt02	4_BOARD3
-gl_knt02,200,200,4	duplicate(BountyBoard)	Bounty Board#gl_knt02_2	4_BOARD3
+gl_knt02,15,140,4	duplicate(BountyBoard)	Bounty Board#gl_knt02	4_BOARD3
+gl_knt02,155,285,4	duplicate(BountyBoard)	Bounty Board#gl_knt02_2	4_BOARD3
 
 // gl_chyard - GH Churchyard (entry from gl_church)
 gl_chyard,147,280,4	duplicate(BountyBoard)	Bounty Board#gl_chyard	4_BOARD3
-gl_chyard,100,150,4	duplicate(BountyBoard)	Bounty Board#gl_chyard_2	4_BOARD3
+gl_chyard,80,150,4	duplicate(BountyBoard)	Bounty Board#gl_chyard_2	4_BOARD3
 
 // gl_sew03 - GH Culvert F3 (entry from gl_sew02)
 gl_sew03,171,280,4	duplicate(BountyBoard)	Bounty Board#gl_sew03	4_BOARD3
-gl_sew03,100,150,4	duplicate(BountyBoard)	Bounty Board#gl_sew03_2	4_BOARD3
+gl_sew03,145,10,4	duplicate(BountyBoard)	Bounty Board#gl_sew03_2	4_BOARD3
 
 // gl_sew04 - GH Culvert F4 (entry from gl_sew03)
 gl_sew04,68,275,4	duplicate(BountyBoard)	Bounty Board#gl_sew04	4_BOARD3
-gl_sew04,100,150,4	duplicate(BountyBoard)	Bounty Board#gl_sew04_2	4_BOARD3
+gl_sew04,100,75,4	duplicate(BountyBoard)	Bounty Board#gl_sew04_2	4_BOARD3
 
 // ==================== SPHINX (Lv 52-75) ====================
 // in_sphinx4 - Sphinx F4 (entry at 10,224)
 in_sphinx4,15,220,4	duplicate(BountyBoard)	Bounty Board#in_sphinx4	4_BOARD3
-in_sphinx4,100,150,4	duplicate(BountyBoard)	Bounty Board#in_sphinx4_2	4_BOARD3
+in_sphinx4,115,115,4	duplicate(BountyBoard)	Bounty Board#in_sphinx4_2	4_BOARD3
 
 // in_sphinx5 - Sphinx F5 (entry at 100,99)
 in_sphinx5,100,103,4	duplicate(BountyBoard)	Bounty Board#in_sphinx5	4_BOARD3
-in_sphinx5,100,150,4	duplicate(BountyBoard)	Bounty Board#in_sphinx5_2	4_BOARD3
+in_sphinx5,95,95,4	duplicate(BountyBoard)	Bounty Board#in_sphinx5_2	4_BOARD3
 
 // ==================== TURTLE ISLAND (Lv 58-75) ====================
 // tur_dun01 - Turtle Island F1 (warp to F2 at 154,241)
 tur_dun01,154,237,4	duplicate(BountyBoard)	Bounty Board#tur_dun01	4_BOARD3
-tur_dun01,100,100,4	duplicate(BountyBoard)	Bounty Board#tur_dun01_2	4_BOARD3
+tur_dun01,100,150,4	duplicate(BountyBoard)	Bounty Board#tur_dun01_2	4_BOARD3
 
 // tur_dun02 - Turtle Island F2 (entry at 148,268)
 tur_dun02,148,264,4	duplicate(BountyBoard)	Bounty Board#tur_dun02	4_BOARD3
-tur_dun02,150,100,4	duplicate(BountyBoard)	Bounty Board#tur_dun02_2	4_BOARD3
+tur_dun02,165,25,4	duplicate(BountyBoard)	Bounty Board#tur_dun02_2	4_BOARD3
 
 // tur_dun03 - Turtle Island F3 (entry at 132,193)
 tur_dun03,132,189,4	duplicate(BountyBoard)	Bounty Board#tur_dun03	4_BOARD3
-tur_dun03,150,100,4	duplicate(BountyBoard)	Bounty Board#tur_dun03_2	4_BOARD3
+tur_dun03,215,75,4	duplicate(BountyBoard)	Bounty Board#tur_dun03_2	4_BOARD3
 
 // ==================== COAL MINE (Lv 43-78) ====================
 // mag_dun01 - Magma Dungeon F1 (entry at 126,66)
 mag_dun01,126,70,4	duplicate(BountyBoard)	Bounty Board#mag_dun01	4_BOARD3
-mag_dun01,200,200,4	duplicate(BountyBoard)	Bounty Board#mag_dun01_2	4_BOARD3
+mag_dun01,240,235,4	duplicate(BountyBoard)	Bounty Board#mag_dun01_2	4_BOARD3
 
 // mag_dun02 - Magma Dungeon F2 (entry at 47,30)
 mag_dun02,47,35,4	duplicate(BountyBoard)	Bounty Board#mag_dun02	4_BOARD3
-mag_dun02,150,150,4	duplicate(BountyBoard)	Bounty Board#mag_dun02_2	4_BOARD3
+mag_dun02,110,190,4	duplicate(BountyBoard)	Bounty Board#mag_dun02_2	4_BOARD3
 
 // ==================== ICE CAVE (Lv 42-60) ====================
 // ice_dun02 - Ice Cave F2 (entry at 151,139)
 ice_dun02,151,143,4	duplicate(BountyBoard)	Bounty Board#ice_dun02	4_BOARD3
-ice_dun02,100,200,4	duplicate(BountyBoard)	Bounty Board#ice_dun02_2	4_BOARD3
+ice_dun02,150,280,4	duplicate(BountyBoard)	Bounty Board#ice_dun02_2	4_BOARD3
 
 // ice_dun03 - Ice Cave F3 (entry at 149,24)
 ice_dun03,149,28,4	duplicate(BountyBoard)	Bounty Board#ice_dun03	4_BOARD3
-ice_dun03,100,100,4	duplicate(BountyBoard)	Bounty Board#ice_dun03_2	4_BOARD3
+ice_dun03,145,130,4	duplicate(BountyBoard)	Bounty Board#ice_dun03_2	4_BOARD3
 
 // ==================== AMATSU DUNGEON (Lv 47-69) ====================
 // ama_dun03 - Amatsu Dungeon F3 (entry at 120,12)
 ama_dun03,120,16,4	duplicate(BountyBoard)	Bounty Board#ama_dun03	4_BOARD3
-ama_dun03,100,100,4	duplicate(BountyBoard)	Bounty Board#ama_dun03_2	4_BOARD3
+ama_dun03,115,100,4	duplicate(BountyBoard)	Bounty Board#ama_dun03_2	4_BOARD3
 
 // ==================== NAMELESS ABBEY (Lv 60-81) ====================
 // abbey01 - Nameless Abbey F1 (entry at 51,9 from nameless_n)
 abbey01,55,15,4	duplicate(BountyBoard)	Bounty Board#abbey01	4_BOARD3
-abbey01,200,200,4	duplicate(BountyBoard)	Bounty Board#abbey01_2	4_BOARD3
+abbey01,95,125,4	duplicate(BountyBoard)	Bounty Board#abbey01_2	4_BOARD3
 
 // abbey02 - Nameless Abbey F2 (entry at 149,11)
 abbey02,149,15,4	duplicate(BountyBoard)	Bounty Board#abbey02	4_BOARD3
-abbey02,150,150,4	duplicate(BountyBoard)	Bounty Board#abbey02_2	4_BOARD3
+abbey02,150,285,4	duplicate(BountyBoard)	Bounty Board#abbey02_2	4_BOARD3
 
 // abbey03 - Nameless Abbey F3 (entry at 119,8)
 abbey03,119,12,4	duplicate(BountyBoard)	Bounty Board#abbey03	4_BOARD3
-abbey03,100,100,4	duplicate(BountyBoard)	Bounty Board#abbey03_2	4_BOARD3
+abbey03,120,150,4	duplicate(BountyBoard)	Bounty Board#abbey03_2	4_BOARD3
 
 // ==================== THOR VOLCANO (Lv 76-91) ====================
 // thor_v01 - Thor Volcano F1 (entry at 21,229)
 thor_v01,25,225,4	duplicate(BountyBoard)	Bounty Board#thor_v01	4_BOARD3
-thor_v01,150,150,4	duplicate(BountyBoard)	Bounty Board#thor_v01_2	4_BOARD3
+thor_v01,195,40,4	duplicate(BountyBoard)	Bounty Board#thor_v01_2	4_BOARD3
 
 // thor_v02 - Thor Volcano F2 (entry at 78,203)
 thor_v02,80,200,4	duplicate(BountyBoard)	Bounty Board#thor_v02	4_BOARD3
-thor_v02,150,100,4	duplicate(BountyBoard)	Bounty Board#thor_v02_2	4_BOARD3
+thor_v02,185,60,4	duplicate(BountyBoard)	Bounty Board#thor_v02_2	4_BOARD3
 
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
