@@ -274,7 +274,7 @@ OnInit:
 		1,       // Poison Bottle = 1 pt
 		2,       // Speed Potion = 2 pts
 		5,       // Elite Siege Supply = 5 pts
-		20;      // Token of Siegfried = 20 pts
+		10;      // Token of Siegfried = 10 pts
 
 	// Build the visual shop (prices shown are point costs)
 	// Clear all items first to prevent duplicates on reload
