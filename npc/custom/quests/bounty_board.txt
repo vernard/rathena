@@ -148,15 +148,19 @@ function	script	F_ShortNum	{
 		// Calculate overleveled penalty (applies to all rewards)
 		.@penalty_pct = callfunc("F_OverlevelPenalty", BaseLevel, .@mob_lv);
 
+		// EXP scaling: 1x at level 10, ~50x at level 80 (quadratic)
+		// Formula: max(1, (mob_lv - 10)^2 / 98) gives 1 at lv10, 16 at lv50, 50 at lv80
+		.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
+		if (.@exp_scale < 1) .@exp_scale = 1;
+
 		for (.@t = 0; .@t < getarraysize(.Tiers); .@t++) {
 			.@kills = .Tiers[.@t];
 			.@mult = .TierMult[.@t];
 
-			// Flattened formula: (base + mob_level * scale) * kills * tier_mult / 100
-			// This reduces the gap between low-level and high-level bounties
-			.@base_exp[.@t] = ((100 + .@mob_lv * 5) * .@kills * .@mult) / 100;
-			.@job_exp[.@t] = ((60 + .@mob_lv * 3) * .@kills * .@mult) / 100;
-			.@zeny[.@t] = ((20 + .@mob_lv) * .@kills * .@mult) / 100;
+			// EXP formula with quadratic level scaling for meaningful high-level rewards
+			.@base_exp[.@t] = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
+			.@job_exp[.@t] = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
+			.@zeny[.@t] = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
 			.@points[.@t] = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
 			if (.@points[.@t] < 1) .@points[.@t] = 1;
 
@@ -167,7 +171,6 @@ function	script	F_ShortNum	{
 			.@points[.@t] = .@points[.@t] * .@penalty_pct / 100;
 
 			// Minimum rewards after penalty
-			if (.@zeny[.@t] < 2000) .@zeny[.@t] = 2000;  // Minimum 2k zeny for low levels
 			if (.@points[.@t] < 1) .@points[.@t] = 1;
 
 			// Calculate % of player's level
@@ -262,14 +265,18 @@ function	script	F_ShortNum	{
 
 		// Auto-claim if bounty is complete
 		if (Bounty_Kills >= Bounty_Target) {
-			// Calculate final rewards (same flattened formula as tier selection)
+			// Calculate final rewards (same formula as tier selection)
 			.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
 			.@mult = .TierMult[Bounty_Tier - 1];
 			.@kills = Bounty_Target;
 
-			.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult) / 100;
-			.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult) / 100;
-			.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 100;
+			// EXP scaling: 1x at level 10, ~50x at level 80 (quadratic)
+			.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
+			if (.@exp_scale < 1) .@exp_scale = 1;
+
+			.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
+			.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
+			.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
 			.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
 			if (.@points < 1) .@points = 1;
 
@@ -281,7 +288,6 @@ function	script	F_ShortNum	{
 			.@points = .@points * .@penalty_pct / 100;
 
 			// Minimum rewards after penalty
-			if (.@zeny < 2000) .@zeny = 2000;  // Minimum 2k zeny for low levels
 			if (.@points < 1) .@points = 1;
 
 			// Calculate % of player's level for display
@@ -290,6 +296,7 @@ function	script	F_ShortNum	{
 
 			mes "[Bounty Board]";
 			mes "^00FF00Bounty Complete!^000000";
+			mes "^0055FF" + Bounty_Target + "x " + .@mob_name$ + "^000000 defeated!";
 			if (.@penalty_pct < 100) {
 				mes "^FF8800(Overleveled: " + .@penalty_pct + "% rewards)^000000";
 			}
