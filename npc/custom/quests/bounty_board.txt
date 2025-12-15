@@ -1074,11 +1074,10 @@ gl_sew04,100,75,4	duplicate(BountyBoard)	Bounty Board#gl_sew04_2	4_BOARD3
 // ==================== SPHINX (Lv 52-75) ====================
 // in_sphinx4 - Sphinx F4 (entry at 10,224)
 in_sphinx4,15,220,4	duplicate(BountyBoard)	Bounty Board#in_sphinx4	4_BOARD3
-in_sphinx4,115,115,4	duplicate(BountyBoard)	Bounty Board#in_sphinx4_2	4_BOARD3
+in_sphinx4,123,118,4	duplicate(BountyBoard)	Bounty Board#in_sphinx4_2	4_BOARD3
 
 // in_sphinx5 - Sphinx F5 (entry at 100,99)
 in_sphinx5,100,103,4	duplicate(BountyBoard)	Bounty Board#in_sphinx5	4_BOARD3
-in_sphinx5,95,95,4	duplicate(BountyBoard)	Bounty Board#in_sphinx5_2	4_BOARD3
 
 // ==================== TURTLE ISLAND (Lv 58-75) ====================
 // tur_dun01 - Turtle Island F1 (warp to F2 at 154,241)
