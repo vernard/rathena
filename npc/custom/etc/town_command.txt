@@ -1,0 +1,18 @@
+//===== rAthena Script =======================================
+//= @town Command
+//===== Description: =========================================
+//= Simple command to warp players to Prontera town center.
+//= Usage: @town
+//===== Changelogs: ==========================================
+//= 1.0 Initial release
+//============================================================
+-	script	#town_cmd	-1,{
+OnInit:
+	bindatcmd("town", strnpcinfo(0)+"::OnTown", 0, 99);
+	end;
+
+OnTown:
+	// Warp to Prontera center (near fountain)
+	warp "prontera", 156, 186;
+	end;
+}
