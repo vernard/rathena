@@ -248,8 +248,8 @@ geffen,124,68,4	duplicate(Hourly Rewards)	Hourly Rewards#gef	4_F_TELEPORTER
 // Payon - near Kafra
 payon,179,96,4	duplicate(Hourly Rewards)	Hourly Rewards#pay	4_F_TELEPORTER
 
-// Alberta - near docks (moved east to avoid Warpra at 32,240)
-alberta,35,241,4	duplicate(Hourly Rewards)	Hourly Rewards#alb	4_F_TELEPORTER
+// Alberta - near entrance
+alberta,37,40,4	duplicate(Hourly Rewards)	Hourly Rewards#alb	4_F_TELEPORTER
 
 // Izlude - near center (moved south to avoid Warpra at 132,116)
 izlude,128,106,4	duplicate(Hourly Rewards)	Hourly Rewards#izl	4_F_TELEPORTER
