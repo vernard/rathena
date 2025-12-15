@@ -1046,8 +1046,8 @@ OnNPCKillEvent:
 		if (!attachrid(.@pm_aid[.@i]))
 			continue;
 
-		// Check if party member has a bounty for this monster on this map
-		if (Bounty_Map$ == .@killer_map$ && Bounty_MobID == .@killed_mob) {
+		// Check if party member has a bounty for this monster (same map already verified above)
+		if (Bounty_MobID == .@killed_mob) {
 			// Increment their kill count in database (share the kill)
 			query_sql("INSERT INTO `char_mob_kills` (`char_id`, `mob_id`, `kill_count`) VALUES (" +
 				getcharid(0) + ", " + .@killed_mob + ", 1) ON DUPLICATE KEY UPDATE `kill_count` = `kill_count` + 1");
