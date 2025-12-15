@@ -1017,27 +1017,34 @@ OnNPCKillEvent:
 	if (.@party_id == 0)
 		end;  // Not in party, done
 
-	// Get party member lists
+	// Get party member lists and copy to LOCAL arrays immediately
+	// (global $@ arrays can be overwritten by other events during the loop)
 	getpartymember .@party_id, 1;  // Account IDs -> $@partymemberaid[]
 	getpartymember .@party_id, 2;  // Char IDs -> $@partymembercid[]
+	.@pm_count = $@partymembercount;
+	for (.@j = 0; .@j < .@pm_count; .@j++) {
+		.@pm_aid[.@j] = $@partymemberaid[.@j];
+		.@pm_cid[.@j] = $@partymembercid[.@j];
+	}
 
 	// Loop through party members
-	for (.@i = 0; .@i < $@partymembercount; .@i++) {
+	for (.@i = 0; .@i < .@pm_count; .@i++) {
 		// Skip the killer (they already got their kill tracked)
-		if ($@partymemberaid[.@i] == .@killer_aid)
+		if (.@pm_aid[.@i] == .@killer_aid)
 			continue;
 
 		// Check if party member is online
-		if (!isloggedin($@partymemberaid[.@i], $@partymembercid[.@i]))
+		if (!isloggedin(.@pm_aid[.@i], .@pm_cid[.@i]))
 			continue;
 
 		// Check if party member is on same map
-		getmapxy(.@pm_map$, .@px, .@py, BL_PC, rid2name($@partymemberaid[.@i]));
+		getmapxy(.@pm_map$, .@px, .@py, BL_PC, rid2name(.@pm_aid[.@i]));
 		if (.@pm_map$ != .@killer_map$)
 			continue;
 
-		// Switch context to party member
-		attachrid($@partymemberaid[.@i]);
+		// Switch context to party member (check if successful)
+		if (!attachrid(.@pm_aid[.@i]))
+			continue;
 
 		// Check if party member has a bounty for this monster on this map
 		if (Bounty_Map$ == .@killer_map$ && Bounty_MobID == .@killed_mob) {
