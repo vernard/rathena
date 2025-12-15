@@ -377,14 +377,61 @@ function	script	F_ShortNum	{
 		}
 
 	} else {
-		// Active bounty on DIFFERENT map
+		// Active bounty on DIFFERENT map - show details and allow abandon
+		.@mob_name$ = getmonsterinfo(Bounty_MobID, MOB_NAME);
+
+		// Update kill count from database
+		query_sql("SELECT COALESCE(kill_count, 0) FROM `char_mob_kills` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID, .@current_kills);
+		Bounty_Kills = .@current_kills - Bounty_StartKills;
+		if (Bounty_Kills < 0) Bounty_Kills = 0;
+
 		mes "[Bounty Board]";
-		mes "You have an active bounty at:";
-		mes "^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000";
+		mes "You have an active bounty elsewhere:";
 		mes " ";
-		mes "Complete or abandon it before";
-		mes "accepting a new bounty.";
-		close;
+		mes "^777777Location:^000000 ^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000";
+		mes "^777777Target:^000000 ^0055FF" + .@mob_name$ + "^000000";
+		mes "^777777Progress:^000000 ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
+		mes " ";
+		mes "Complete it there or abandon below.";
+		next;
+
+		switch(select(" ~ ^777777Close^000000: ~ Abandon Bounty")) {
+		case 1:
+			mes "[Bounty Board]";
+			mes "Return to ^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000";
+			mes "to continue your bounty.";
+			close;
+
+		case 2:
+			// Abandon Bounty
+			mes "[Bounty Board]";
+			mes "Abandon your ^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000 bounty?";
+			mes " ";
+			mes "Target: " + .@mob_name$;
+			mes "Progress: " + Bounty_Kills + " / " + Bounty_Target;
+			mes " ";
+			mes "^FF8800All progress will be lost.^000000";
+			next;
+			if (select(" ~ ^777777No, keep it^000000: ~ Yes, abandon") == 1) {
+				mes "[Bounty Board]";
+				mes "Bounty kept. Return to:";
+				mes "^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000";
+				mes "to continue your hunt.";
+			} else {
+				Bounty_Map$ = "";
+				Bounty_MobID = 0;
+				Bounty_Target = 0;
+				Bounty_Tier = 0;
+				Bounty_StartKills = 0;
+				Bounty_Kills = 0;
+				mes "[Bounty Board]";
+				mes "Bounty abandoned.";
+				mes " ";
+				mes "You can now accept a bounty here!";
+				dispbottom "[Bounty] Bounty abandoned.", 0xFF8800;
+			}
+			close;
+		}
 	}
 	end;
 
