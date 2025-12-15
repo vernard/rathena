@@ -377,7 +377,7 @@ function	script	F_ShortNum	{
 		}
 
 	} else {
-		// Active bounty on DIFFERENT map - show details and allow abandon
+		// Active bounty on DIFFERENT map - show details, allow claim if complete, or abandon
 		.@mob_name$ = getmonsterinfo(Bounty_MobID, MOB_NAME);
 
 		// Update kill count from database
@@ -386,51 +386,134 @@ function	script	F_ShortNum	{
 		if (Bounty_Kills < 0) Bounty_Kills = 0;
 
 		mes "[Bounty Board]";
-		mes "You have an active bounty elsewhere:";
+		if (Bounty_Kills >= Bounty_Target) {
+			mes "^00FF00Bounty Complete!^000000";
+		} else {
+			mes "You have an active bounty:";
+		}
 		mes " ";
 		mes "^777777Location:^000000 ^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000";
 		mes "^777777Target:^000000 ^0055FF" + .@mob_name$ + "^000000";
 		mes "^777777Progress:^000000 ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
 		mes " ";
-		mes "Complete it there or abandon below.";
+		if (Bounty_Kills >= Bounty_Target) {
+			mes "Claim your rewards below!";
+		} else {
+			.@remaining = Bounty_Target - Bounty_Kills;
+			mes "^FF8800" + .@remaining + " more to go!^000000";
+		}
 		next;
 
-		switch(select(" ~ ^777777Close^000000: ~ Abandon Bounty")) {
-		case 1:
-			mes "[Bounty Board]";
-			mes "Return to ^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000";
-			mes "to continue your bounty.";
-			close;
+		// Different menu based on completion status
+		if (Bounty_Kills >= Bounty_Target) {
+			switch(select(" ~ ^00FF00Claim Rewards^000000: ~ ^777777Close^000000")) {
+			case 1:
+				// Claim rewards - same logic as original board
+				.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
+				.@mult = .TierMult[Bounty_Tier - 1];
+				.@kills = Bounty_Target;
 
-		case 2:
-			// Abandon Bounty
-			mes "[Bounty Board]";
-			mes "Abandon your ^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000 bounty?";
-			mes " ";
-			mes "Target: " + .@mob_name$;
-			mes "Progress: " + Bounty_Kills + " / " + Bounty_Target;
-			mes " ";
-			mes "^FF8800All progress will be lost.^000000";
-			next;
-			if (select(" ~ ^777777No, keep it^000000: ~ Yes, abandon") == 1) {
+				// EXP scaling: 1x at level 10, ~50x at level 80 (quadratic)
+				.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
+				if (.@exp_scale < 1) .@exp_scale = 1;
+
+				.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
+				.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
+				.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
+				.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
+				if (.@points < 1) .@points = 1;
+
+				// Apply overleveled penalty
+				.@penalty_pct = callfunc("F_OverlevelPenalty", BaseLevel, .@mob_lv);
+				.@base_exp = .@base_exp * .@penalty_pct / 100;
+				.@job_exp = .@job_exp * .@penalty_pct / 100;
+				.@zeny = .@zeny * .@penalty_pct / 100;
+				.@points = .@points * .@penalty_pct / 100;
+				if (.@points < 1) .@points = 1;
+
+				.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
+				.@pct = .@base_exp * 100 / .@next_exp;
+
 				mes "[Bounty Board]";
-				mes "Bounty kept. Return to:";
-				mes "^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000";
-				mes "to continue your hunt.";
-			} else {
+				mes "^00FF00Bounty Complete!^000000";
+				mes "^0055FF" + Bounty_Target + "x " + .@mob_name$ + "^000000 defeated!";
+				if (.@penalty_pct < 100) {
+					mes "^FF8800(Overleveled: " + .@penalty_pct + "% rewards)^000000";
+				}
+				mes " ";
+				mes "Rewards:";
+				mes "  EXP: ^0055FF~" + .@pct + "% of level^000000";
+				mes "  Zeny: ^0055FF" + callfunc("F_ShortNum", .@zeny) + "^000000";
+				mes "  Hunt Points: ^0055FF" + .@points + "^000000";
+
+				// Grant rewards
+				getexp .@base_exp, .@job_exp;
+				Zeny += .@zeny;
+				#HUNT_POINTS += .@points;
+
+				// Log to database
+				query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" +
+					getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
+
+				#HUNT_TOTAL += 1;
+
+				// Clear bounty
 				Bounty_Map$ = "";
 				Bounty_MobID = 0;
 				Bounty_Target = 0;
 				Bounty_Tier = 0;
 				Bounty_StartKills = 0;
 				Bounty_Kills = 0;
+
+				specialeffect2 EF_ANGEL;
+				specialeffect2 EF_TRUESIGHT;
+
+				next;
 				mes "[Bounty Board]";
-				mes "Bounty abandoned.";
+				mes "Well done, hunter! You now have ^0055FF" + #HUNT_POINTS + "^000000 Hunt Points.";
 				mes " ";
-				mes "You can now accept a bounty here!";
-				dispbottom "[Bounty] Bounty abandoned.", 0xFF8800;
+				mes "Total bounties completed: ^0055FF" + #HUNT_TOTAL + "^000000";
+				mes " ";
+				mes "Visit the ^0055FFMonster Hunter Guild^000000 in Prontera to spend your points!";
+				close;
+
+			case 2:
+				close;
 			}
-			close;
+		} else {
+			switch(select(" ~ ^777777Close^000000: ~ Abandon Bounty")) {
+			case 1:
+				close;
+
+			case 2:
+				// Abandon Bounty
+				mes "[Bounty Board]";
+				mes "Abandon your ^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000 bounty?";
+				mes " ";
+				mes "Target: " + .@mob_name$;
+				mes "Progress: " + Bounty_Kills + " / " + Bounty_Target;
+				mes " ";
+				mes "^FF8800All progress will be lost.^000000";
+				next;
+				if (select(" ~ ^777777No, keep it^000000: ~ Yes, abandon") == 1) {
+					mes "[Bounty Board]";
+					mes "Bounty kept.";
+					close;
+				} else {
+					Bounty_Map$ = "";
+					Bounty_MobID = 0;
+					Bounty_Target = 0;
+					Bounty_Tier = 0;
+					Bounty_StartKills = 0;
+					Bounty_Kills = 0;
+					mes "[Bounty Board]";
+					mes "Bounty abandoned.";
+					mes " ";
+					mes "You can now accept a bounty here!";
+					dispbottom "[Bounty] Bounty abandoned.", 0xFF8800;
+				}
+				close;
+			}
 		}
 	}
 	end;
@@ -1253,58 +1336,203 @@ gl_dun02,140,140,4	duplicate(BountyBoard)	Bounty Board#gl_dun02_2	4_BOARD3
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
 prontera,164,164,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
+	// Tier multipliers (must match BountyBoard OnInit)
+	setarray .@TierMult[0], 100, 110, 125;
+
 	mes "[Monster Hunter Guild]";
 	mes "Welcome, hunter!";
 	mes " ";
 	mes "You have ^0055FF" + #HUNT_POINTS + "^000000 Hunt Points.";
 	mes "Total bounties completed: ^0055FF" + #HUNT_TOTAL + "^000000";
+
+	// Check for active bounty
+	if (Bounty_Map$ != "") {
+		.@mob_name$ = getmonsterinfo(Bounty_MobID, MOB_NAME);
+
+		// Update kill count from database
+		query_sql("SELECT COALESCE(kill_count, 0) FROM `char_mob_kills` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID, .@current_kills);
+		Bounty_Kills = .@current_kills - Bounty_StartKills;
+		if (Bounty_Kills < 0) Bounty_Kills = 0;
+
+		mes " ";
+		mes "^777777────────────────────^000000";
+		if (Bounty_Kills >= Bounty_Target) {
+			mes "^00FF00Active Bounty: COMPLETE!^000000";
+		} else {
+			mes "^FFAA00Active Bounty:^000000";
+		}
+		mes "  " + .@mob_name$ + " (" + Bounty_Kills + "/" + Bounty_Target + ")";
+	}
 	next;
 
-	switch(select(" ~ Browse Shop: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
-	case 1:
-		goto L_Shop;
-
-	case 2:
-		mes "[Monster Hunter Guild]";
-		mes "The top hunters are:";
-		mes " ";
-		query_sql("SELECT c.`name`, SUM(b.`points_reward`) as total_points, COUNT(*) as bounties FROM `bounty_log` b JOIN `char` c ON b.char_id = c.char_id GROUP BY b.char_id ORDER BY total_points DESC LIMIT 10", .@name$, .@points, .@count);
-		for (.@i = 0; .@i < getarraysize(.@name$); .@i++) {
-			mes "^0055FF#" + (.@i+1) + "^000000 " + .@name$[.@i] + " - " + .@points[.@i] + " pts (" + .@count[.@i] + " bounties)";
+	// Build menu based on bounty status
+	if (Bounty_Map$ != "" && Bounty_Kills >= Bounty_Target) {
+		// Bounty complete - show claim option first
+		switch(select(" ~ ^00FF00Claim Bounty Rewards^000000: ~ Browse Shop: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+		case 1:
+			goto L_ClaimBounty;
+		case 2:
+			goto L_Shop;
+		case 3:
+			goto L_TopHunters;
+		case 4:
+			goto L_About;
+		case 5:
+			goto L_Leave;
 		}
-		if (!getarraysize(.@name$)) {
-			mes "^777777No hunters yet!^000000";
-			mes "Be the first to complete a bounty!";
+	} else if (Bounty_Map$ != "") {
+		// Bounty in progress - show progress option
+		switch(select(" ~ View Bounty Progress: ~ Browse Shop: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+		case 1:
+			goto L_BountyProgress;
+		case 2:
+			goto L_Shop;
+		case 3:
+			goto L_TopHunters;
+		case 4:
+			goto L_About;
+		case 5:
+			goto L_Leave;
 		}
-		close;
-
-	case 3:
-		mes "[Monster Hunter Guild]";
-		mes "Hunt Points are earned by";
-		mes "completing bounties at the";
-		mes "^0055FFBounty Boards^000000 placed around";
-		mes "the world.";
-		next;
-		mes "[Monster Hunter Guild]";
-		mes "Find a Bounty Board on a map,";
-		mes "select a monster to hunt,";
-		mes "choose how many to kill,";
-		mes "and return when done!";
-		next;
-		mes "[Monster Hunter Guild]";
-		mes "Higher kill tiers give bonus";
-		mes "rewards:";
-		mes "  10 kills: Base rate";
-		mes "  50 kills: +10% bonus";
-		mes "  200 kills: +25% bonus";
-		close;
-
-	case 4:
-		mes "[Monster Hunter Guild]";
-		mes "Happy hunting!";
-		close;
+	} else {
+		// No active bounty
+		switch(select(" ~ Browse Shop: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+		case 1:
+			goto L_Shop;
+		case 2:
+			goto L_TopHunters;
+		case 3:
+			goto L_About;
+		case 4:
+			goto L_Leave;
+		}
 	}
 	end;
+
+L_ClaimBounty:
+	.@mob_name$ = getmonsterinfo(Bounty_MobID, MOB_NAME);
+	.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
+	.@mult = .@TierMult[Bounty_Tier - 1];
+	.@kills = Bounty_Target;
+
+	// EXP scaling
+	.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
+	if (.@exp_scale < 1) .@exp_scale = 1;
+
+	.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
+	.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
+	.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
+	.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
+	if (.@points < 1) .@points = 1;
+
+	// Apply overleveled penalty
+	.@penalty_pct = callfunc("F_OverlevelPenalty", BaseLevel, .@mob_lv);
+	.@base_exp = .@base_exp * .@penalty_pct / 100;
+	.@job_exp = .@job_exp * .@penalty_pct / 100;
+	.@zeny = .@zeny * .@penalty_pct / 100;
+	.@points = .@points * .@penalty_pct / 100;
+	if (.@points < 1) .@points = 1;
+
+	.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
+	.@pct = .@base_exp * 100 / .@next_exp;
+
+	mes "[Monster Hunter Guild]";
+	mes "^00FF00Bounty Complete!^000000";
+	mes "^0055FF" + Bounty_Target + "x " + .@mob_name$ + "^000000 defeated!";
+	if (.@penalty_pct < 100) {
+		mes "^FF8800(Overleveled: " + .@penalty_pct + "% rewards)^000000";
+	}
+	mes " ";
+	mes "Rewards:";
+	mes "  EXP: ^0055FF~" + .@pct + "% of level^000000";
+	mes "  Zeny: ^0055FF" + callfunc("F_ShortNum", .@zeny) + "^000000";
+	mes "  Hunt Points: ^0055FF" + .@points + "^000000";
+
+	// Grant rewards
+	getexp .@base_exp, .@job_exp;
+	Zeny += .@zeny;
+	#HUNT_POINTS += .@points;
+
+	// Log to database
+	query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" +
+		getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
+
+	#HUNT_TOTAL += 1;
+
+	// Clear bounty
+	Bounty_Map$ = "";
+	Bounty_MobID = 0;
+	Bounty_Target = 0;
+	Bounty_Tier = 0;
+	Bounty_StartKills = 0;
+	Bounty_Kills = 0;
+
+	specialeffect2 EF_ANGEL;
+	specialeffect2 EF_TRUESIGHT;
+
+	next;
+	mes "[Monster Hunter Guild]";
+	mes "Well done, hunter!";
+	mes " ";
+	mes "You now have ^0055FF" + #HUNT_POINTS + "^000000 Hunt Points.";
+	mes "Total bounties completed: ^0055FF" + #HUNT_TOTAL + "^000000";
+	close;
+
+L_BountyProgress:
+	.@mob_name$ = getmonsterinfo(Bounty_MobID, MOB_NAME);
+	.@remaining = Bounty_Target - Bounty_Kills;
+
+	mes "[Monster Hunter Guild]";
+	mes "Your active bounty:";
+	mes " ";
+	mes "^777777Location:^000000 ^0055FF" + Bounty_Map$ + "^000000";
+	mes "^777777Target:^000000 ^0055FF" + .@mob_name$ + "^000000";
+	mes "^777777Progress:^000000 ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
+	mes " ";
+	mes "^FF8800" + .@remaining + " more to go!^000000";
+	mes " ";
+	mes "Keep hunting and return when done!";
+	close;
+
+L_TopHunters:
+	mes "[Monster Hunter Guild]";
+	mes "The top hunters are:";
+	mes " ";
+	query_sql("SELECT c.`name`, SUM(b.`points_reward`) as total_points, COUNT(*) as bounties FROM `bounty_log` b JOIN `char` c ON b.char_id = c.char_id GROUP BY b.char_id ORDER BY total_points DESC LIMIT 10", .@name$, .@points, .@count);
+	for (.@i = 0; .@i < getarraysize(.@name$); .@i++) {
+		mes "^0055FF#" + (.@i+1) + "^000000 " + .@name$[.@i] + " - " + .@points[.@i] + " pts (" + .@count[.@i] + " bounties)";
+	}
+	if (!getarraysize(.@name$)) {
+		mes "^777777No hunters yet!^000000";
+		mes "Be the first to complete a bounty!";
+	}
+	close;
+
+L_About:
+	mes "[Monster Hunter Guild]";
+	mes "Hunt Points are earned by";
+	mes "completing bounties at the";
+	mes "^0055FFBounty Boards^000000 placed around";
+	mes "the world.";
+	next;
+	mes "[Monster Hunter Guild]";
+	mes "Find a Bounty Board on a map,";
+	mes "select a monster to hunt,";
+	mes "choose how many to kill,";
+	mes "and return when done!";
+	next;
+	mes "[Monster Hunter Guild]";
+	mes "Higher kill tiers give bonus";
+	mes "rewards:";
+	mes "  10 kills: Base rate";
+	mes "  50 kills: +10% bonus";
+	mes "  200 kills: +25% bonus";
+	close;
+
+L_Leave:
+	mes "[Monster Hunter Guild]";
+	mes "Happy hunting!";
+	close;
 
 L_Shop:
 	callshop "hunt_point_shop", 1;
