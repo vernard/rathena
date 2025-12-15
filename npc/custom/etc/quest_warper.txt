@@ -1205,19 +1205,33 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 29;
 
-//----------------GH CHURCH
-	setarray @pDmenuitems$[@Di], "GH Church";
+//----------------GH ST. ABBEY
+	setarray @pDmenuitems$[@Di], "GH St. Abbey";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
-	setarray @DLevels[@Di], 2;
+	setarray @DLevels[@Di], 1;
 
-	setarray @DGat$[@Dref], "gl_church", "gl_chyard";
-	setarray @DLevelName$[@Dref], "St. Abbey", "Churchyard";
-	setarray @DXcoords[@Dref], 156, 147;
-	setarray @DYcoords[@Dref], 8, 15;
-	setarray @DDepth[@Dref], 0, 1;
+	setarray @DGat$[@Dref], "gl_church";
+	setarray @DLevelName$[@Dref], "St. Abbey";
+	setarray @DXcoords[@Dref], 156;
+	setarray @DYcoords[@Dref], 8;
+	setarray @DDepth[@Dref], 0;
 
-	QWS_Make_Dungeon_Menu 30;
+	QWS_Make_Dungeon_Menu 41;
+
+//----------------GH CHURCHYARD
+	setarray @pDmenuitems$[@Di], "GH Churchyard";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 1;
+
+	setarray @DGat$[@Dref], "gl_chyard";
+	setarray @DLevelName$[@Dref], "Churchyard";
+	setarray @DXcoords[@Dref], 147;
+	setarray @DYcoords[@Dref], 15;
+	setarray @DDepth[@Dref], 0;
+
+	QWS_Make_Dungeon_Menu 42;
 
 //----------------GH CHIVALRY
 	setarray @pDmenuitems$[@Di], "GH Chivalry";
@@ -1821,7 +1835,8 @@ gef_dun02,218,61,2	script	Warpra Helper#10	112,{ callfunc "QWS_Dungeon_Warpra",1
 // GH Region Helpers (split into 7 regions for exploration)
 glast_01,371,308,3	script	Warpra Helper#11	112,{ callfunc "QWS_Dungeon_Warpra",11,"GH Entrance"; close; }
 gl_cas02,105,33,3	script	Warpra Helper#29	112,{ callfunc "QWS_Dungeon_Warpra",29,"GH Castle"; close; }
-gl_chyard,148,149,3	script	Warpra Helper#30	112,{ callfunc "QWS_Dungeon_Warpra",30,"GH Church"; close; }
+gl_chyard,148,149,3	script	Warpra Helper#42	112,{ callfunc "QWS_Dungeon_Warpra",42,"GH Churchyard"; close; }
+gl_church,150,15,3	script	Warpra Helper#41	112,{ callfunc "QWS_Dungeon_Warpra",41,"GH St. Abbey"; close; }
 gl_knt02,165,292,3	script	Warpra Helper#31	112,{ callfunc "QWS_Dungeon_Warpra",31,"GH Chivalry"; close; }
 gl_prison1,150,29,3	script	Warpra Helper#32	112,{ callfunc "QWS_Dungeon_Warpra",32,"GH Prison"; close; }
 gl_sew03,167,281,3	script	Warpra Helper#33	112,{ callfunc "QWS_Dungeon_Warpra",33,"GH Sewers"; close; }
