@@ -166,6 +166,42 @@ void raredrop_record_and_announce(map_session_data* sd, t_itemid item_id,
 	// Get drop count from log table for the "Nth drop" message
 	uint32 drop_count = raredrop_get_drop_count(sd->status.char_id, item_id);
 
+	// Queue for Discord webhook notification
+	// The PHP worker will poll this table and send rich embeds to Discord
+	{
+		const char* map_name = mapindex_id2name(sd->mapindex);
+		char escaped_player[NAME_LENGTH * 2 + 1];
+		char escaped_item[ITEM_NAME_LENGTH * 2 + 1];
+		char escaped_source[NAME_LENGTH * 2 + 1];
+		char escaped_map[MAP_NAME_LENGTH_EXT * 2 + 1];
+
+		Sql_EscapeString(mmysql_handle, escaped_player, sd->status.name);
+		Sql_EscapeString(mmysql_handle, escaped_item, item_name);
+		Sql_EscapeString(mmysql_handle, escaped_source, source_name);
+		Sql_EscapeString(mmysql_handle, escaped_map, map_name ? map_name : "unknown");
+
+		if (SQL_ERROR == Sql_Query(mmysql_handle,
+			"INSERT INTO `discord_webhook_queue` (`webhook_type`, `payload`) VALUES ('rare_drop', "
+			"JSON_OBJECT("
+			"'player_name', '%s', "
+			"'item_name', '%s', "
+			"'item_id', %u, "
+			"'source_name', '%s', "
+			"'source_type', %d, "
+			"'source_id', %u, "
+			"'drop_rate', %d, "
+			"'kill_count', %u, "
+			"'drop_count', %u, "
+			"'map_name', '%s'"
+			"))",
+			escaped_player, escaped_item, item_id,
+			escaped_source, (int)source_type, source_id,
+			drop_rate, kill_count, drop_count, escaped_map))
+		{
+			Sql_ShowDebug(mmysql_handle);
+		}
+	}
+
 	// Prepare the announcement message
 	char message[256];
 	char count_str[32];
