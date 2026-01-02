@@ -177,7 +177,7 @@ morocc,155,97,6	duplicate(Enchanter)	Enchanter#mor	4_M_SAGE_A
 moscovia,222,191,4	duplicate(Enchanter)	Enchanter#mos	4_M_SAGE_A
 niflheim,214,182,5	duplicate(Enchanter)	Enchanter#nif	4_M_SAGE_A
 payon,181,106,4	duplicate(Enchanter)	Enchanter#pay	4_M_SAGE_A
-prontera,164,193,4	duplicate(Enchanter)	Enchanter#prt	4_M_SAGE_A
+prontera,165,193,4	duplicate(Enchanter)	Enchanter#prt	4_M_SAGE_A
 rachel,127,116,6	duplicate(Enchanter)	Enchanter#rac	4_M_SAGE_A
 thor_camp,251,74,4	duplicate(Enchanter)	Enchanter#thor	4_M_SAGE_A
 umbala,107,148,3	duplicate(Enchanter)	Enchanter#umb	4_M_SAGE_A
