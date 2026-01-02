@@ -13,10 +13,15 @@
 //= 1.0 Initial implementation (level-based)
 //= 1.1 Switched to EXP-based tiers, added Platinum tier
 //= 1.2 Simplified to 3 tiers with matching client sprites
+//= 1.3 Fix: Use base MvpExp instead of rate-modified value
 //============================================================
 
 // Invisible NPC for MVP kill detection
 -	script	MVPCoinSystem	FAKE_NPC,{
+	end;
+
+OnInit:
+	.debug = 0;  // Set to 1 to enable debug logging
 	end;
 
 OnNPCKillEvent:
@@ -26,15 +31,23 @@ OnNPCKillEvent:
 
 	.@mob_name$ = getmonsterinfo(killedrid, MOB_NAME);
 
-	// Determine coin tier by MVP EXP (better difficulty scaling than level)
+	// getmonsterinfo returns rate-modified MvpExp, so divide by server rate to get base value
+	// MVP_EXP_RATE is in percentage (100 = 1x, 1500 = 15x)
+	.@mvp_rate = getbattleflag("mvp_exp_rate");
+	if (.@mvp_rate < 100) .@mvp_rate = 100;  // Safety: minimum 1x
+	.@base_mvp_exp = .@mvp_exp * 100 / .@mvp_rate;
+
+	if (.debug) debugmes "[MVPCoin] Killed: " + .@mob_name$ + " (ID:" + killedrid + ") MvpExp:" + .@mvp_exp + " BaseExp:" + .@base_mvp_exp + " Rate:" + .@mvp_rate;
+
+	// Determine coin tier by BASE MVP EXP (not rate-modified)
 	// Mithril: 500k+ MvpExp (Fallen Bishop, Kiel, Bio Labs, Beelzebub)
 	// Gold: 25k-500k MvpExp (Doppel, Dark Lord, Amon Ra, Baphomet, Dracula, LoD, Atroce, Gloom)
 	// Silver: <25k MvpExp (GTB, Eddga, Drake, Maya, Moonlight)
-	if (.@mvp_exp >= 500000) {
+	if (.@base_mvp_exp >= 500000) {
 		.@coin_id = 30012;  // Mithril MVP Coin
 		.@coin_name$ = "^87CEEBMithril MVP Coin^000000";
 		.@coin_color = 0x87CEEB;
-	} else if (.@mvp_exp >= 25000) {
+	} else if (.@base_mvp_exp >= 25000) {
 		.@coin_id = 30011;  // Gold MVP Coin
 		.@coin_name$ = "^FFD700Gold MVP Coin^000000";
 		.@coin_color = 0xFFD700;
