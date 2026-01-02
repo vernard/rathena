@@ -8,7 +8,7 @@
 //= - 10 points granted every hour of accumulated online time
 //= - Points are account-wide (shared across characters)
 //= - Partial time tracking (logout saves progress in minutes)
-//= - Maximum 100 points cap (must redeem before earning more)
+//= - Maximum 200 points cap (must redeem before earning more)
 //= - Shop items: Siege Box, Poison Bottle, Speed Pot, etc.
 //===== Changelog: ==========================================
 //= 1.0 Initial implementation
@@ -27,7 +27,7 @@ OnInit:
 	.check_interval = 60000;	// Fire every 60 seconds (1 minute)
 	.minutes_per_grant = 60;	// 60 minutes = 1 hour
 	.points_per_grant = 10;		// Points granted per hour
-	.max_points = 100;			// Maximum points cap (prevents AFK abuse)
+	.max_points = 200;			// Maximum points cap (prevents AFK abuse)
 	end;
 
 OnPCLoginEvent:
@@ -106,16 +106,16 @@ prontera,164,168,4	script	Hourly Rewards	894,{
 	mes "You earn ^00FF0010 points^000000 for every";
 	mes "hour you're online.";
 	mes " ";
-	mes "^FF0000Max: 100 points^000000 - redeem to earn more!";
+	mes "^FF0000Max: 200 points^000000 - redeem to earn more!";
 	next;
 
 	// Show balance and progress
 	mes "[Hourly Rewards]";
 	mes "^0055FFYour Balance^000000";
-	if (#HOURLY_POINTS >= 100) {
-		mes "Points: ^FF0000" + #HOURLY_POINTS + "/100 (CAPPED)^000000";
+	if (#HOURLY_POINTS >= 200) {
+		mes "Points: ^FF0000" + #HOURLY_POINTS + "/200 (CAPPED)^000000";
 	} else {
-		mes "Points: ^00FF00" + #HOURLY_POINTS + "/100^000000";
+		mes "Points: ^00FF00" + #HOURLY_POINTS + "/200^000000";
 	}
 	mes "Progress: ^FFA500" + #HOURLY_MINUTES + "/60^000000 minutes";
 	next;
@@ -133,7 +133,7 @@ prontera,164,168,4	script	Hourly Rewards	894,{
 		mes "Every hour you're online,";
 		mes "you earn 10 points automatically.";
 		mes " ";
-		mes "Points cap at 100 - spend some";
+		mes "Points cap at 200 - spend some";
 		mes "to keep earning!";
 		next;
 		mes "[Hourly Rewards]";
