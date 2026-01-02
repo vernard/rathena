@@ -3,27 +3,105 @@
 //===== By: ==================================================
 //= Claude Code
 //===== Current Version: =====================================
-//= 2.0
+//= 3.0
 //===== Compatible With: =====================================
 //= rAthena Project
 //===== Description: =========================================
 //= Adds Healer, Enchanter, and Kafra NPCs to the MVP Arena
 //= lobby (quiz_00) for convenient MVP hunting support.
+//= Also overrides the Protector function to charge for heals.
 //===== Additional Comments: =================================
 //= 1.0 Initial version with Healer duplicate and custom Kafra
 //= 2.0 Custom MVP Healer with flat pricing (no level discount)
+//= 3.0 Override Protector function, buffs include heal
 //============================================================
 
-// MVP Arena Healer - dedicated healer with flat pricing
+// ============================================================
+// Override the Protector function from mvp_arena.txt
+// Charges 3k for heal, 10k for buffs (includes heal)
+// ============================================================
+function	script	Protector	{
+	.@nextMap$ = getarg(0);
+	.@HealPrice = 3000;
+	.@BuffsPrice = 10000;	// Includes heal
+	.@BuffDuration = 420000;	// 7 minutes
+
+	// Build menu dynamically
+	if (.@nextMap$ != "") {
+		.@menu$ = "Harder Monsters:";
+	}
+	.@menu$ = .@menu$ + "Heal (" + callfunc("F_InsertComma", .@HealPrice) + "z):Heal + Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z):Exit";
+
+	switch(select(.@menu$)) {
+	case 1:
+		if (.@nextMap$ != "") {
+			warp .@nextMap$, 102, 102;
+			end;
+		}
+		// Fall through to heal if no next map
+	case 2:
+		// Heal only
+		if (Zeny < .@HealPrice) {
+			mes "[MVP-Protector]";
+			mes "You need " + callfunc("F_InsertComma", .@HealPrice) + " Zeny.";
+			close;
+		}
+		Zeny -= .@HealPrice;
+		specialeffect2 EF_HEAL2;
+		percentheal 100,100;
+		end;
+	case 3:
+		// Buffs (includes heal)
+		if (Zeny < .@BuffsPrice) {
+			mes "[MVP-Protector]";
+			mes "You need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
+			close;
+		}
+		Zeny -= .@BuffsPrice;
+
+		// Heal first
+		specialeffect2 EF_HEAL2;
+		percentheal 100,100;
+
+		// Apply buffs
+		specialeffect2 EF_INCAGILITY;
+		sc_start SC_INCREASEAGI, .@BuffDuration, 10;
+		specialeffect2 EF_BLESSING;
+		sc_start SC_BLESSING, .@BuffDuration, 10;
+		specialeffect2 EF_IMPOSITIO;
+		sc_start SC_IMPOSITIO, .@BuffDuration, 10;
+		specialeffect2 EF_MAGNIFICAT;
+		sc_start SC_MAGNIFICAT, .@BuffDuration, 10;
+		specialeffect2 EF_ANGELUS;
+		sc_start SC_ANGELUS, .@BuffDuration, 10;
+		specialeffect2 EF_KYRIE;
+		sc_start SC_KYRIE, .@BuffDuration, 10;
+		specialeffect2 EF_GLORIA;
+		sc_start SC_GLORIA, .@BuffDuration, 10;
+		specialeffect2 EF_ASSUMPTIO;
+		sc_start SC_ASSUMPTIO, .@BuffDuration, 5;
+
+		// Re-heal after buffs
+		percentheal 100,100;
+		end;
+	case 4:
+		warp "prontera", 156, 179;
+		end;
+	}
+}
+
+// ============================================================
+// MVP Arena Lobby Healer - dedicated healer with flat pricing
 // No level discount - everyone pays the same in MVP arena
-quiz_00,57,21,4	script	Healer#mvp_arena	909,{
+// ============================================================
+quiz_00,57,21,4	script	Healer#mvp_arena	569,{
 
 	.@IdentifyItems = 1;	// Identify all unidentified equipment? (1: yes / 0: no)
 
 	// Pricing configuration (same as town healer, but no level discount)
 	.@HealPrice = 3000;
-	.@BuffsPrice = 10000;
-	.@BuffDuration = 600000;	// 10 minutes
+	.@BuffsPrice = 10000;	// Includes heal + identify
+	.@BuffDuration = 420000;	// 7 minutes
 
 	mes "[Healer]";
 	mes "Welcome, MVP hunter.";
@@ -33,9 +111,7 @@ quiz_00,57,21,4	script	Healer#mvp_arena	909,{
 
 	switch(select(
 		"Heal + Identify (" + callfunc("F_InsertComma", .@HealPrice) + "z)",
-		"Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)",
-		"Both (" + callfunc("F_InsertComma", .@HealPrice + .@BuffsPrice) + "z)",
-		"Cancel"
+		"Heal + Identify + Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)"
 	)) {
 		case 1:
 			// Heal only
@@ -50,7 +126,7 @@ quiz_00,57,21,4	script	Healer#mvp_arena	909,{
 			end;
 
 		case 2:
-			// Buffs only
+			// Full service (heal + identify + buffs)
 			if (Zeny < .@BuffsPrice) {
 				mes "[Healer]";
 				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
@@ -58,28 +134,9 @@ quiz_00,57,21,4	script	Healer#mvp_arena	909,{
 			}
 			Zeny -= .@BuffsPrice;
 			close2;
-			callsub S_Buffs, .@BuffDuration;
-			end;
-
-		case 3:
-			// Both heal and buffs
-			.@TotalPrice = .@HealPrice + .@BuffsPrice;
-			if (Zeny < .@TotalPrice) {
-				mes "[Healer]";
-				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@TotalPrice) + " Zeny.";
-				close;
-			}
-			Zeny -= .@TotalPrice;
-			close2;
 			callsub S_Heal, .@IdentifyItems;
 			callsub S_Buffs, .@BuffDuration;
 			end;
-
-		case 4:
-			// Cancel
-			mes "[Healer]";
-			mes "Good luck with your hunt!";
-			close;
 	}
 	end;
 

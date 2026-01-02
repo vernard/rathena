@@ -12,7 +12,7 @@
 //= - Level 60 and below: FREE heal + buffs
 //= - Level 61+: Heal costs 3,000z, Buffs cost 10,000z
 //===== Additional Comments: =================================
-//= 3.0 Simplified pricing: heal and buffs as separate costs
+//= 3.0 Buffs include heal, grace period for buff purchasers
 //============================================================
 
 -	script	Healer	-1,{
@@ -21,9 +21,11 @@
 
 	// Pricing configuration
 	.@HealPrice = 3000;
-	.@BuffsPrice = 10000;
+	.@BuffsPrice = 10000;		// Includes heal + identify
 	.@FreeLevel = 60;
 	.@BuffDuration = 600000;	// 10 minutes
+	.@GracePeriod = 180;		// 3 minutes grace after paying for buffs
+	.@MonkGrace = 10;			// 10 seconds for Monks (prevent Asura abuse)
 
 	// ============================================================
 	// Check if player qualifies for free service
@@ -37,6 +39,33 @@
 	}
 
 	// ============================================================
+	// Check grace period (for buff purchasers)
+	// ============================================================
+	.@now = gettimetick(2);
+	if (healer_paid_until > .@now) {
+		// Check if they've used up their 10 free uses
+		if (healer_grace_uses >= 10) {
+			mes "[Healer]";
+			mes "Oh my, you've been through quite a lot!";
+			mes " ";
+			mes "I've healed you many times now...";
+			mes "Perhaps a small donation would help me continue my work?";
+			next;
+			// Fall through to payment menu
+		} else {
+			healer_grace_uses = healer_grace_uses + 1;
+			mes "[Healer]";
+			mes "Welcome back, brave adventurer!";
+			mes " ";
+			mes "Let me tend to your wounds.";
+			close2;
+			callsub S_Heal, .@IdentifyItems;
+			callsub S_Buffs, .@BuffDuration;
+			end;
+		}
+	}
+
+	// ============================================================
 	// Level 61+ players - show menu
 	// ============================================================
 	mes "[Healer]";
@@ -47,9 +76,7 @@
 
 	switch(select(
 		"Heal + Identify (" + callfunc("F_InsertComma", .@HealPrice) + "z)",
-		"Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)",
-		"Both (" + callfunc("F_InsertComma", .@HealPrice + .@BuffsPrice) + "z)",
-		"Cancel"
+		"Heal + Identify + Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)"
 	)) {
 		case 1:
 			// Heal only
@@ -64,36 +91,34 @@
 			end;
 
 		case 2:
-			// Buffs only
+			// Full service (heal + identify + buffs)
 			if (Zeny < .@BuffsPrice) {
 				mes "[Healer]";
 				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
 				close;
 			}
 			Zeny -= .@BuffsPrice;
-			close2;
-			callsub S_Buffs, .@BuffDuration;
-			end;
 
-		case 3:
-			// Both heal and buffs
-			.@TotalPrice = .@HealPrice + .@BuffsPrice;
-			if (Zeny < .@TotalPrice) {
-				mes "[Healer]";
-				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@TotalPrice) + " Zeny.";
-				close;
+			// Set grace period based on class
+			// Monks and Champions get shorter grace to prevent Asura Strike abuse
+			if ((eaclass()&EAJ_UPPERMASK) == EAJ_MONK) {
+				.@grace = .@MonkGrace;
+			} else {
+				.@grace = .@GracePeriod;
 			}
-			Zeny -= .@TotalPrice;
+
+			healer_paid_until = .@now + .@grace;
+			healer_grace_uses = 0;  // Reset usage counter on payment
+
+			mes "[Healer]";
+			mes "Bless you, kind adventurer!";
+			mes " ";
+			mes "May these blessings protect you.";
+			mes "Return to me if you fall in battle.";
 			close2;
 			callsub S_Heal, .@IdentifyItems;
 			callsub S_Buffs, .@BuffDuration;
 			end;
-
-		case 4:
-			// Cancel
-			mes "[Healer]";
-			mes "May the gods watch over you.";
-			close;
 	}
 	end;
 
