@@ -58,8 +58,8 @@ OnTimeCheck:
 
 	// Check if at point cap - stop earning until they redeem
 	if (#HOURLY_POINTS >= .max_points) {
-		// Only notify once per hour (when minutes reset)
-		if (#HOURLY_MINUTES == 0) {
+		// Notify every 5 minutes when capped
+		if (#HOURLY_MINUTES % 5 == 0) {
 			dispbottom "[Hourly Points] You have " + #HOURLY_POINTS + "/" + .max_points + " points. Redeem some to earn more!";
 		}
 		// Still track minutes but don't grant points
