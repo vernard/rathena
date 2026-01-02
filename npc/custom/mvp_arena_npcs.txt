@@ -3,7 +3,7 @@
 //===== By: ==================================================
 //= Claude Code
 //===== Current Version: =====================================
-//= 3.0
+//= 3.1
 //===== Compatible With: =====================================
 //= rAthena Project
 //===== Description: =========================================
@@ -14,7 +14,30 @@
 //= 1.0 Initial version with Healer duplicate and custom Kafra
 //= 2.0 Custom MVP Healer with flat pricing (no level discount)
 //= 3.0 Override Protector function, buffs include heal
+//= 3.1 Override Arena Guide to remove free heal option
 //============================================================
+
+// ============================================================
+// Override the MVP Arena Guide to remove the free heal option
+// Players should use the paid Healer NPC instead
+// ============================================================
+quiz_00,49,31,4	script	MVP Arena Guide	778,{
+	mes "[ ^0065DFMVP Arena Guide^000000 ]";
+	mes "Welcome and behold this sacred place. Here you will find out if you truly have what it takes to call yourself a warrior.";
+	next;
+	switch(select("Information","Return to Prontera","Cancel")) {
+	case 1:
+		mes "[ ^0065DFMVP Arena Guide^000000 ]";
+		mes "There are four Keepers, and each can spawn four different MVPs.";
+		mes "There are eight rooms per Keeper, and sixteen MVPs in total.";
+		close;
+	case 2:
+		warp "prontera",156,179;
+		close;
+	case 3:
+		close;
+	}
+}
 
 // ============================================================
 // Override the Protector function from mvp_arena.txt
@@ -111,7 +134,8 @@ quiz_00,57,21,4	script	Healer#mvp_arena	569,{
 
 	switch(select(
 		"Heal + Identify (" + callfunc("F_InsertComma", .@HealPrice) + "z)",
-		"Heal + Identify + Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)"
+		"Heal + Identify + Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)",
+		"Cancel"
 	)) {
 		case 1:
 			// Heal only
@@ -137,6 +161,12 @@ quiz_00,57,21,4	script	Healer#mvp_arena	569,{
 			callsub S_Heal, .@IdentifyItems;
 			callsub S_Buffs, .@BuffDuration;
 			end;
+
+		case 3:
+			// Cancel
+			mes "[Healer]";
+			mes "Good luck with your hunt!";
+			close;
 	}
 	end;
 

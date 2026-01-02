@@ -76,7 +76,8 @@
 
 	switch(select(
 		"Heal + Identify (" + callfunc("F_InsertComma", .@HealPrice) + "z)",
-		"Heal + Identify + Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)"
+		"Heal + Identify + Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)",
+		"Cancel"
 	)) {
 		case 1:
 			// Heal only
@@ -119,6 +120,12 @@
 			callsub S_Heal, .@IdentifyItems;
 			callsub S_Buffs, .@BuffDuration;
 			end;
+
+		case 3:
+			// Cancel
+			mes "[Healer]";
+			mes "May the gods watch over you.";
+			close;
 	}
 	end;
 
