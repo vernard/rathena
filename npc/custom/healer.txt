@@ -1,168 +1,159 @@
 //===== rAthena Script =======================================
-//= Healer (Enhanced with 8 Buffs + Free Heal/Identify)
+//= Healer (Two-Tier Pricing)
 //===== By: ==================================================
 //= Euphy (original)
 //= Modified by Claude Code
 //===== Current Version: =====================================
-//= 2.0
+//= 3.0
 //===== Compatible With: =====================================
 //= rAthena Project
 //===== Description: =========================================
-//= Enhanced healer with free heal+identify, paid buffs with
-//= grace period for MVP hunters, and 8 total buffs.
+//= Healer with level-based pricing:
+//= - Level 60 and below: FREE heal + buffs
+//= - Level 61+: Heal costs 3,000z, Buffs cost 10,000z
 //===== Additional Comments: =================================
-//= 1.0 Initial script.
-//= 1.1 Aligned coordinates with @go.
-//= 1.2 Added 5 buffs: Increase Agi, Blessing, Impositio Manus,
-//=     Magnificat, and Angelus (4 minute duration, level 10)
-//= 1.3 Added equipment identification feature with configurable
-//=     buff duration (10 minutes default)
-//= 1.4 Fixed heal order: buffs applied before heal so Blessing's
-//=     INT bonus is reflected in max SP before percentheal
-//= 1.5 Two-tier pricing: 1k for heal+identify, 5k for heal+buffs+identify
-//= 1.6 Configurable pricing via env vars, free for low-level players
-//= 2.0 Major restructure:
-//=     - Heal + identify always FREE for everyone
-//=     - Only buffs cost money (for level 61+)
-//=     - Added grace period after paying (3 min, 10s for Monks)
-//=     - Added 3 new buffs: Kyrie Eleison, Gloria, Assumptio
+//= 3.0 Simplified pricing: heal and buffs as separate costs
 //============================================================
 
 -	script	Healer	-1,{
 
 	.@IdentifyItems = 1;	// Identify all unidentified equipment? (1: yes / 0: no)
 
-	// Configurable settings (values baked in at build time from environment variables)
-	.@BuffsPrice = 5000;
+	// Pricing configuration
+	.@HealPrice = 3000;
+	.@BuffsPrice = 10000;
 	.@FreeLevel = 60;
-	.@BuffDuration = 600000;
-	.@GracePeriod = 180;
-	.@MonkGrace = 10;
+	.@BuffDuration = 600000;	// 10 minutes
 
 	// ============================================================
-	// Step 1: Always provide free healing + identify
+	// Check if player qualifies for free service
 	// ============================================================
+	if (.@FreeLevel > 0 && BaseLevel <= .@FreeLevel) {
+		// Low-level players get everything free
+		message strcharinfo(0), "Free service for adventurers level " + .@FreeLevel + " and below!";
+		callsub S_Heal, .@IdentifyItems;
+		callsub S_Buffs, .@BuffDuration;
+		end;
+	}
+
+	// ============================================================
+	// Level 61+ players - show menu
+	// ============================================================
+	mes "[Healer]";
+	mes "Welcome, adventurer.";
+	mes " ";
+	mes "How may I assist you?";
+	next;
+
+	switch(select(
+		"Heal + Identify (" + callfunc("F_InsertComma", .@HealPrice) + "z)",
+		"Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)",
+		"Both (" + callfunc("F_InsertComma", .@HealPrice + .@BuffsPrice) + "z)",
+		"Cancel"
+	)) {
+		case 1:
+			// Heal only
+			if (Zeny < .@HealPrice) {
+				mes "[Healer]";
+				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@HealPrice) + " Zeny.";
+				close;
+			}
+			Zeny -= .@HealPrice;
+			close2;
+			callsub S_Heal, .@IdentifyItems;
+			end;
+
+		case 2:
+			// Buffs only
+			if (Zeny < .@BuffsPrice) {
+				mes "[Healer]";
+				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
+				close;
+			}
+			Zeny -= .@BuffsPrice;
+			close2;
+			callsub S_Buffs, .@BuffDuration;
+			end;
+
+		case 3:
+			// Both heal and buffs
+			.@TotalPrice = .@HealPrice + .@BuffsPrice;
+			if (Zeny < .@TotalPrice) {
+				mes "[Healer]";
+				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@TotalPrice) + " Zeny.";
+				close;
+			}
+			Zeny -= .@TotalPrice;
+			close2;
+			callsub S_Heal, .@IdentifyItems;
+			callsub S_Buffs, .@BuffDuration;
+			end;
+
+		case 4:
+			// Cancel
+			mes "[Healer]";
+			mes "May the gods watch over you.";
+			close;
+	}
+	end;
+
+// ============================================================
+// Subroutine: Heal + Identify
+// ============================================================
+S_Heal:
 	specialeffect2 EF_HEAL2;
 	percentheal 100,100;
 
-	if (.@IdentifyItems) {
+	if (getarg(0)) {
 		.@identified = identifyall();
 		if (.@identified > 0) {
 			specialeffect2 EF_MAGNIFIERITEM;
 			message strcharinfo(0), "Identified " + .@identified + " item(s).";
 		}
 	}
+	return;
 
-	// ============================================================
-	// Step 2: Check if player qualifies for free buffs
-	// ============================================================
+// ============================================================
+// Subroutine: Apply all 8 buffs
+// ============================================================
+S_Buffs:
+	.@duration = getarg(0);
 
-	// Low-level players get everything free
-	if (.@FreeLevel > 0 && BaseLevel <= .@FreeLevel) {
-		message strcharinfo(0), "Free service for adventurers level " + .@FreeLevel + " and below!";
-		goto L_ApplyBuffs;
-	}
-
-	// Check grace period (healer_paid_until is a permanent player variable)
-	.@now = gettimetick(2);
-	if (healer_paid_until > .@now) {
-		// Check if they've used up their 10 free uses
-		if (healer_grace_uses >= 10) {
-			mes "[Healer]";
-			mes "Oh my, you've been through quite a lot!";
-			mes " ";
-			mes "I've healed you many times now...";
-			mes "Perhaps a small donation would help me continue my work?";
-			next;
-			// Fall through to payment menu
-		} else {
-			healer_grace_uses = healer_grace_uses + 1;
-			.@remaining = healer_paid_until - .@now;
-			mes "[Healer]";
-			mes "Welcome back, brave adventurer!";
-			mes " ";
-			mes "Let me tend to your wounds.";
-			close2;
-			goto L_ApplyBuffs;
-		}
-	}
-
-	// ============================================================
-	// Step 3: Offer paid buffs to level 61+ players
-	// ============================================================
-	switch(select("Done (just healing):Add Buffs (" + .@BuffsPrice + "z)")) {
-		case 1:
-			// Player chose to leave without buffs
-			end;
-		case 2:
-			// Player wants buffs - check payment
-			if (Zeny < .@BuffsPrice) {
-				message strcharinfo(0), "You need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny for buffs.";
-				end;
-			}
-			Zeny -= .@BuffsPrice;
-
-			// Set grace period based on class
-			// Monks and Champions get shorter grace to prevent Asura Strike abuse
-			if ((eaclass()&EAJ_UPPERMASK) == EAJ_MONK) {
-				.@grace = .@MonkGrace;
-			} else {
-				.@grace = .@GracePeriod;
-			}
-
-			healer_paid_until = .@now + .@grace;
-			healer_grace_uses = 0;  // Reset usage counter on payment
-			mes "[Healer]";
-			mes "Bless you, kind adventurer!";
-			mes " ";
-			mes "May these blessings protect you.";
-			mes "Return to me if you fall in battle.";
-			close2;
-			goto L_ApplyBuffs;
-	}
-	end;
-
-	// ============================================================
-	// Apply all 8 buffs
-	// ============================================================
-L_ApplyBuffs:
 	// 1. Increase Agi (+12 AGI, +25% move speed)
 	specialeffect2 EF_INCAGILITY;
-	sc_start SC_INCREASEAGI,.@BuffDuration,10;
+	sc_start SC_INCREASEAGI, .@duration, 10;
 
 	// 2. Blessing (+10 STR/INT/DEX)
 	specialeffect2 EF_BLESSING;
-	sc_start SC_BLESSING,.@BuffDuration,10;
+	sc_start SC_BLESSING, .@duration, 10;
 
 	// 3. Impositio Manus (+25 ATK)
 	specialeffect2 EF_IMPOSITIO;
-	sc_start SC_IMPOSITIO,.@BuffDuration,10;
+	sc_start SC_IMPOSITIO, .@duration, 10;
 
 	// 4. Magnificat (2x SP regen)
 	specialeffect2 EF_MAGNIFICAT;
-	sc_start SC_MAGNIFICAT,.@BuffDuration,10;
+	sc_start SC_MAGNIFICAT, .@duration, 10;
 
 	// 5. Angelus (+50% DEF)
 	specialeffect2 EF_ANGELUS;
-	sc_start SC_ANGELUS,.@BuffDuration,10;
+	sc_start SC_ANGELUS, .@duration, 10;
 
 	// 6. Kyrie Eleison (blocks hits/damage shield)
-	// Level 10: blocks 10 hits or 30% of MaxHP damage
 	specialeffect2 EF_KYRIE;
-	sc_start SC_KYRIE,.@BuffDuration,10;
+	sc_start SC_KYRIE, .@duration, 10;
 
 	// 7. Gloria (+30 LUK)
 	specialeffect2 EF_GLORIA;
-	sc_start SC_GLORIA,.@BuffDuration,10;
+	sc_start SC_GLORIA, .@duration, 10;
 
 	// 8. Assumptio (halves damage in pre-renewal)
-	// Note: In pre-renewal, Assumptio reduces all damage by 50%
 	specialeffect2 EF_ASSUMPTIO;
-	sc_start SC_ASSUMPTIO,.@BuffDuration,5;
+	sc_start SC_ASSUMPTIO, .@duration, 5;
 
 	// Re-heal after buffs so Blessing's INT bonus affects max SP
 	percentheal 100,100;
-	end;
+	return;
 }
 
 

@@ -3,19 +3,144 @@
 //===== By: ==================================================
 //= Claude Code
 //===== Current Version: =====================================
-//= 1.0
+//= 2.0
 //===== Compatible With: =====================================
 //= rAthena Project
 //===== Description: =========================================
-//= Adds Healer and Kafra NPCs to the MVP Arena lobby (quiz_00)
-//= for convenient MVP hunting support.
+//= Adds Healer, Enchanter, and Kafra NPCs to the MVP Arena
+//= lobby (quiz_00) for convenient MVP hunting support.
 //===== Additional Comments: =================================
 //= 1.0 Initial version with Healer duplicate and custom Kafra
+//= 2.0 Custom MVP Healer with flat pricing (no level discount)
 //============================================================
 
-// MVP Arena Healer - duplicate of main Healer NPC
-// Positioned near the MVP Keeper NPCs
-quiz_00,57,21,4	duplicate(Healer)	Healer#mvp_arena	909
+// MVP Arena Healer - dedicated healer with flat pricing
+// No level discount - everyone pays the same in MVP arena
+quiz_00,57,21,4	script	Healer#mvp_arena	909,{
+
+	.@IdentifyItems = 1;	// Identify all unidentified equipment? (1: yes / 0: no)
+
+	// Pricing configuration (same as town healer, but no level discount)
+	.@HealPrice = 3000;
+	.@BuffsPrice = 10000;
+	.@BuffDuration = 600000;	// 10 minutes
+
+	mes "[Healer]";
+	mes "Welcome, MVP hunter.";
+	mes " ";
+	mes "How may I assist you?";
+	next;
+
+	switch(select(
+		"Heal + Identify (" + callfunc("F_InsertComma", .@HealPrice) + "z)",
+		"Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)",
+		"Both (" + callfunc("F_InsertComma", .@HealPrice + .@BuffsPrice) + "z)",
+		"Cancel"
+	)) {
+		case 1:
+			// Heal only
+			if (Zeny < .@HealPrice) {
+				mes "[Healer]";
+				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@HealPrice) + " Zeny.";
+				close;
+			}
+			Zeny -= .@HealPrice;
+			close2;
+			callsub S_Heal, .@IdentifyItems;
+			end;
+
+		case 2:
+			// Buffs only
+			if (Zeny < .@BuffsPrice) {
+				mes "[Healer]";
+				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
+				close;
+			}
+			Zeny -= .@BuffsPrice;
+			close2;
+			callsub S_Buffs, .@BuffDuration;
+			end;
+
+		case 3:
+			// Both heal and buffs
+			.@TotalPrice = .@HealPrice + .@BuffsPrice;
+			if (Zeny < .@TotalPrice) {
+				mes "[Healer]";
+				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@TotalPrice) + " Zeny.";
+				close;
+			}
+			Zeny -= .@TotalPrice;
+			close2;
+			callsub S_Heal, .@IdentifyItems;
+			callsub S_Buffs, .@BuffDuration;
+			end;
+
+		case 4:
+			// Cancel
+			mes "[Healer]";
+			mes "Good luck with your hunt!";
+			close;
+	}
+	end;
+
+// ============================================================
+// Subroutine: Heal + Identify
+// ============================================================
+S_Heal:
+	specialeffect2 EF_HEAL2;
+	percentheal 100,100;
+
+	if (getarg(0)) {
+		.@identified = identifyall();
+		if (.@identified > 0) {
+			specialeffect2 EF_MAGNIFIERITEM;
+			message strcharinfo(0), "Identified " + .@identified + " item(s).";
+		}
+	}
+	return;
+
+// ============================================================
+// Subroutine: Apply all 8 buffs
+// ============================================================
+S_Buffs:
+	.@duration = getarg(0);
+
+	// 1. Increase Agi (+12 AGI, +25% move speed)
+	specialeffect2 EF_INCAGILITY;
+	sc_start SC_INCREASEAGI, .@duration, 10;
+
+	// 2. Blessing (+10 STR/INT/DEX)
+	specialeffect2 EF_BLESSING;
+	sc_start SC_BLESSING, .@duration, 10;
+
+	// 3. Impositio Manus (+25 ATK)
+	specialeffect2 EF_IMPOSITIO;
+	sc_start SC_IMPOSITIO, .@duration, 10;
+
+	// 4. Magnificat (2x SP regen)
+	specialeffect2 EF_MAGNIFICAT;
+	sc_start SC_MAGNIFICAT, .@duration, 10;
+
+	// 5. Angelus (+50% DEF)
+	specialeffect2 EF_ANGELUS;
+	sc_start SC_ANGELUS, .@duration, 10;
+
+	// 6. Kyrie Eleison (blocks hits/damage shield)
+	specialeffect2 EF_KYRIE;
+	sc_start SC_KYRIE, .@duration, 10;
+
+	// 7. Gloria (+30 LUK)
+	specialeffect2 EF_GLORIA;
+	sc_start SC_GLORIA, .@duration, 10;
+
+	// 8. Assumptio (halves damage in pre-renewal)
+	specialeffect2 EF_ASSUMPTIO;
+	sc_start SC_ASSUMPTIO, .@duration, 5;
+
+	// Re-heal after buffs so Blessing's INT bonus affects max SP
+	percentheal 100,100;
+	return;
+}
 
 // MVP Arena Enchanter - duplicate of Element Endow NPC
 // Positioned to the right of the Healer - useful for matching element to MVP weakness
