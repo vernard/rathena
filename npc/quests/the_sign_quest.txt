@@ -1301,3 +1301,138 @@ mjo_dun02,88,295,4	script	Flaming Spirit Man	85,{
 		end;
 	}
 }
+
+// Soldier#s11_ (Maruin) - Original script for the duplicate in pre-re/quests/the_sign_quest.txt
+// The duplicate places this soldier at prt_castle,107,58
+// Part of the Sign Quest - receives Vigorgra + Sister's Letter at quest stage 49
+-	script	Soldier#s11_	-1,{
+	callfunc "F_UpdateSignVars";
+	mes "[Maruin]";
+	if (sign_q < 49) {
+		mes "Welcome to";
+		mes "Prontera Castle.";
+		mes "Please be careful";
+		mes "and avoid getting lost.";
+		next;
+		mes "[Maruin]";
+		mes "Oh man...";
+		mes "I'm so tired~!";
+		mes "Enervated, even~";
+		mes "If I only had some";
+		mes "kind of refreshment...";
+		close;
+	}
+	else if (sign_q == 49) {
+		if ((countitem(7044) < 1) && (countitem(7183) < 1)) {
+			mes "Welcome to";
+			mes "Prontera Castle.";
+			mes "Please be careful";
+			mes "and avoid getting lost.";
+			next;
+			mes "[Maruin]";
+			mes "Oh man...";
+			mes "I'm so tired~!";
+			mes "Enervated, even~";
+			mes "If I only had some";
+			mes "kind of refreshment...";
+			close;
+		}
+		else {
+			mes "Welcome to";
+			mes "Prontera Castle.";
+			mes "Please be careful";
+			mes "and avoid getting los--";
+			next;
+			mes "[Maruin]";
+			mes "What's that?";
+			mes "You're here for";
+			mes "my sister? Um, did";
+			mes "something happen...?";
+			next;
+			select("Oh no, she sent you a birthday gift.");
+			mes "[Maruin]";
+			mes "Birthday...?";
+			mes "What are you sm--";
+			mes "OH. It is my birthday.";
+			mes "Ha! I completely forgot!";
+			next;
+			mes "[Maruin]";
+			mes "Thanks for coming";
+			mes "all the way out here";
+			mes "to deliver my present!";
+			mes "Wow, I wonder what she";
+			mes "got for me this year?";
+			next;
+			emotion ET_SURPRISE;
+			mes "[Maruin]";
+			mes "Th-this is--!";
+			mes "Oh. Snap. That's right.";
+			mes "She's been worried about";
+			mes "me being tired lately. But";
+			mes "does she even know what";
+			mes "Vigorgra is supposed to...?";
+			next;
+			mes "[Maruin]";
+			mes "Never mind. It's the";
+			mes "thought that counts.";
+			mes "But for the record, it's";
+			mes "not like I need this stuff.";
+			mes "I mean, I have, you know,";
+			mes "a girlfr--you know what I mean.";
+			next;
+			mes "[Maruin]";
+			mes "I'd like to pay you";
+			mes "back, but since I'm";
+			mes "on duty, all I can do";
+			mes "is replenish your health.";
+			mes "I'm not really supposed to,";
+			mes "but no one will say anything.";
+			delitem 7044,1; //Vigorgra
+			delitem 7183,1; //Sister_Letter
+			set sign_q,50;
+			percentheal 100,100;
+			next;
+			mes "[Maruin]";
+			mes "Well, thanks for";
+			mes "the letter and the";
+			mes "male supplement, I guess.";
+			mes "I'll send a message to my";
+			mes "sister. Good luck on your";
+			mes "travels, alright?";
+			close;
+		}
+	}
+	else if (sign_q == 97 || sign_q == 98) {
+		mes "Welcome to";
+		mes "Prontera Castle.";
+		mes "Please be careful";
+		mes "and avoid getting lost.";
+		next;
+		mes "[Maruin]";
+		mes "Oh man...";
+		mes "I'm so tired~!";
+		mes "Enervated, even~";
+		mes "If I only had some";
+		mes "kind of refreshment...";
+		close;
+	}
+	else {
+		mes "Oh hey, how's";
+		mes "it going? Thanks";
+		mes "again for helping";
+		mes "out my sister, we";
+		mes "really appreciate it.";
+		if (Sex == SEX_MALE) {
+			if (rand(1,5) == 5) {
+				next;
+				mes "[Maruin]";
+				mes "Oh...";
+				mes "And just between you";
+				mes "and me, that Vigorgra";
+				mes "really came in handy!";
+				mes "That stuff's amazing!";
+			}
+		}
+		close;
+	}
+}

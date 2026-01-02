@@ -3,37 +3,44 @@
 //===== By: ==================================================
 //= Claude Code
 //===== Current Version: =====================================
-//= 1.1
+//= 1.2
 //===== Compatible With: =====================================
 //= rAthena Project
 //===== Description: =========================================
-//= NPC that provides elemental weapon enchantments for zeny.
+//= NPC that provides elemental weapon enchantments.
+//= Requires elemental stones + 2,500z fee.
 //= Offers Fire, Water, Wind, Earth, and Holy (Aspersio).
 //===== Additional Comments: =================================
 //= 1.0 Initial script - placed near healers for convenience
 //= 1.1 Added 3-minute grace period for free re-endow (for MVP hunters who die)
+//= 1.2 Now requires elemental stones (Flame Heart, Mystic Frozen, etc.) + 2,500z
 //============================================================
 
 -	script	Enchanter	-1,{
 
-	// Configurable settings (values baked in at build time from environment variables)
-	.@Price = ${ENDOW_PRICE};           // Zeny cost per endow
+	// Configurable settings
+	.@Price = 2500;                     // Zeny cost per endow
 	.@Duration = ${ENDOW_DURATION};     // Duration in milliseconds
 	.@FreeLevel = ${ENDOW_FREE_LEVEL};  // Free service for players at or below this level
 	.@GracePeriod = 180;                // Grace period in seconds (3 minutes)
+
+	// Item IDs for elemental stones
+	setarray .@ReqItem[1], 994, 995, 996, 997, 523;  // Flame Heart, Mystic Frozen, Rough Wind, Great Nature, Holy Water
+	setarray .@ReqName$[1], "Flame Heart", "Mystic Frozen", "Rough Wind", "Great Nature", "Holy Water";
 
 	// Check for grace period (recent endow within 3 minutes)
 	.@TimeSinceLast = gettimetick(2) - ENDOW_LAST_TIME;
 	.@InGrace = (ENDOW_LAST_TIME > 0 && .@TimeSinceLast < .@GracePeriod);
 
-	// Free service for low-level adventurers
+	// Free service for low-level adventurers (waives both item and zeny)
+	.@IsFree = 0;
 	if (.@FreeLevel > 0 && BaseLevel <= .@FreeLevel) {
-		.@Price = 0;
+		.@IsFree = 1;
 		message strcharinfo(0), "Free enchantment for adventurers level " + .@FreeLevel + " and below!";
 	}
 
 	// If in grace period, offer free re-endow option
-	if (.@InGrace && .@Price > 0) {
+	if (.@InGrace && !.@IsFree) {
 		// Check if they've exhausted their free uses
 		if (ENDOW_GRACE_USES >= 10) {
 			mes "[Elemental Enchanter]";
@@ -61,9 +68,9 @@
 			next;
 			switch(select("Re-apply " + .@LastElement$ + " (Free):Choose different element:Cancel")) {
 				case 1:
-					// Free re-apply of last element
+					// Free re-apply of last element (waives both item and zeny)
 					.@choice = ENDOW_LAST_ELEMENT;
-					.@Price = 0;
+					.@IsFree = 1;
 					ENDOW_GRACE_USES = ENDOW_GRACE_USES + 1;
 					break;
 				case 2:
@@ -83,10 +90,10 @@
 		mes "[Elemental Enchanter]";
 		mes "I can imbue your weapon with elemental power.";
 		mes " ";
-		if (.@Price > 0) {
-			mes "Cost: ^0000FF" + callfunc("F_InsertComma", .@Price) + " Zeny^000000";
-		} else {
+		if (.@IsFree) {
 			mes "Cost: ^00FF00Free^000000 (for new adventurers)";
+		} else {
+			mes "Bring me an elemental stone and ^0000FF" + callfunc("F_InsertComma", .@Price) + " Zeny^000000.";
 		}
 		mes "Duration: ^0000FF10 minutes^000000";
 		next;
@@ -124,18 +131,30 @@
 			break;
 	}
 
-	// Check zeny
-	if (Zeny < .@Price) {
-		mes "[Elemental Enchanter]";
-		mes "You need " + callfunc("F_InsertComma", .@Price) + " Zeny for this service.";
-		close;
-	}
+	// Check requirements (skip if free)
+	if (!.@IsFree) {
+		// Check item
+		if (countitem(.@ReqItem[.@choice]) < 1) {
+			mes "[Elemental Enchanter]";
+			mes "You need a ^0000FF" + .@ReqName$[.@choice] + "^000000 for " + .@element$ + " enchantment.";
+			mes " ";
+			mes "You can buy one from the Tool Dealer in Prontera center.";
+			close;
+		}
+		// Check zeny
+		if (Zeny < .@Price) {
+			mes "[Elemental Enchanter]";
+			mes "You need " + callfunc("F_InsertComma", .@Price) + " Zeny for this service.";
+			close;
+		}
 
-	// Deduct zeny and apply enchantment
-	if (.@Price > 0) {
+		// Deduct item and zeny
+		delitem .@ReqItem[.@choice], 1;
 		Zeny -= .@Price;
 		ENDOW_GRACE_USES = 0;  // Reset usage counter on payment
 	}
+
+	// Apply enchantment
 	specialeffect2 .@effect;
 	sc_start .@sc, .@Duration, 5;  // Level 5 for maximum effectiveness
 
@@ -147,7 +166,7 @@
 	mes "Your weapon now burns with ^FF0000" + .@element$ + "^000000 power!";
 	mes " ";
 	mes "The enchantment will last for 10 minutes.";
-	if (.@Price > 0) {
+	if (!.@IsFree) {
 		mes " ";
 		mes "^777777(Free re-endow available for 3 minutes)^000000";
 	}
@@ -177,7 +196,7 @@ morocc,155,97,6	duplicate(Enchanter)	Enchanter#mor	4_M_SAGE_A
 moscovia,222,191,4	duplicate(Enchanter)	Enchanter#mos	4_M_SAGE_A
 niflheim,214,182,5	duplicate(Enchanter)	Enchanter#nif	4_M_SAGE_A
 payon,181,106,4	duplicate(Enchanter)	Enchanter#pay	4_M_SAGE_A
-prontera,164,193,4	duplicate(Enchanter)	Enchanter#prt	4_M_SAGE_A
+prontera,165,193,4	duplicate(Enchanter)	Enchanter#prt	4_M_SAGE_A
 rachel,127,116,6	duplicate(Enchanter)	Enchanter#rac	4_M_SAGE_A
 thor_camp,251,74,4	duplicate(Enchanter)	Enchanter#thor	4_M_SAGE_A
 umbala,107,148,3	duplicate(Enchanter)	Enchanter#umb	4_M_SAGE_A
