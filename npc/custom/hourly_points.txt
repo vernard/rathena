@@ -98,7 +98,7 @@ OnTimeCheck:
 // ============================================================
 
 // Master NPC in Prontera
-prontera,164,168,4	script	Hourly Rewards	4_F_TELEPORTER,{
+prontera,164,168,4	script	Hourly Rewards	894,{
 	mes "[Hourly Rewards]";
 	mes "Welcome! I can exchange your";
 	mes "^0055FFHourly Points^000000 for useful items.";
@@ -243,13 +243,13 @@ OnInit:
 // ============================================================
 
 // Geffen - near center of town (moved east to avoid Warpra at 116,66)
-geffen,124,68,4	duplicate(Hourly Rewards)	Hourly Rewards#gef	4_F_TELEPORTER
+geffen,124,68,4	duplicate(Hourly Rewards)	Hourly Rewards#gef	894
 
 // Payon - near Kafra
-payon,179,96,4	duplicate(Hourly Rewards)	Hourly Rewards#pay	4_F_TELEPORTER
+payon,179,96,4	duplicate(Hourly Rewards)	Hourly Rewards#pay	894
 
 // Alberta - near entrance
-alberta,37,40,4	duplicate(Hourly Rewards)	Hourly Rewards#alb	4_F_TELEPORTER
+alberta,37,40,4	duplicate(Hourly Rewards)	Hourly Rewards#alb	894
 
 // Izlude - near center (moved south to avoid Warpra at 132,116)
-izlude,128,106,4	duplicate(Hourly Rewards)	Hourly Rewards#izl	4_F_TELEPORTER
+izlude,128,106,4	duplicate(Hourly Rewards)	Hourly Rewards#izl	894
