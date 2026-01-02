@@ -47,20 +47,20 @@ function	script	F_ShortNum	{
 	return "" + .@n;
 }
 
-// Calculate cooldown penalty (returns 25-100 as percentage)
+// Calculate cooldown/discovery bonus (returns 25-300 as percentage)
 // Tracks hunts within a 3-day window per character per monster
-// 1st hunt = 100%, 2nd = 75%, 3rd = 50%, 4th+ = 25%
+// First time EVER = 300%, then within cooldown: 1-2 hunts = 100%, 3rd = 75%, 4th = 50%, 5th+ = 25%
 function	script	F_BountyCooldown	{
 	.@char_id = getarg(0);
 	.@mob_id = getarg(1);
 	.@cooldown_seconds = getarg(2);
 
-	// Query cooldown data
-	query_sql("SELECT `hunt_count`, TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + .@char_id + " AND `mob_id` = " + .@mob_id, .@hunt_count, .@elapsed);
+	// Query cooldown data including first_clear flag
+	query_sql("SELECT `hunt_count`, `first_clear`, TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + .@char_id + " AND `mob_id` = " + .@mob_id, .@hunt_count, .@first_clear, .@elapsed);
 
-	// No cooldown record = first hunt (or table doesn't exist yet)
-	if (!.@hunt_count) {
-		return 100;  // Full rewards
+	// No record = first time ever hunting this monster!
+	if (!.@hunt_count && !.@first_clear) {
+		return 300;  // Discovery bonus: triple rewards!
 	}
 
 	// Check if cooldown expired (3 days passed)
@@ -68,11 +68,12 @@ function	script	F_BountyCooldown	{
 		return 100;  // Cooldown expired, full rewards
 	}
 
-	// Cooldown active - return penalty based on hunt count
-	// hunt_count is the NEXT hunt number (1 = about to do 1st, 2 = about to do 2nd, etc.)
-	if (.@hunt_count == 1) return 75;   // 2nd hunt
-	if (.@hunt_count == 2) return 50;   // 3rd hunt
-	return 25;                           // 4th+ hunt
+	// Cooldown active - return reward based on hunt count
+	// hunt_count tracks completed hunts within the cooldown window
+	if (.@hunt_count <= 1) return 100;  // 1st or 2nd hunt = full rewards (grace period)
+	if (.@hunt_count == 2) return 75;   // 3rd hunt
+	if (.@hunt_count == 3) return 50;   // 4th hunt
+	return 25;                           // 5th+ hunt
 }
 
 // Get remaining cooldown time as formatted string
@@ -216,8 +217,10 @@ function	script	F_CooldownTimeLeft	{
 			.@line$ = "^0055FF[" + (.@i+1) + "]^000000 " + .@mob_name$ + " (Lv " + .@mob_lv + ")";
 			.@line$ = .@line$ + " - ~" + .@pct + "% lvl, " + callfunc("F_ShortNum", .@display_zeny) + "z";
 
-			// Show cooldown warning if active
-			if (.@cooldown_pct < 100) {
+			// Show discovery bonus or cooldown warning
+			if (.@cooldown_pct >= 300) {
+				.@line$ = .@line$ + " ^00FF00[NEW 3x]^000000";
+			} else if (.@cooldown_pct < 100) {
 				.@time_left$ = callfunc("F_CooldownTimeLeft", getcharid(0), .@mob_id, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 				.@line$ = .@line$ + " ^FF8800(" + .@cooldown_pct + "% - " + .@time_left$ + ")^000000";
 			}
@@ -289,7 +292,9 @@ function	script	F_CooldownTimeLeft	{
 		mes " ";
 		mes "Target: ^0055FF" + .@mob_name$ + "^000000";
 		mes "Amount: ^0055FF" + .@target + "^000000";
-		if (.@cooldown_pct < 100) {
+		if (.@cooldown_pct >= 300) {
+			mes "^00FF00★ Discovery Bonus: 3x rewards! ★^000000";
+		} else if (.@cooldown_pct < 100) {
 			mes "^FF8800(Cooldown: " + .@cooldown_pct + "% rewards)^000000";
 		}
 		mes " ";
@@ -361,6 +366,9 @@ function	script	F_CooldownTimeLeft	{
 			mes "[Bounty Board]";
 			mes "^00FF00Bounty Complete!^000000";
 			mes "^0055FF" + Bounty_Target + "x " + .@mob_name$ + "^000000 defeated!";
+			if (.@cooldown_pct >= 300) {
+				mes "^00FF00★ Discovery Bonus: 3x rewards! ★^000000";
+			}
 			if (.@penalty_pct < 100) {
 				mes "^FF8800(Overleveled: " + .@penalty_pct + "% rewards)^000000";
 			}
@@ -387,10 +395,10 @@ function	script	F_CooldownTimeLeft	{
 			query_sql("SELECT TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID, .@elapsed);
 			if (!.@elapsed || .@elapsed >= .CooldownSeconds) {
 				// First hunt or cooldown expired - start new 3-day window
-				query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `first_hunt_time`, `hunt_count`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", NOW(), 1)");
+				query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `first_hunt_time`, `hunt_count`, `first_clear`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", NOW(), 1, 1)");
 			} else {
 				// Within cooldown window - increment hunt count
-				query_sql("UPDATE `bounty_cooldowns` SET `hunt_count` = `hunt_count` + 1 WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID);
+				query_sql("UPDATE `bounty_cooldowns` SET `hunt_count` = `hunt_count` + 1, `first_clear` = 1 WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID);
 			}
 
 			// Increment completion counter
@@ -625,7 +633,7 @@ OnInit:
 	// Party members must be within 14 cells OR have killed something recently
 	.AFKTimeout = 60;        // 60 seconds - must have killed recently
 	.StationaryTimeout = 30; // 30 seconds - max time standing still (if not active)
-	.DebugAFK = 1;           // 1 = show debug messages, 0 = hide
+	.DebugAFK = 0;           // 1 = show debug messages, 0 = hide
 
 	// ==================== MAP DEFINITIONS ====================
 	// Maps array for lookup
@@ -1687,6 +1695,9 @@ L_ClaimBounty:
 	mes "[Monster Hunter Guild]";
 	mes "^00FF00Bounty Complete!^000000";
 	mes "^0055FF" + Bounty_Target + "x " + .@mob_name$ + "^000000 defeated!";
+	if (.@cooldown_pct >= 300) {
+		mes "^00FF00★ Discovery Bonus: 3x rewards! ★^000000";
+	}
 	if (.@penalty_pct < 100) {
 		mes "^FF8800(Overleveled: " + .@penalty_pct + "% rewards)^000000";
 	}
@@ -1712,9 +1723,9 @@ L_ClaimBounty:
 	.@cooldown_seconds = getvariableofnpc(.CooldownSeconds, "BountyBoard");
 	query_sql("SELECT TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID, .@elapsed);
 	if (!.@elapsed || .@elapsed >= .@cooldown_seconds) {
-		query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `first_hunt_time`, `hunt_count`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", NOW(), 1)");
+		query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `first_hunt_time`, `hunt_count`, `first_clear`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", NOW(), 1, 1)");
 	} else {
-		query_sql("UPDATE `bounty_cooldowns` SET `hunt_count` = `hunt_count` + 1 WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID);
+		query_sql("UPDATE `bounty_cooldowns` SET `hunt_count` = `hunt_count` + 1, `first_clear` = 1 WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID);
 	}
 
 	#HUNT_TOTAL += 1;
