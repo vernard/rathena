@@ -47,6 +47,55 @@ function	script	F_ShortNum	{
 	return "" + .@n;
 }
 
+// Calculate cooldown penalty (returns 25-100 as percentage)
+// Tracks hunts within a 3-day window per character per monster
+// 1st hunt = 100%, 2nd = 75%, 3rd = 50%, 4th+ = 25%
+function	script	F_BountyCooldown	{
+	.@char_id = getarg(0);
+	.@mob_id = getarg(1);
+	.@cooldown_seconds = getarg(2);
+
+	// Query cooldown data
+	query_sql("SELECT `hunt_count`, TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + .@char_id + " AND `mob_id` = " + .@mob_id, .@hunt_count, .@elapsed);
+
+	// No cooldown record = first hunt (or table doesn't exist yet)
+	if (!.@hunt_count) {
+		return 100;  // Full rewards
+	}
+
+	// Check if cooldown expired (3 days passed)
+	if (.@elapsed >= .@cooldown_seconds) {
+		return 100;  // Cooldown expired, full rewards
+	}
+
+	// Cooldown active - return penalty based on hunt count
+	// hunt_count is the NEXT hunt number (1 = about to do 1st, 2 = about to do 2nd, etc.)
+	if (.@hunt_count == 1) return 75;   // 2nd hunt
+	if (.@hunt_count == 2) return 50;   // 3rd hunt
+	return 25;                           // 4th+ hunt
+}
+
+// Get remaining cooldown time as formatted string
+function	script	F_CooldownTimeLeft	{
+	.@char_id = getarg(0);
+	.@mob_id = getarg(1);
+	.@cooldown_seconds = getarg(2);
+
+	query_sql("SELECT TIMESTAMPDIFF(SECOND, NOW(), DATE_ADD(`first_hunt_time`, INTERVAL " + .@cooldown_seconds + " SECOND)) as remaining FROM `bounty_cooldowns` WHERE `char_id` = " + .@char_id + " AND `mob_id` = " + .@mob_id, .@remaining);
+
+	if (.@remaining <= 0) return "";
+
+	.@days = .@remaining / 86400;
+	.@hours = (.@remaining % 86400) / 3600;
+	.@mins = (.@remaining % 3600) / 60;
+
+	if (.@days > 0)
+		return .@days + "d " + .@hours + "h";
+	if (.@hours > 0)
+		return .@hours + "h " + .@mins + "m";
+	return .@mins + "m";
+}
+
 // ==================== MASTER NPC SCRIPT ====================
 -	script	BountyBoard	-1,{
 	// Get map-specific configuration
@@ -105,18 +154,75 @@ function	script	F_ShortNum	{
 
 	// Menu options
 	if (Bounty_Map$ == "") {
-		// No active bounty - show monster selection
+		// No active bounty - show monster selection with reward preview
 		mes "[Bounty Board]";
-		mes "Available bounties:";
+		mes "Available bounties (50 kills each):";
 		mes " ";
 
-		// Build menu of monsters
+		// Get QUEST_EXP_RATE from server config
+		.@quest_rate = getbattleflag("quest_exp_rate");
+		if (.@quest_rate < 1) .@quest_rate = 100;  // Default 1x
+
+		// Get player's EXP to next level for percentage calculation
+		.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
+
+		// Build menu of monsters with reward preview
 		.@menu$ = "";
 		for (.@i = 0; .@i < .@mob_count; .@i++) {
 			.@mob_id = .@mobs[.@i];
 			.@mob_name$ = getmonsterinfo(.@mob_id, MOB_NAME);
 			.@mob_lv = getmonsterinfo(.@mob_id, MOB_LV);
-			mes "^0055FF[" + (.@i+1) + "]^000000 " + .@mob_name$ + " (Lv " + .@mob_lv + ")";
+
+			// Calculate rewards for this monster (50 kills, no tier bonus)
+			.@kills = .Tiers[0];
+			.@mult = .TierMult[0];
+
+			// EXP scaling: 1x at level 10, ~50x at level 80 (quadratic)
+			.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
+			if (.@exp_scale < 1) .@exp_scale = 1;
+
+			// Base calculations
+			.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
+			.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
+			.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
+			.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
+			if (.@points < 1) .@points = 1;
+
+			// Apply QUEST_EXP_RATE scaling
+			.@base_exp = .@base_exp * .@quest_rate / 100;
+			.@job_exp = .@job_exp * .@quest_rate / 100;
+
+			// Apply overleveled penalty
+			.@penalty_pct = callfunc("F_OverlevelPenalty", BaseLevel, .@mob_lv);
+			.@base_exp = .@base_exp * .@penalty_pct / 100;
+			.@job_exp = .@job_exp * .@penalty_pct / 100;
+			.@zeny = .@zeny * .@penalty_pct / 100;
+			.@points = .@points * .@penalty_pct / 100;
+			if (.@points < 1) .@points = 1;
+
+			// Get cooldown status
+			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), .@mob_id, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
+
+			// Apply cooldown penalty to display values
+			.@display_exp = .@base_exp * .@cooldown_pct / 100;
+			.@display_zeny = .@zeny * .@cooldown_pct / 100;
+			.@display_points = .@points * .@cooldown_pct / 100;
+			if (.@display_points < 1) .@display_points = 1;
+
+			// Calculate % of player's level
+			.@pct = .@display_exp * 100 / .@next_exp;
+
+			// Build display line
+			.@line$ = "^0055FF[" + (.@i+1) + "]^000000 " + .@mob_name$ + " (Lv " + .@mob_lv + ")";
+			.@line$ = .@line$ + " - ~" + .@pct + "% lvl, " + callfunc("F_ShortNum", .@display_zeny) + "z";
+
+			// Show cooldown warning if active
+			if (.@cooldown_pct < 100) {
+				.@time_left$ = callfunc("F_CooldownTimeLeft", getcharid(0), .@mob_id, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
+				.@line$ = .@line$ + " ^FF8800(" + .@cooldown_pct + "% - " + .@time_left$ + ")^000000";
+			}
+
+			mes .@line$;
 			.@menu$ = .@menu$ + " ~ " + .@mob_name$ + ":";
 		}
 		.@menu$ = .@menu$ + " ~ ^777777Cancel^000000";
@@ -134,88 +240,8 @@ function	script	F_ShortNum	{
 		.@mob_name$ = getmonsterinfo(.@selected_mob, MOB_NAME);
 		.@mob_lv = getmonsterinfo(.@selected_mob, MOB_LV);
 
-		mes "[Bounty Board]";
-		mes "Target: ^0055FF" + .@mob_name$ + "^000000 (Lv " + .@mob_lv + ")";
-		mes " ";
-		mes "Select how many to hunt:";
-		mes "^777777Higher tiers give bonus rewards!^000000";
-		next;
-
-		// Calculate rewards for each tier
-		// Get player's EXP to next level for percentage calculation
-		.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
-
-		// Calculate overleveled penalty (applies to all rewards)
-		.@penalty_pct = callfunc("F_OverlevelPenalty", BaseLevel, .@mob_lv);
-
-		// EXP scaling: 1x at level 10, ~50x at level 80 (quadratic)
-		// Formula: max(1, (mob_lv - 10)^2 / 98) gives 1 at lv10, 16 at lv50, 50 at lv80
-		.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
-		if (.@exp_scale < 1) .@exp_scale = 1;
-
-		for (.@t = 0; .@t < getarraysize(.Tiers); .@t++) {
-			.@kills = .Tiers[.@t];
-			.@mult = .TierMult[.@t];
-
-			// EXP formula with quadratic level scaling for meaningful high-level rewards
-			.@base_exp[.@t] = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
-			.@job_exp[.@t] = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
-			.@zeny[.@t] = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
-			.@points[.@t] = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
-			if (.@points[.@t] < 1) .@points[.@t] = 1;
-
-			// Apply overleveled penalty to all rewards
-			.@base_exp[.@t] = .@base_exp[.@t] * .@penalty_pct / 100;
-			.@job_exp[.@t] = .@job_exp[.@t] * .@penalty_pct / 100;
-			.@zeny[.@t] = .@zeny[.@t] * .@penalty_pct / 100;
-			.@points[.@t] = .@points[.@t] * .@penalty_pct / 100;
-
-			// Minimum rewards after penalty
-			if (.@points[.@t] < 1) .@points[.@t] = 1;
-
-			// Calculate % of player's level
-			.@pct[.@t] = .@base_exp[.@t] * 100 / .@next_exp;
-		}
-
-		mes "[Bounty Board]";
-		// Show overleveled penalty warning
-		if (.@penalty_pct < 100) {
-			mes "^FF8800Warning: Overleveled penalty!^000000";
-			mes "^777777You are Lv " + BaseLevel + " hunting Lv " + .@mob_lv + " monsters.^000000";
-			mes "^FF0000Rewards reduced to " + .@penalty_pct + "%^000000";
-			mes " ";
-		}
-		// Build tier display dynamically
-		.@tier_count = getarraysize(.Tiers);
-		for (.@t = 0; .@t < .@tier_count; .@t++) {
-			.@bonus = .TierMult[.@t] - 100;
-			if (.@bonus > 0)
-				mes "^0055FF[" + (.@t+1) + "]^000000 Hunt " + .Tiers[.@t] + " - ~" + .@pct[.@t] + "% lvl, " + callfunc("F_ShortNum", .@zeny[.@t]) + " zeny, " + .@points[.@t] + " pts ^00AA00(+" + .@bonus + "%)^000000";
-			else
-				mes "^0055FF[" + (.@t+1) + "]^000000 Hunt " + .Tiers[.@t] + " - ~" + .@pct[.@t] + "% lvl, " + callfunc("F_ShortNum", .@zeny[.@t]) + " zeny, " + .@points[.@t] + " pts";
-		}
-		next;
-
-		// Build menu dynamically
-		.@menu$ = "";
-		for (.@t = 0; .@t < .@tier_count; .@t++) {
-			.@bonus = .TierMult[.@t] - 100;
-			if (.@bonus > 0)
-				.@menu$ = .@menu$ + " ~ Hunt " + .Tiers[.@t] + " (+" + .@bonus + "%):";
-			else
-				.@menu$ = .@menu$ + " ~ Hunt " + .Tiers[.@t] + ":";
-		}
-		.@menu$ = .@menu$ + " ~ ^777777Cancel^000000";
-		.@tier_choice = select(.@menu$) - 1;
-
-		if (.@tier_choice >= .@tier_count) {
-			mes "[Bounty Board]";
-			mes "Come back when you're ready!";
-			close;
-		}
-
-		// Level requirement check - player must be within 20 levels of monster
-		.@min_player_lv = max(1, .@mob_lv - 20);
+		// Level requirement check - player must be within 10 levels of monster (anti-abuse)
+		.@min_player_lv = max(1, .@mob_lv - 10);
 		if (BaseLevel < .@min_player_lv) {
 			mes "[Bounty Board]";
 			mes "^FF0000You are too low level for this bounty!^000000";
@@ -226,8 +252,26 @@ function	script	F_ShortNum	{
 			close;
 		}
 
-		// Accept bounty
-		.@target = .Tiers[.@tier_choice];
+		// Show cooldown warning before accepting
+		.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), .@selected_mob, .CooldownSeconds);
+		if (.@cooldown_pct < 100) {
+			.@time_left$ = callfunc("F_CooldownTimeLeft", getcharid(0), .@selected_mob, .CooldownSeconds);
+			mes "[Bounty Board]";
+			mes "^FF8800Warning: Bounty Cooldown Active^000000";
+			mes " ";
+			mes "You recently hunted ^0055FF" + .@mob_name$ + "^000000.";
+			mes "Rewards reduced to ^FF8800" + .@cooldown_pct + "%^000000.";
+			mes "Full rewards in: ^0055FF" + .@time_left$ + "^000000";
+			next;
+			if (select(" ~ Accept anyway: ~ ^777777Cancel^000000") == 2) {
+				mes "[Bounty Board]";
+				mes "Come back when you're ready!";
+				close;
+			}
+		}
+
+		// Accept bounty (single tier: 50 kills)
+		.@target = .Tiers[0];
 
 		// Get current kill count from char_mob_kills
 		query_sql("SELECT COALESCE(kill_count, 0) FROM `char_mob_kills` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + .@selected_mob, .@start_kills);
@@ -236,7 +280,7 @@ function	script	F_ShortNum	{
 		Bounty_Map$ = .@map$;
 		Bounty_MobID = .@selected_mob;
 		Bounty_Target = .@target;
-		Bounty_Tier = .@tier_choice + 1;
+		Bounty_Tier = 1;  // Single tier
 		Bounty_StartKills = .@start_kills;
 		Bounty_Kills = 0;
 
@@ -245,6 +289,9 @@ function	script	F_ShortNum	{
 		mes " ";
 		mes "Target: ^0055FF" + .@mob_name$ + "^000000";
 		mes "Amount: ^0055FF" + .@target + "^000000";
+		if (.@cooldown_pct < 100) {
+			mes "^FF8800(Cooldown: " + .@cooldown_pct + "% rewards)^000000";
+		}
 		mes " ";
 		mes "Hunt them and return here to claim your reward.";
 		mes "^777777Your kills are tracked automatically.^000000";
@@ -265,10 +312,14 @@ function	script	F_ShortNum	{
 
 		// Auto-claim if bounty is complete
 		if (Bounty_Kills >= Bounty_Target) {
-			// Calculate final rewards (same formula as tier selection)
+			// Calculate final rewards
 			.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
-			.@mult = .TierMult[Bounty_Tier - 1];
+			.@mult = .TierMult[0];  // Single tier now
 			.@kills = Bounty_Target;
+
+			// Get QUEST_EXP_RATE from server config
+			.@quest_rate = getbattleflag("quest_exp_rate");
+			if (.@quest_rate < 1) .@quest_rate = 100;
 
 			// EXP scaling: 1x at level 10, ~50x at level 80 (quadratic)
 			.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
@@ -280,14 +331,27 @@ function	script	F_ShortNum	{
 			.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
 			if (.@points < 1) .@points = 1;
 
-			// Apply overleveled penalty to all rewards
+			// Apply QUEST_EXP_RATE scaling
+			.@base_exp = .@base_exp * .@quest_rate / 100;
+			.@job_exp = .@job_exp * .@quest_rate / 100;
+
+			// Apply overleveled penalty
 			.@penalty_pct = callfunc("F_OverlevelPenalty", BaseLevel, .@mob_lv);
 			.@base_exp = .@base_exp * .@penalty_pct / 100;
 			.@job_exp = .@job_exp * .@penalty_pct / 100;
 			.@zeny = .@zeny * .@penalty_pct / 100;
 			.@points = .@points * .@penalty_pct / 100;
 
-			// Minimum rewards after penalty
+			// Get cooldown penalty (calculated BEFORE we update the table)
+			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, .CooldownSeconds);
+
+			// Apply cooldown penalty
+			.@base_exp = .@base_exp * .@cooldown_pct / 100;
+			.@job_exp = .@job_exp * .@cooldown_pct / 100;
+			.@zeny = .@zeny * .@cooldown_pct / 100;
+			.@points = .@points * .@cooldown_pct / 100;
+
+			// Minimum rewards after all penalties
 			if (.@points < 1) .@points = 1;
 
 			// Calculate % of player's level for display
@@ -299,6 +363,9 @@ function	script	F_ShortNum	{
 			mes "^0055FF" + Bounty_Target + "x " + .@mob_name$ + "^000000 defeated!";
 			if (.@penalty_pct < 100) {
 				mes "^FF8800(Overleveled: " + .@penalty_pct + "% rewards)^000000";
+			}
+			if (.@cooldown_pct < 100) {
+				mes "^FF8800(Cooldown: " + .@cooldown_pct + "% rewards)^000000";
 			}
 			mes " ";
 			mes "Rewards:";
@@ -315,8 +382,22 @@ function	script	F_ShortNum	{
 			query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" +
 				getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
 
+			// Update bounty cooldown table
+			// Check if cooldown is expired or first hunt
+			query_sql("SELECT TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID, .@elapsed);
+			if (!.@elapsed || .@elapsed >= .CooldownSeconds) {
+				// First hunt or cooldown expired - start new 3-day window
+				query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `first_hunt_time`, `hunt_count`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", NOW(), 1)");
+			} else {
+				// Within cooldown window - increment hunt count
+				query_sql("UPDATE `bounty_cooldowns` SET `hunt_count` = `hunt_count` + 1 WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID);
+			}
+
 			// Increment completion counter
 			#HUNT_TOTAL += 1;
+
+			// Store completed mob ID before clearing (for display)
+			.@completed_mob = Bounty_MobID;
 
 			// Clear bounty
 			Bounty_Map$ = "";
@@ -335,6 +416,14 @@ function	script	F_ShortNum	{
 			mes " ";
 			mes "Total bounties completed: ^0055FF" + #HUNT_TOTAL + "^000000";
 			mes " ";
+			// Show next cooldown status
+			.@next_cooldown = callfunc("F_BountyCooldown", getcharid(0), .@completed_mob, .CooldownSeconds);
+			if (.@next_cooldown < 100) {
+				.@time_left$ = callfunc("F_CooldownTimeLeft", getcharid(0), .@completed_mob, .CooldownSeconds);
+				mes "^FF8800Note: " + .@mob_name$ + " now at " + .@next_cooldown + "% rewards^000000";
+				mes "^777777Full rewards in " + .@time_left$ + "^000000";
+				mes " ";
+			}
 			mes "Visit the ^0055FFMonster Hunter Guild^000000 in Prontera to spend your points!";
 			close;
 		} else {
@@ -521,11 +610,22 @@ function	script	F_ShortNum	{
 OnInit:
 	// ==================== CONFIGURATION ====================
 
-	// Kill tiers (10 is quick, 200 is for dedicated grinding)
-	setarray .Tiers[0], 10, 50, 200;
-	// Tier multipliers (100 = 1.0x, 105 = 1.05x, etc.)
-	// Lower tiers have smaller bonuses, higher tiers reward commitment
-	setarray .TierMult[0], 100, 110, 125;
+	// Single 50-kill tier (simplified from previous 10/50/200)
+	setarray .Tiers[0], 50;
+	setarray .TierMult[0], 100;
+
+	// Bounty Cooldown System - prevents farming same monster repeatedly
+	// When hunting the same monster within the cooldown window, rewards are reduced
+	.CooldownDays = 3;
+	.CooldownSeconds = 259200;  // 3 days in seconds
+	// Reward percentages: 1st hunt = 100%, 2nd = 75%, 3rd = 50%, 4th+ = 25%
+	setarray .CooldownRewards[0], 100, 75, 50, 25;
+
+	// AFK detection for party kill sharing (seconds)
+	// Party members must be within 14 cells OR have killed something recently
+	.AFKTimeout = 60;        // 60 seconds - must have killed recently
+	.StationaryTimeout = 30; // 30 seconds - max time standing still (if not active)
+	.DebugAFK = 1;           // 1 = show debug messages, 0 = hide
 
 	// ==================== MAP DEFINITIONS ====================
 	// Maps array for lookup
@@ -996,6 +1096,24 @@ OnNPCKillEvent:
 	.@killer_aid = getcharid(3);
 	.@killer_cid = getcharid(0);
 
+	// Update killer's last_kill timestamp (for party AFK detection)
+	// This ensures the "active" check has accurate data for all kills, not just rare drops
+	query_sql("INSERT INTO `char_mob_kills` (`char_id`, `mob_id`, `kill_count`, `last_kill`) VALUES (" +
+		.@killer_cid + ", " + .@killed_mob + ", 0, NOW()) ON DUPLICATE KEY UPDATE `last_kill` = NOW()");
+
+	// If killer is under AFK penalty, track kills to potentially clear it
+	if (Bounty_AFKPenalty > gettimetick(2)) {
+		Bounty_PenaltyKills = Bounty_PenaltyKills + 1;
+		if (Bounty_PenaltyKills >= 5) {
+			Bounty_AFKPenalty = 0;  // Clear penalty
+			Bounty_PenaltyKills = 0;
+			dispbottom "[Bounty] Party sharing restored - welcome back!", 0x00FF00;
+		}
+	}
+
+	// Get debug flag from config
+	.@debug = getvariableofnpc(.DebugAFK, "BountyBoard");
+
 	// Check if killer has a bounty for this monster
 	.@killer_has_bounty = (Bounty_Map$ != "" && Bounty_MobID == .@killed_mob);
 
@@ -1005,17 +1123,32 @@ OnNPCKillEvent:
 		Bounty_Kills = .@current_kills - Bounty_StartKills;
 		if (Bounty_Kills < 0) Bounty_Kills = 0;
 
-		if (Bounty_Kills >= Bounty_Target) {
-			dispbottom "[Bounty] ^00FF00Complete!^000000 " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " - Return to claim reward!", 0x00FF00;
+		if (.@debug) {
+			if (Bounty_Kills >= Bounty_Target) {
+				dispbottom "[Bounty] ^00FF00Complete!^000000 " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " (self) - Return to claim reward!", 0x00FF00;
+			} else {
+				dispbottom "[Bounty] " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " (self)", 0x00AAFF;
+			}
 		} else {
-			dispbottom "[Bounty] " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$, 0x00AAFF;
+			if (Bounty_Kills >= Bounty_Target) {
+				dispbottom "[Bounty] ^00FF00Complete!^000000 " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " - Return to claim reward!", 0x00FF00;
+			} else {
+				dispbottom "[Bounty] " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$, 0x00AAFF;
+			}
 		}
 	}
 
 	// ==================== PARTY KILL SHARING ====================
+	// Anti-AFK: Party members must be NEARBY (14 cells) OR have killed something recently (120s)
 	.@party_id = getcharid(1);
 	if (.@party_id == 0)
 		end;  // Not in party, done
+
+	// Get AFK config
+	.@afk_timeout = getvariableofnpc(.AFKTimeout, "BountyBoard");
+	if (.@afk_timeout < 1) .@afk_timeout = 60;
+	.@stationary_timeout = getvariableofnpc(.StationaryTimeout, "BountyBoard");
+	if (.@stationary_timeout < 1) .@stationary_timeout = 30;
 
 	// Get party member lists and copy to LOCAL arrays immediately
 	// (global $@ arrays can be overwritten by other events during the loop)
@@ -1042,13 +1175,93 @@ OnNPCKillEvent:
 		if (.@pm_map$ != .@killer_map$)
 			continue;
 
-		// Switch context to party member (check if successful)
+		// Switch context to party member early (needed for variable access)
 		if (!attachrid(.@pm_aid[.@i]))
 			continue;
+
+		// ==================== AFK DETECTION ====================
+		.@now = gettimetick(2);
+
+		// Check if under 10-minute AFK penalty (from previous 3-minute stationary detection)
+		if (Bounty_AFKPenalty > .@now) {
+			if (.@debug && Bounty_MobID == .@killed_mob) {
+				.@penalty_left = Bounty_AFKPenalty - .@now;
+				dispbottom "[Bounty] ^FF0000BLOCKED^000000 - AFK penalty " + .@penalty_left + "s left (kill " + Bounty_PenaltyKills + "/5 to clear)", 0xFF0000;
+			}
+			attachrid(.@killer_aid);
+			continue;  // Still under penalty
+		}
+
+		// Check 1: Is party member within 14 cells of the kill?
+		// Bards/Dancers who stand still while buffing nearby should get credit
+		.@distance = distance(.@kx, .@ky, .@px, .@py);
+		.@is_nearby = (.@distance <= 14);
+		.@reason$ = "";
+
+		if (.@is_nearby) {
+			// Nearby - reset movement tracking (so penalty doesn't accumulate)
+			Bounty_LastX = .@px;
+			Bounty_LastY = .@py;
+			Bounty_LastMap$ = .@pm_map$;
+			Bounty_LastMove = .@now;
+			.@reason$ = "nearby " + .@distance + "c";
+		} else {
+			// NOT nearby - must be active OR moving
+
+			// Track movement status
+			.@is_stationary = false;
+			.@stationary_time = 0;
+			if (Bounty_LastX == .@px && Bounty_LastY == .@py && Bounty_LastMap$ == .@pm_map$) {
+				.@stationary_time = .@now - Bounty_LastMove;
+
+				// If stationary for 3+ minutes, apply 10-minute penalty (always blocks)
+				if (.@stationary_time >= 180) {
+					Bounty_AFKPenalty = .@now + 600;  // 10 minute penalty
+					Bounty_PenaltyKills = 0;  // Reset redemption counter
+					if (.@debug && Bounty_MobID == .@killed_mob) {
+						dispbottom "[Bounty] ^FF0000BLOCKED^000000 - AFK 3min! 10-min penalty applied (kill 5 to clear)", 0xFF0000;
+					}
+					attachrid(.@killer_aid);
+					continue;
+				}
+
+				// Stationary for too long
+				.@is_stationary = (.@stationary_time >= .@stationary_timeout);
+			} else {
+				// Position changed - update movement tracking
+				Bounty_LastX = .@px;
+				Bounty_LastY = .@py;
+				Bounty_LastMap$ = .@pm_map$;
+				Bounty_LastMove = .@now;
+			}
+
+			// Check kill activity (killed something in last 60 seconds)
+			.@idle_time = 0;
+			.@has_kills = query_sql("SELECT TIMESTAMPDIFF(SECOND, MAX(last_kill), NOW()) FROM `char_mob_kills` WHERE `char_id` = " + .@pm_cid[.@i], .@idle_time);
+			.@is_active = (.@has_kills > 0 && .@idle_time >= 0 && .@idle_time <= .@afk_timeout);
+
+			// If active (killed recently), pass regardless of movement
+			// If not active, must NOT be stationary for 15+ seconds
+			if (!.@is_active && .@is_stationary) {
+				if (.@debug && Bounty_MobID == .@killed_mob) {
+					dispbottom "[Bounty] ^FF0000BLOCKED^000000 - stationary " + .@stationary_time + "s, no kills in " + .@afk_timeout + "s", 0xFF0000;
+				}
+				attachrid(.@killer_aid);
+				continue;  // Not active + stationary = AFK
+			}
+
+			// Build reason string for debug
+			if (.@is_active)
+				.@reason$ = "active " + .@idle_time + "s";
+			else
+				.@reason$ = "moving " + .@stationary_time + "s";
+		}
 
 		// Check if party member has a bounty for this monster (same map already verified above)
 		if (Bounty_MobID == .@killed_mob) {
 			// Increment their kill count in database (share the kill)
+			// NOTE: Do NOT update last_kill here - only the actual killer gets last_kill updated
+			// This prevents AFK players from resetting their activity timer via shared kills
 			query_sql("INSERT INTO `char_mob_kills` (`char_id`, `mob_id`, `kill_count`) VALUES (" +
 				getcharid(0) + ", " + .@killed_mob + ", 1) ON DUPLICATE KEY UPDATE `kill_count` = `kill_count` + 1");
 
@@ -1057,11 +1270,19 @@ OnNPCKillEvent:
 			Bounty_Kills = .@pm_kills - Bounty_StartKills;
 			if (Bounty_Kills < 0) Bounty_Kills = 0;
 
-			// Notify party member
-			if (Bounty_Kills >= Bounty_Target) {
-				dispbottom "[Bounty] ^00FF00Complete!^000000 " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " (party) - Return to claim!", 0x00FF00;
+			// Notify party member (with debug info if enabled)
+			if (.@debug) {
+				if (Bounty_Kills >= Bounty_Target) {
+					dispbottom "[Bounty] ^00FF00Complete!^000000 " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " (party: " + .@reason$ + ") - Return to claim!", 0x00FF00;
+				} else {
+					dispbottom "[Bounty] " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " (party: " + .@reason$ + ")", 0x00AAFF;
+				}
 			} else {
-				dispbottom "[Bounty] " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " (party)", 0x00AAFF;
+				if (Bounty_Kills >= Bounty_Target) {
+					dispbottom "[Bounty] ^00FF00Complete!^000000 " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$ + " - Return to claim!", 0x00FF00;
+				} else {
+					dispbottom "[Bounty] " + Bounty_Kills + "/" + Bounty_Target + " " + .@mob_name$, 0x00AAFF;
+				}
 			}
 		}
 
@@ -1343,9 +1564,6 @@ gl_dun02,140,140,4	duplicate(BountyBoard)	Bounty Board#gl_dun02_2	4_BOARD3
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
 prontera,164,164,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
-	// Tier multipliers (must match BountyBoard OnInit)
-	setarray .@TierMult[0], 100, 110, 125;
-
 	mes "[Monster Hunter Guild]";
 	mes "Welcome, hunter!";
 	mes " ";
@@ -1375,42 +1593,48 @@ prontera,164,164,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 	// Build menu based on bounty status
 	if (Bounty_Map$ != "" && Bounty_Kills >= Bounty_Target) {
 		// Bounty complete - show claim option first
-		switch(select(" ~ ^00FF00Claim Bounty Rewards^000000: ~ Browse Shop: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+		switch(select(" ~ ^00FF00Claim Bounty Rewards^000000: ~ Browse Shop: ~ View Cooldowns: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
 		case 1:
 			goto L_ClaimBounty;
 		case 2:
 			goto L_Shop;
 		case 3:
-			goto L_TopHunters;
+			goto L_Cooldowns;
 		case 4:
-			goto L_About;
+			goto L_TopHunters;
 		case 5:
+			goto L_About;
+		case 6:
 			goto L_Leave;
 		}
 	} else if (Bounty_Map$ != "") {
 		// Bounty in progress - show progress option
-		switch(select(" ~ View Bounty Progress: ~ Browse Shop: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+		switch(select(" ~ View Bounty Progress: ~ Browse Shop: ~ View Cooldowns: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
 		case 1:
 			goto L_BountyProgress;
 		case 2:
 			goto L_Shop;
 		case 3:
-			goto L_TopHunters;
+			goto L_Cooldowns;
 		case 4:
-			goto L_About;
+			goto L_TopHunters;
 		case 5:
+			goto L_About;
+		case 6:
 			goto L_Leave;
 		}
 	} else {
 		// No active bounty
-		switch(select(" ~ Browse Shop: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+		switch(select(" ~ Browse Shop: ~ View Cooldowns: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
 		case 1:
 			goto L_Shop;
 		case 2:
-			goto L_TopHunters;
+			goto L_Cooldowns;
 		case 3:
-			goto L_About;
+			goto L_TopHunters;
 		case 4:
+			goto L_About;
+		case 5:
 			goto L_Leave;
 		}
 	}
@@ -1419,8 +1643,12 @@ prontera,164,164,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 L_ClaimBounty:
 	.@mob_name$ = getmonsterinfo(Bounty_MobID, MOB_NAME);
 	.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
-	.@mult = .@TierMult[Bounty_Tier - 1];
+	.@mult = 100;  // Single tier now
 	.@kills = Bounty_Target;
+
+	// Get QUEST_EXP_RATE from server config
+	.@quest_rate = getbattleflag("quest_exp_rate");
+	if (.@quest_rate < 1) .@quest_rate = 100;
 
 	// EXP scaling
 	.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
@@ -1432,12 +1660,25 @@ L_ClaimBounty:
 	.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
 	if (.@points < 1) .@points = 1;
 
+	// Apply QUEST_EXP_RATE scaling
+	.@base_exp = .@base_exp * .@quest_rate / 100;
+	.@job_exp = .@job_exp * .@quest_rate / 100;
+
 	// Apply overleveled penalty
 	.@penalty_pct = callfunc("F_OverlevelPenalty", BaseLevel, .@mob_lv);
 	.@base_exp = .@base_exp * .@penalty_pct / 100;
 	.@job_exp = .@job_exp * .@penalty_pct / 100;
 	.@zeny = .@zeny * .@penalty_pct / 100;
 	.@points = .@points * .@penalty_pct / 100;
+
+	// Get cooldown penalty (before updating table)
+	.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
+
+	// Apply cooldown penalty
+	.@base_exp = .@base_exp * .@cooldown_pct / 100;
+	.@job_exp = .@job_exp * .@cooldown_pct / 100;
+	.@zeny = .@zeny * .@cooldown_pct / 100;
+	.@points = .@points * .@cooldown_pct / 100;
 	if (.@points < 1) .@points = 1;
 
 	.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
@@ -1448,6 +1689,9 @@ L_ClaimBounty:
 	mes "^0055FF" + Bounty_Target + "x " + .@mob_name$ + "^000000 defeated!";
 	if (.@penalty_pct < 100) {
 		mes "^FF8800(Overleveled: " + .@penalty_pct + "% rewards)^000000";
+	}
+	if (.@cooldown_pct < 100) {
+		mes "^FF8800(Cooldown: " + .@cooldown_pct + "% rewards)^000000";
 	}
 	mes " ";
 	mes "Rewards:";
@@ -1464,7 +1708,19 @@ L_ClaimBounty:
 	query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" +
 		getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
 
+	// Update bounty cooldown table
+	.@cooldown_seconds = getvariableofnpc(.CooldownSeconds, "BountyBoard");
+	query_sql("SELECT TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID, .@elapsed);
+	if (!.@elapsed || .@elapsed >= .@cooldown_seconds) {
+		query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `first_hunt_time`, `hunt_count`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", NOW(), 1)");
+	} else {
+		query_sql("UPDATE `bounty_cooldowns` SET `hunt_count` = `hunt_count` + 1 WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID);
+	}
+
 	#HUNT_TOTAL += 1;
+
+	// Store for display before clearing
+	.@completed_mob = Bounty_MobID;
 
 	// Clear bounty
 	Bounty_Map$ = "";
@@ -1483,6 +1739,14 @@ L_ClaimBounty:
 	mes " ";
 	mes "You now have ^0055FF" + #HUNT_POINTS + "^000000 Hunt Points.";
 	mes "Total bounties completed: ^0055FF" + #HUNT_TOTAL + "^000000";
+	// Show next cooldown status
+	.@next_cooldown = callfunc("F_BountyCooldown", getcharid(0), .@completed_mob, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
+	if (.@next_cooldown < 100) {
+		.@time_left$ = callfunc("F_CooldownTimeLeft", getcharid(0), .@completed_mob, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
+		mes " ";
+		mes "^FF8800Note: " + .@mob_name$ + " now at " + .@next_cooldown + "% rewards^000000";
+		mes "^777777Full rewards in " + .@time_left$ + "^000000";
+	}
 	close;
 
 L_BountyProgress:
@@ -1515,6 +1779,53 @@ L_TopHunters:
 	}
 	close;
 
+L_Cooldowns:
+	mes "[Monster Hunter Guild]";
+	mes "Your active bounty cooldowns:";
+	mes " ";
+
+	// Query all active cooldowns for this character (within 3 days)
+	.@cooldown_seconds = getvariableofnpc(.CooldownSeconds, "BountyBoard");
+	.@count = query_sql("SELECT bc.mob_id, bc.hunt_count, TIMESTAMPDIFF(SECOND, NOW(), DATE_ADD(bc.first_hunt_time, INTERVAL " + .@cooldown_seconds + " SECOND)) as remaining FROM `bounty_cooldowns` bc WHERE bc.char_id = " + getcharid(0) + " AND TIMESTAMPDIFF(SECOND, bc.first_hunt_time, NOW()) < " + .@cooldown_seconds + " ORDER BY remaining ASC LIMIT 15", .@mob_ids, .@hunt_counts, .@remaining);
+
+	if (.@count == 0) {
+		mes "^00AA00No active cooldowns!^000000";
+		mes "All bounties offer full rewards.";
+	} else {
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@mob_name$ = getmonsterinfo(.@mob_ids[.@i], MOB_NAME);
+
+			// Calculate time remaining
+			.@days = .@remaining[.@i] / 86400;
+			.@hours = (.@remaining[.@i] % 86400) / 3600;
+			.@mins = (.@remaining[.@i] % 3600) / 60;
+
+			if (.@days > 0)
+				.@time$ = .@days + "d " + .@hours + "h";
+			else if (.@hours > 0)
+				.@time$ = .@hours + "h " + .@mins + "m";
+			else
+				.@time$ = .@mins + "m";
+
+			// Determine reward percentage based on hunt count
+			if (.@hunt_counts[.@i] == 1) .@pct = 75;
+			else if (.@hunt_counts[.@i] == 2) .@pct = 50;
+			else .@pct = 25;
+
+			// Color code by severity
+			if (.@pct >= 75)
+				mes "^D29922" + .@mob_name$ + "^000000 - " + .@pct + "% (" + .@time$ + ")";
+			else if (.@pct >= 50)
+				mes "^FF8800" + .@mob_name$ + "^000000 - " + .@pct + "% (" + .@time$ + ")";
+			else
+				mes "^FF0000" + .@mob_name$ + "^000000 - " + .@pct + "% (" + .@time$ + ")";
+		}
+		mes " ";
+		mes "^777777Cooldowns reset 3 days after^000000";
+		mes "^777777first hunt of that monster.^000000";
+	}
+	close;
+
 L_About:
 	mes "[Monster Hunter Guild]";
 	mes "Hunt Points are earned by";
@@ -1525,15 +1836,18 @@ L_About:
 	mes "[Monster Hunter Guild]";
 	mes "Find a Bounty Board on a map,";
 	mes "select a monster to hunt,";
-	mes "choose how many to kill,";
-	mes "and return when done!";
+	mes "kill 50 of them, and return!";
 	next;
 	mes "[Monster Hunter Guild]";
-	mes "Higher kill tiers give bonus";
-	mes "rewards:";
-	mes "  10 kills: Base rate";
-	mes "  50 kills: +10% bonus";
-	mes "  200 kills: +25% bonus";
+	mes "^FF8800Bounty Cooldown:^000000";
+	mes "Hunting the same monster";
+	mes "repeatedly reduces rewards:";
+	mes "  1st hunt: 100%";
+	mes "  2nd hunt: 75%";
+	mes "  3rd hunt: 50%";
+	mes "  4th+ hunt: 25%";
+	mes " ";
+	mes "^777777Cooldowns reset after 3 days.^000000";
 	close;
 
 L_Leave:
