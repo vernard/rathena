@@ -98,7 +98,7 @@ function	script	Protector	{
 		specialeffect2 EF_ANGELUS;
 		sc_start SC_ANGELUS, .@BuffDuration, 10;
 		specialeffect2 EF_KYRIE;
-		sc_start SC_KYRIE, .@BuffDuration, 10;
+		sc_start SC_KYRIE, 120000, 10;  // Max 2 min (skill cap)
 		specialeffect2 EF_GLORIA;
 		sc_start SC_GLORIA, .@BuffDuration, 10;
 		specialeffect2 EF_ASSUMPTIO;
@@ -228,7 +228,7 @@ S_Buffs:
 
 	// 6. Kyrie Eleison (blocks hits/damage shield)
 	specialeffect2 EF_KYRIE;
-	sc_start SC_KYRIE, .@duration, 10;
+	sc_start SC_KYRIE, 120000, 10;  // Max 2 min (skill cap)
 
 	// 7. Gloria (+30 LUK)
 	specialeffect2 EF_GLORIA;

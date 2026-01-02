@@ -180,8 +180,9 @@ S_Buffs:
 	sc_start SC_ANGELUS, .@duration, 10;
 
 	// 6. Kyrie Eleison (blocks hits/damage shield)
+	// Max duration is 120 seconds (skill cap), not affected by .@duration
 	specialeffect2 EF_KYRIE;
-	sc_start SC_KYRIE, .@duration, 10;
+	sc_start SC_KYRIE, 120000, 10;
 
 	// 7. Gloria (+30 LUK)
 	specialeffect2 EF_GLORIA;
