@@ -126,10 +126,12 @@ quiz_00,57,21,4	script	Healer#mvp_arena	569,{
 	.@BuffsPrice = 10000;	// Includes heal + identify
 	.@BuffDuration = 420000;	// 7 minutes
 
-	mes "[Healer]";
-	mes "Welcome, MVP hunter.";
+	mes "[Nurse]";
+	mes "Another brave hunter!";
+	mes "You look like you've seen";
+	mes "some tough battles out there.";
 	mes " ";
-	mes "How may I assist you?";
+	mes "What can I do for you?";
 	next;
 
 	switch(select(
@@ -140,8 +142,11 @@ quiz_00,57,21,4	script	Healer#mvp_arena	569,{
 		case 1:
 			// Heal only
 			if (Zeny < .@HealPrice) {
-				mes "[Healer]";
-				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@HealPrice) + " Zeny.";
+				mes "[Nurse]";
+				mes "Oh dear... I'm afraid the";
+				mes "medical supplies aren't free.";
+				mes " ";
+				mes "You need " + callfunc("F_InsertComma", .@HealPrice) + " Zeny.";
 				close;
 			}
 			Zeny -= .@HealPrice;
@@ -152,11 +157,19 @@ quiz_00,57,21,4	script	Healer#mvp_arena	569,{
 		case 2:
 			// Full service (heal + identify + buffs)
 			if (Zeny < .@BuffsPrice) {
-				mes "[Healer]";
-				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
+				mes "[Nurse]";
+				mes "Oh dear... I'm afraid the";
+				mes "medical supplies aren't free.";
+				mes " ";
+				mes "You need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
 				close;
 			}
 			Zeny -= .@BuffsPrice;
+			mes "[Nurse]";
+			mes "There you go, all patched up!";
+			mes " ";
+			mes "These tonics should help you";
+			mes "take down those MVPs. Good luck!";
 			close2;
 			callsub S_Heal, .@IdentifyItems;
 			callsub S_Buffs, .@BuffDuration;
@@ -164,8 +177,9 @@ quiz_00,57,21,4	script	Healer#mvp_arena	569,{
 
 		case 3:
 			// Cancel
-			mes "[Healer]";
-			mes "Good luck with your hunt!";
+			mes "[Nurse]";
+			mes "Good luck out there, hunter!";
+			mes "Come back if you need patching up.";
 			close;
 	}
 	end;

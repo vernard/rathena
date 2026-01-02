@@ -45,19 +45,19 @@
 	if (healer_paid_until > .@now) {
 		// Check if they've used up their 10 free uses
 		if (healer_grace_uses >= 10) {
-			mes "[Healer]";
-			mes "Oh my, you've been through quite a lot!";
+			mes "[Nurse]";
+			mes "Goodness, you've been here";
+			mes "quite a few times now!";
 			mes " ";
-			mes "I've healed you many times now...";
-			mes "Perhaps a small donation would help me continue my work?";
+			mes "I hate to ask, but the supplies";
+			mes "do cost money to restock...";
 			next;
 			// Fall through to payment menu
 		} else {
 			healer_grace_uses = healer_grace_uses + 1;
-			mes "[Healer]";
-			mes "Welcome back, brave adventurer!";
-			mes " ";
-			mes "Let me tend to your wounds.";
+			mes "[Nurse]";
+			mes "Back again already?";
+			mes "Let me take care of that for you.";
 			close2;
 			callsub S_Heal, .@IdentifyItems;
 			callsub S_Buffs, .@BuffDuration;
@@ -68,10 +68,11 @@
 	// ============================================================
 	// Level 61+ players - show menu
 	// ============================================================
-	mes "[Healer]";
-	mes "Welcome, adventurer.";
+	mes "[Nurse]";
+	mes "Oh my, you look exhausted!";
+	mes "Come, let me take a look at you.";
 	mes " ";
-	mes "How may I assist you?";
+	mes "What can I do for you today?";
 	next;
 
 	switch(select(
@@ -82,8 +83,11 @@
 		case 1:
 			// Heal only
 			if (Zeny < .@HealPrice) {
-				mes "[Healer]";
-				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@HealPrice) + " Zeny.";
+				mes "[Nurse]";
+				mes "Oh dear... I'm afraid the";
+				mes "medical supplies aren't free.";
+				mes " ";
+				mes "You need " + callfunc("F_InsertComma", .@HealPrice) + " Zeny.";
 				close;
 			}
 			Zeny -= .@HealPrice;
@@ -94,8 +98,11 @@
 		case 2:
 			// Full service (heal + identify + buffs)
 			if (Zeny < .@BuffsPrice) {
-				mes "[Healer]";
-				mes "I'm sorry, you need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
+				mes "[Nurse]";
+				mes "Oh dear... I'm afraid the";
+				mes "medical supplies aren't free.";
+				mes " ";
+				mes "You need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
 				close;
 			}
 			Zeny -= .@BuffsPrice;
@@ -111,11 +118,11 @@
 			healer_paid_until = .@now + .@grace;
 			healer_grace_uses = 0;  // Reset usage counter on payment
 
-			mes "[Healer]";
-			mes "Bless you, kind adventurer!";
+			mes "[Nurse]";
+			mes "There you go, all patched up!";
 			mes " ";
-			mes "May these blessings protect you.";
-			mes "Return to me if you fall in battle.";
+			mes "These tonics should keep you";
+			mes "going for a while. Be careful!";
 			close2;
 			callsub S_Heal, .@IdentifyItems;
 			callsub S_Buffs, .@BuffDuration;
@@ -123,8 +130,9 @@
 
 		case 3:
 			// Cancel
-			mes "[Healer]";
-			mes "May the gods watch over you.";
+			mes "[Nurse]";
+			mes "Stay safe out there!";
+			mes "Come back if you need anything.";
 			close;
 	}
 	end;
