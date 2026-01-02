@@ -16,7 +16,7 @@
 //= Modified: Moved Prontera Banker to center (147,168)
 //============================================================
 
-prontera,147,168,4	script	Banker	109,{
+prontera,144,172,4	script	Banker	109,{
 	set @cost,500;
 	mes "[Banker]";
 	mes "Welcome to the First Bank of Prontera. How can I help you today?";
