@@ -100,10 +100,11 @@ OnSeedMonsters:
 	query_sql "DELETE FROM motd_monsters";
 
 	// Insert monsters from mob_db
-	// Exclude: MVPs (mode & 0x20 = MVP), mini-bosses
+	// Exclude: MVPs (mode_mvp = 1, NULL means non-MVP)
 	// Only level 50+ (or configured min level)
 	// Tier: medium (50-75), hard (76+)
-	query_sql "INSERT INTO motd_monsters (mob_id, mob_name, mob_level, tier, has_bounty, enabled) SELECT ID, iName, LV, CASE WHEN LV <= 75 THEN 'medium' ELSE 'hard' END, 0, 1 FROM mob_db WHERE LV >= "+.@min_level+" AND (Mode & 32) = 0 AND (Mode & 8192) = 0 AND ID < 2000";
+	// Column names: id, name_english, level, mode_mvp
+	query_sql "INSERT INTO motd_monsters (mob_id, mob_name, mob_level, tier, has_bounty, enabled) SELECT id, name_english, level, CASE WHEN level <= 75 THEN 'medium' ELSE 'hard' END, 0, 1 FROM mob_db WHERE level >= "+.@min_level+" AND (mode_mvp IS NULL OR mode_mvp = 0) AND id < 2000";
 
 	// Count inserted
 	query_sql "SELECT COUNT(*) FROM motd_monsters", .@count;
