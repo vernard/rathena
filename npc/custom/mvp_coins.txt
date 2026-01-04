@@ -125,7 +125,7 @@ OnNPCKillEvent:
 // ============================================================
 
 // Master NPC in Prontera
-prontera,164,172,4	script	MVP Coin Exchange	4_M_MASKMAN,{
+prontera,164,164,4	script	MVP Coin Exchange	4_M_MASKMAN,{
 	mes "[MVP Coin Exchange]";
 	mes "Welcome! I can exchange your";
 	mes "^0055FFMVP Coins^000000 for valuable items.";

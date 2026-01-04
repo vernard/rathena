@@ -1,0 +1,103 @@
+//===== rAthena Script =======================================
+//= Event Calendar NPC
+//= Shows all current and upcoming server events
+//===== Description: =========================================
+//= Player-facing NPC that displays:
+//= - Currently active events
+//= - Upcoming scheduled events
+//= - Event descriptions and rewards
+//============================================================
+
+prontera,150,180,5	script	Event Calendar	4_F_KAFRA1,{
+	mes "[Event Calendar]";
+	mes "Welcome to the Server Event Calendar!";
+	mes "Here you can see all active and upcoming events.";
+	next;
+
+	// ========================================
+	// CURRENTLY ACTIVE EVENTS
+	// ========================================
+	mes "[^FF0000Currently Active^000000]";
+	set .@has_active, 0;
+
+	// Check Happy Hour
+	if ($@HappyHourActive) {
+		set .@remaining, callfunc("F_HappyHourRemaining");
+		mes "^FFD700★ Happy Hour^000000";
+		mes "   2x EXP rates!";
+		mes "   Time left: ^00AA00"+.@remaining+" minutes^000000";
+		set .@has_active, 1;
+	}
+
+	// Check Monster of the Day
+	query_sql "SELECT mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@motd_name$, .@motd_mins;
+	if (.@motd_name$ != "") {
+		mes "^00FF00★ Monster of the Day^000000";
+		mes "   Featured: ^0000FF"+.@motd_name$+"^000000";
+		mes "   3x EXP & Hunt Points!";
+		mes "   Time left: ^00AA00"+.@motd_mins+" minutes^000000";
+		set .@has_active, 1;
+	}
+
+	if (!.@has_active) {
+		mes "^888888No events currently active.^000000";
+	}
+	next;
+
+	// ========================================
+	// UPCOMING EVENTS
+	// ========================================
+	mes "[^0055FFUpcoming Events^000000]";
+
+	// Get scheduled Happy Hours
+	query_sql "SELECT DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), start_hour, start_minute FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 ORDER BY day_of_week LIMIT 3", .@hh_days$, .@hh_hours, .@hh_mins;
+
+	if (getarraysize(.@hh_days$) > 0) {
+		mes "^FFD700Happy Hour Schedule:^000000";
+		for (set .@i, 0; .@i < getarraysize(.@hh_days$); set .@i, .@i + 1) {
+			set .@time$, (.@hh_hours[.@i] < 10 ? "0" : "") + .@hh_hours[.@i] + ":" + (.@hh_mins[.@i] < 10 ? "0" : "") + .@hh_mins[.@i];
+			mes "   "+.@hh_days$[.@i]+" at "+.@time$;
+		}
+	} else {
+		mes "^888888No Happy Hour scheduled.^000000";
+	}
+
+	mes " ";
+	mes "^00FF00Monster of the Day:^000000";
+	mes "   Rotates every 3 hours";
+	mes "   Check the Monster Hunter Board!";
+	next;
+
+	// ========================================
+	// MENU
+	// ========================================
+	switch(select("View Event Details:View My Event Stats:Close")) {
+		case 1:
+			mes "[Event Details]";
+			mes "^FFD700Happy Hour^000000";
+			mes "2x EXP rates for all monsters!";
+			mes "Scheduled 1-2 times per week.";
+			next;
+			mes "^00FF00Monster of the Day^000000";
+			mes "3x EXP and Hunt Points for a";
+			mes "featured monster. Changes every";
+			mes "3 hours. Check the Monster Hunter";
+			mes "Board for current target!";
+			close;
+
+		case 2:
+			mes "[Your Event Stats]";
+			// Get event coin balance
+			query_sql "SELECT coins, total_earned FROM event_coins WHERE account_id = "+getcharid(3), .@coins, .@total;
+			mes "Event Coins: ^0000FF"+.@coins+"^000000";
+			mes "Total Earned: "+.@total;
+			mes " ";
+			// Get MOTD completions
+			query_sql "SELECT COUNT(*) FROM motd_completions WHERE char_id = "+getcharid(0), .@motd_count;
+			mes "MOTD Hunts Completed: "+.@motd_count;
+			close;
+
+		case 3:
+			close;
+	}
+}

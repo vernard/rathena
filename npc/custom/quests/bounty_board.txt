@@ -273,11 +273,18 @@ function	script	F_CooldownTimeLeft	{
 		Bounty_StartKills = .@start_kills;
 		Bounty_Kills = 0;
 
+		// Check if this mob is Monster of the Day (3x bonus)
+		query_sql("SELECT 1 FROM motd_schedule WHERE mob_id = " + .@selected_mob + " AND NOW() BETWEEN start_time AND end_time LIMIT 1", .@is_motd);
+		Bounty_MOTD_Bonus = .@is_motd;
+
 		mes "[Bounty Board]";
 		mes "Bounty accepted!";
 		mes " ";
 		mes "Target: ^0055FF" + .@mob_name$ + "^000000";
 		mes "Amount: ^0055FF" + .@target + "^000000";
+		if (Bounty_MOTD_Bonus) {
+			mes "^FF8800* Monster of the Day: 3x EXP & Points! *^000000";
+		}
 		if (.@cooldown_pct >= 300) {
 			mes "^00FF00* Discovery Bonus: 3x rewards! *^000000";
 		} else if (.@cooldown_pct < 100) {
@@ -327,6 +334,13 @@ function	script	F_CooldownTimeLeft	{
 			.@zeny = .@zeny * .@cooldown_pct / 100;
 			.@points = .@points * .@cooldown_pct / 100;
 
+			// Apply Monster of the Day bonus (3x EXP and Points, NOT drops)
+			if (Bounty_MOTD_Bonus) {
+				.@base_exp = .@base_exp * 3;
+				.@job_exp = .@job_exp * 3;
+				.@points = .@points * 3;
+			}
+
 			// Minimum rewards after all penalties
 			if (.@points < 1) .@points = 1;
 
@@ -340,6 +354,9 @@ function	script	F_CooldownTimeLeft	{
 			mes "[Bounty Board]";
 			mes "^00FF00Bounty Complete!^000000";
 			mes "^0055FF" + Bounty_Target + "x " + .@mob_name$ + "^000000 defeated!";
+			if (Bounty_MOTD_Bonus) {
+				mes "^FF8800* Monster of the Day: 3x EXP & Points! *^000000";
+			}
 			if (.@cooldown_pct >= 300) {
 				mes "^00FF00* Discovery Bonus: 3x rewards! *^000000";
 			}
@@ -607,6 +624,14 @@ function	script	F_CooldownTimeLeft	{
 	}
 	end;
 
+// Called by Monster Hunter Guild to build suggestion list
+// TEMPORARILY DISABLED - causes infinity loop due to too many script operations
+OnBuildSuggestions:
+	@suggest_count = 0;
+
+L_BuildSuggestEnd:
+	end;
+
 OnInit:
 	// ==================== CONFIGURATION ====================
 
@@ -676,6 +701,7 @@ OnInit:
 		"ra_san01", "ra_san03",
 		// Additional GH maps (separated regions)
 		"gl_church", "gl_prison1", "gl_sew01", "gl_sew02", "gl_dun01", "gl_dun02";
+	.MapCount = 78;  // Total maps in .Maps$ array
 
 	// ==================== MAP NAMES ====================
 	// Beginner Fields
@@ -1080,6 +1106,8 @@ OnInit:
 	setarray .Mobs_gl_dun02[0], 1194, 1207;  // Arclouze (Lv 59), Sting (Lv 61)
 	set .Mobs_gl_dun02_count, 2;
 
+	// Mark initialization complete
+	.Initialized = 1;
 	end;
 }
 
@@ -1563,7 +1591,7 @@ gl_dun02,140,140,4	duplicate(BountyBoard)	Bounty Board#gl_dun02_2	4_BOARD3
 
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
-prontera,164,164,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
+prontera,164,172,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 	mes "[Monster Hunter Guild]";
 	mes "Welcome, hunter!";
 	mes " ";
@@ -1613,25 +1641,45 @@ prontera,164,164,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 	// Build menu based on bounty status
 	if (Bounty_Map$ != "" && Bounty_Kills >= Bounty_Target) {
 		// Bounty complete - show claim option first
-		switch(select(" ~ ^00FF00Claim Bounty Rewards^000000: ~ Browse Shop: ~ View Cooldowns: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+		switch(select(" ~ ^00FF00Claim Bounty Rewards^000000: ~ Suggest Monsters: ~ Browse Shop: ~ View Cooldowns: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
 		case 1:
 			goto L_ClaimBounty;
 		case 2:
-			goto L_Shop;
+			goto L_SuggestMonsters;
 		case 3:
-			goto L_Cooldowns;
+			goto L_Shop;
 		case 4:
-			goto L_TopHunters;
+			goto L_Cooldowns;
 		case 5:
-			goto L_About;
+			goto L_TopHunters;
 		case 6:
+			goto L_About;
+		case 7:
 			goto L_Leave;
 		}
 	} else if (Bounty_Map$ != "") {
 		// Bounty in progress - show progress option
-		switch(select(" ~ View Bounty Progress: ~ Browse Shop: ~ View Cooldowns: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+		switch(select(" ~ View Bounty Progress: ~ Suggest Monsters: ~ Browse Shop: ~ View Cooldowns: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
 		case 1:
 			goto L_BountyProgress;
+		case 2:
+			goto L_SuggestMonsters;
+		case 3:
+			goto L_Shop;
+		case 4:
+			goto L_Cooldowns;
+		case 5:
+			goto L_TopHunters;
+		case 6:
+			goto L_About;
+		case 7:
+			goto L_Leave;
+		}
+	} else {
+		// No active bounty
+		switch(select(" ~ Suggest Monsters: ~ Browse Shop: ~ View Cooldowns: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
+		case 1:
+			goto L_SuggestMonsters;
 		case 2:
 			goto L_Shop;
 		case 3:
@@ -1641,20 +1689,6 @@ prontera,164,164,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 		case 5:
 			goto L_About;
 		case 6:
-			goto L_Leave;
-		}
-	} else {
-		// No active bounty
-		switch(select(" ~ Browse Shop: ~ View Cooldowns: ~ View Top Hunters: ~ About Hunt Points: ~ ^777777Leave^000000")) {
-		case 1:
-			goto L_Shop;
-		case 2:
-			goto L_Cooldowns;
-		case 3:
-			goto L_TopHunters;
-		case 4:
-			goto L_About;
-		case 5:
 			goto L_Leave;
 		}
 	}
@@ -1886,6 +1920,85 @@ L_About:
 	mes "^777777Cooldowns reset after 3 days.^000000";
 	close;
 
+L_SuggestMonsters:
+	// Call BountyBoard to build the suggestion list
+	// Results stored in @suggest_* player variables
+	doevent "BountyBoard::OnBuildSuggestions";
+
+	if (@suggest_count == 0) {
+		mes "[Monster Hunter Guild]";
+		mes "^FF8800Data is still loading...^000000";
+		mes "Please try again in a moment!";
+		goto L_SuggestCleanup;
+	}
+
+	// Display suggestions grouped by location
+	@suggest_shown = 0;
+
+L_SuggestDisplay:
+	mes "[Monster Hunter Guild]";
+	if (@suggest_shown == 0) {
+		mes "Best bounties for Lv" + BaseLevel + ":";
+	} else {
+		mes "More suggestions:";
+	}
+	mes " ";
+
+	.@show_count = 0;
+	.@last_loc$ = "";
+	.@start = @suggest_shown;
+	.@limit = (@suggest_count > @suggest_shown + 10) ? @suggest_shown + 10 : @suggest_count;
+
+	for (.@i = .@start; .@i < .@limit; .@i++) {
+		// Show location header if changed
+		if (@suggest_loc$[.@i] != .@last_loc$) {
+			if (.@last_loc$ != "") mes " ";
+			mes "^0055FF" + @suggest_loc$[.@i] + "^000000";
+			.@last_loc$ = @suggest_loc$[.@i];
+		}
+
+		.@name$ = getmonsterinfo(@suggest_mob[.@i], MOB_NAME);
+		.@zeny_k = @suggest_zeny[.@i] / 1000;
+
+		// Build reward string
+		if (@suggest_cd[.@i] >= 300) {
+			// Discovery bonus - highlight it
+			.@reward$ = "^00FF00[3x] " + @suggest_exp[.@i] + "% " + .@zeny_k + "k^000000";
+		} else if (@suggest_cd[.@i] < 100) {
+			// On cooldown - show reduced and dim
+			.@reward$ = "^FF8800" + @suggest_exp[.@i] + "% " + .@zeny_k + "k (" + @suggest_cd[.@i] + "%)^000000";
+		} else {
+			// Normal
+			.@reward$ = @suggest_exp[.@i] + "% " + .@zeny_k + "k";
+		}
+
+		mes "  ^777777Lv" + @suggest_lv[.@i] + "^000000 " + .@name$ + " " + .@reward$;
+		.@show_count++;
+		@suggest_shown++;
+	}
+
+	// Show more option if there are more
+	if (@suggest_shown < @suggest_count) {
+		next;
+		if (select(" ~ Show " + (@suggest_count - @suggest_shown) + " more: ~ Done") == 1) {
+			goto L_SuggestDisplay;
+		}
+	}
+
+L_SuggestCleanup:
+	// Clean up player variables
+	deletearray @suggest_mob;
+	deletearray @suggest_lv;
+	deletearray @suggest_map$;
+	deletearray @suggest_loc$;
+	deletearray @suggest_exp;
+	deletearray @suggest_zeny;
+	deletearray @suggest_cd;
+	deletearray @suggest_score;
+	@suggest_count = 0;
+	@suggest_shown = 0;
+	close;
+
 L_Leave:
 	mes "[Monster Hunter Guild]";
 	mes "Happy hunting!";
@@ -1989,6 +2102,9 @@ OnInit:
 	for (.@i = 0; .@i < getarraysize(.ShopItems); .@i++) {
 		npcshopadditem "hunt_point_shop", .ShopItems[.@i], .ShopCosts[.@i];
 	}
+
+	// Warmup: access BountyBoard to ensure cross-NPC calls work on first player interaction
+	.@warmup = getvariableofnpc(.Initialized, "BountyBoard");
 	end;
 }
 

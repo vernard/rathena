@@ -9,7 +9,7 @@
 //= - Points are account-wide (shared across characters)
 //= - Partial time tracking (logout saves progress in minutes)
 //= - Maximum 200 points cap (must redeem before earning more)
-//= - Shop items: Siege Box, Poison Bottle, Speed Pot, etc.
+//= - Shop items: ESB, Speed Potions, Bubble Gum
 //===== Changelog: ==========================================
 //= 1.0 Initial implementation
 //= 1.1 Simplified to track minutes instead of seconds
@@ -209,19 +209,15 @@ OnInit:
 	// Define shop items and their point costs
 	// Format: Item ID, Point Cost
 	setarray .ShopItems[0],
-		662,     // Authoritative Badge (3 min, +25% speed)
 		12028,   // Box of Thunder (45 sec, +40% speed)
 		12016,   // Speed Potion (15 sec, +60% speed)
-		678,     // Poison Bottle
 		14003,   // Elite Siege Supply Box
 		12210;   // Bubble Gum
 
 	setarray .ShopPrices[0],
-		3,       // Authoritative Badge = 3 pts (cheap walking buff)
-		10,      // Box of Thunder = 10 pts (mid-tier speed)
-		10,      // Speed Potion = 10 pts (burst speed)
-		5,       // Poison Bottle = 5 pts
-		30,      // Elite Siege Supply = 30 pts
+		5,       // Box of Thunder = 5 pts (mid-tier speed)
+		5,       // Speed Potion = 5 pts (burst speed)
+		15,      // Elite Siege Supply = 15 pts
 		100;     // Bubble Gum = 100 pts
 
 	// Build the visual shop (prices shown are point costs)

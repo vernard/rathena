@@ -1,0 +1,144 @@
+//===== rAthena Script =======================================
+//= Happy Hour Event
+//= 2x EXP rates for a scheduled duration
+//===== Description: =========================================
+//= EXP-only bonus event (no drop rate changes to protect economy)
+//= - Triggered by scheduler or manually by GM
+//= - Doubles base and job EXP rates
+//= - Announces on start, every 30 min, and on end
+//============================================================
+
+-	script	HappyHour	FAKE_NPC,{
+	end;
+
+OnInit:
+	// Initialize state
+	set $@HappyHourActive, 0;
+	set $@HappyHourEndTime, 0;
+	end;
+
+// ============================================================
+// Event Start - Called by scheduler or GM
+// ============================================================
+OnEventStart:
+	if ($@HappyHourActive) {
+		debugmes "[HappyHour] Already active, ignoring start request";
+		end;
+	}
+
+	// Get duration (default 120 minutes if not set)
+	if ($@HappyHourDuration <= 0) set $@HappyHourDuration, 120;
+
+	// Store original rates
+	set $@HH_OrigBaseExp, getbattleflag("base_exp_rate");
+	set $@HH_OrigJobExp, getbattleflag("job_exp_rate");
+
+	// Double EXP rates (no drop changes!)
+	setbattleflag("base_exp_rate", $@HH_OrigBaseExp * 2);
+	setbattleflag("job_exp_rate", $@HH_OrigJobExp * 2, true);  // true = reload
+
+	// Mark as active
+	set $@HappyHourActive, 1;
+	set $@HappyHourEndTime, gettimetick(2) + ($@HappyHourDuration * 60);
+	set $@HappyHourStartTime, gettimetick(2);
+
+	// Log to database
+	query_sql "INSERT INTO event_instances (event_type_id, event_code, actual_start, status, trigger_type) SELECT id, 'happy_hour', NOW(), 'active', 'scheduled' FROM event_types WHERE code = 'happy_hour'";
+
+	// Announce
+	announce "===========================================", bc_all, 0xFFD700;
+	announce "      HAPPY HOUR HAS BEGUN!", bc_all, 0xFFD700;
+	announce "   2x EXP rates for "+$@HappyHourDuration+" minutes!", bc_all, 0xFFD700;
+	announce "===========================================", bc_all, 0xFFD700;
+
+	// Set timer for periodic announcements (every 30 minutes)
+	initnpctimer;
+
+	// Set end timer
+	addtimer $@HappyHourDuration * 60 * 1000, strnpcinfo(0)+"::OnEventEnd";
+
+	debugmes "[HappyHour] Started - Duration: "+$@HappyHourDuration+" minutes";
+	end;
+
+// ============================================================
+// Periodic Reminder (every 30 minutes)
+// ============================================================
+OnTimer1800000:  // 30 minutes
+	if (!$@HappyHourActive) {
+		stopnpctimer;
+		end;
+	}
+
+	// Calculate remaining time
+	set .@remaining, ($@HappyHourEndTime - gettimetick(2)) / 60;
+
+	if (.@remaining > 0) {
+		announce "Happy Hour is active! 2x EXP rates - "+.@remaining+" minutes remaining!", bc_all, 0xFFD700;
+	}
+
+	// Continue timer
+	initnpctimer;
+	end;
+
+// ============================================================
+// Event End
+// ============================================================
+OnEventEnd:
+	if (!$@HappyHourActive) {
+		debugmes "[HappyHour] Not active, ignoring end request";
+		end;
+	}
+
+	// Restore original rates
+	setbattleflag("base_exp_rate", $@HH_OrigBaseExp);
+	setbattleflag("job_exp_rate", $@HH_OrigJobExp, true);  // true = reload
+
+	// Mark as inactive
+	set $@HappyHourActive, 0;
+	set $@HappyHourEndTime, 0;
+
+	// Update database
+	query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE event_code = 'happy_hour' AND status = 'active' ORDER BY id DESC LIMIT 1";
+
+	// Stop timer
+	stopnpctimer;
+
+	// Announce
+	announce "===========================================", bc_all, 0xFFD700;
+	announce "      HAPPY HOUR HAS ENDED!", bc_all, 0xFFD700;
+	announce "   EXP rates have returned to normal.", bc_all, 0xFFD700;
+	announce "===========================================", bc_all, 0xFFD700;
+
+	debugmes "[HappyHour] Ended";
+	end;
+
+// ============================================================
+// Manual Stop (for GM use)
+// ============================================================
+OnManualStop:
+	if (!$@HappyHourActive) {
+		end;
+	}
+
+	// Clear the scheduled end timer
+	deltimer strnpcinfo(0)+"::OnEventEnd";
+
+	// End the event
+	donpcevent strnpcinfo(0)+"::OnEventEnd";
+	end;
+}
+
+// ============================================================
+// Helper function to check if Happy Hour is active
+// ============================================================
+function	script	F_IsHappyHourActive	{
+	return $@HappyHourActive;
+}
+
+// ============================================================
+// Helper function to get Happy Hour remaining time (minutes)
+// ============================================================
+function	script	F_HappyHourRemaining	{
+	if (!$@HappyHourActive) return 0;
+	return ($@HappyHourEndTime - gettimetick(2)) / 60;
+}

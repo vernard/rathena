@@ -1,0 +1,255 @@
+//===== rAthena Script =======================================
+//= GM Event Management NPC
+//= Administrative controls for the event system
+//===== Description: =========================================
+//= GM-only NPC for:
+//= - Triggering Happy Hour manually
+//= - Configuring MOTD settings
+//= - Managing event schedules
+//= - Viewing event history
+//============================================================
+
+prontera,148,180,3	script	Event Manager	4_M_MANAGER,{
+	// GM check (level 60+)
+	if (getgmlevel() < 60) {
+		mes "[Event Manager]";
+		mes "This area is for staff only.";
+		close;
+	}
+
+	mes "[Event Manager]";
+	mes "Welcome, "+strcharinfo(0)+".";
+	mes "What would you like to manage?";
+	next;
+
+	switch(select("Happy Hour:Monster of the Day:Seed MOTD Monsters:Event History:Close")) {
+		case 1: callsub S_HappyHour; break;
+		case 2: callsub S_MOTD; break;
+		case 3: callsub S_SeedMonsters; break;
+		case 4: callsub S_History; break;
+		case 5: close;
+	}
+	end;
+
+// ============================================================
+// Happy Hour Management
+// ============================================================
+S_HappyHour:
+	mes "[Happy Hour Management]";
+
+	if ($@HappyHourActive) {
+		set .@remaining, callfunc("F_HappyHourRemaining");
+		mes "^00AA00Status: ACTIVE^000000";
+		mes "Time remaining: "+.@remaining+" minutes";
+		next;
+
+		if (select("Stop Happy Hour:Back") == 1) {
+			donpcevent "HappyHour::OnManualStop";
+			mes "[Event Manager]";
+			mes "Happy Hour has been stopped.";
+			close;
+		}
+		goto S_HappyHour;
+	}
+
+	mes "^FF0000Status: INACTIVE^000000";
+	next;
+
+	switch(select("Start Happy Hour:Manage Schedule:Back")) {
+		case 1:
+			mes "[Start Happy Hour]";
+			mes "Select duration:";
+			next;
+			set .@choice, select("30 minutes:1 hour:2 hours:3 hours:Custom");
+			switch(.@choice) {
+				case 1: set $@HappyHourDuration, 30; break;
+				case 2: set $@HappyHourDuration, 60; break;
+				case 3: set $@HappyHourDuration, 120; break;
+				case 4: set $@HappyHourDuration, 180; break;
+				case 5:
+					mes "[Custom Duration]";
+					mes "Enter duration in minutes:";
+					input .@custom;
+					if (.@custom < 10 || .@custom > 480) {
+						mes "Invalid duration. Must be 10-480 minutes.";
+						close;
+					}
+					set $@HappyHourDuration, .@custom;
+					break;
+			}
+			donpcevent "HappyHour::OnEventStart";
+			mes "[Event Manager]";
+			mes "Happy Hour started for "+$@HappyHourDuration+" minutes!";
+			close;
+
+		case 2:
+			mes "[Happy Hour Schedule]";
+			query_sql "SELECT id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), start_hour, start_minute, duration_minutes, enabled FROM event_schedule WHERE event_code = 'happy_hour' ORDER BY day_of_week", .@ids, .@days$, .@hours, .@mins, .@durations, .@enabled;
+
+			if (getarraysize(.@ids) == 0) {
+				mes "No scheduled Happy Hours.";
+			} else {
+				for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+					set .@status$, (.@enabled[.@i] ? "^00AA00ON^000000" : "^FF0000OFF^000000");
+					mes .@days$[.@i]+" "+.@hours[.@i]+":"+(.@mins[.@i] < 10 ? "0" : "")+.@mins[.@i]+" ("+.@durations[.@i]+"m) ["+.@status$+"]";
+				}
+			}
+			next;
+
+			switch(select("Add Schedule:Toggle Schedule:Remove Schedule:Back")) {
+				case 1:
+					mes "Select day:";
+					next;
+					set .@day, select("Sunday:Monday:Tuesday:Wednesday:Thursday:Friday:Saturday") - 1;
+					mes "Enter hour (0-23):";
+					input .@hour;
+					if (.@hour < 0 || .@hour > 23) { mes "Invalid hour."; close; }
+					mes "Enter minute (0-59):";
+					input .@minute;
+					if (.@minute < 0 || .@minute > 59) { mes "Invalid minute."; close; }
+					mes "Duration (minutes):";
+					input .@duration;
+					if (.@duration < 10 || .@duration > 480) { mes "Invalid duration."; close; }
+
+					query_sql "INSERT INTO event_schedule (event_code, schedule_type, day_of_week, start_hour, start_minute, duration_minutes, enabled) VALUES ('happy_hour', 'fixed', "+.@day+", "+.@hour+", "+.@minute+", "+.@duration+", 1)";
+					callsub S_InvalidateCache;
+					mes "Schedule added!";
+					close;
+
+				case 2:
+					if (getarraysize(.@ids) == 0) { mes "No schedules to toggle."; close; }
+					mes "Enter schedule ID to toggle:";
+					input .@toggle_id;
+					query_sql "UPDATE event_schedule SET enabled = NOT enabled WHERE id = "+.@toggle_id;
+					callsub S_InvalidateCache;
+					mes "Schedule toggled!";
+					close;
+
+				case 3:
+					if (getarraysize(.@ids) == 0) { mes "No schedules to remove."; close; }
+					mes "Enter schedule ID to remove:";
+					input .@remove_id;
+					query_sql "DELETE FROM event_schedule WHERE id = "+.@remove_id;
+					callsub S_InvalidateCache;
+					mes "Schedule removed!";
+					close;
+
+				case 4:
+					goto S_HappyHour;
+			}
+			close;
+
+		case 3:
+			end;
+	}
+	end;
+
+// ============================================================
+// Monster of the Day Management
+// ============================================================
+S_MOTD:
+	mes "[MOTD Settings]";
+
+	// Get current config
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
+
+	mes "Current Settings:";
+	mes "Selection Mode: ^0000FF"+.@mode$+"^000000";
+	mes "Min Monster Level: ^0000FF"+.@min_level$+"^000000";
+	next;
+
+	switch(select("Change Selection Mode:Change Min Level:Regenerate Schedule:View Today's Schedule:Back")) {
+		case 1:
+			mes "Select mode:";
+			next;
+			set .@new_mode, select("Random:Tier Rotation");
+			if (.@new_mode == 1) {
+				query_sql "UPDATE event_config SET config_value = 'random' WHERE config_key = 'motd_selection_mode'";
+			} else {
+				query_sql "UPDATE event_config SET config_value = 'tier_rotation' WHERE config_key = 'motd_selection_mode'";
+			}
+			callsub S_InvalidateCache;
+			mes "Mode updated!";
+			close;
+
+		case 2:
+			mes "Enter minimum monster level (1-99):";
+			input .@new_level;
+			if (.@new_level < 1 || .@new_level > 99) {
+				mes "Invalid level.";
+				close;
+			}
+			query_sql "UPDATE event_config SET config_value = '"+.@new_level+"' WHERE config_key = 'motd_min_level'";
+			callsub S_InvalidateCache;
+			mes "Min level updated to "+.@new_level+"!";
+			mes "Run 'Seed MOTD Monsters' to apply.";
+			close;
+
+		case 3:
+			donpcevent "EventScheduler::OnGenerateMOTDSchedule";
+			callsub S_InvalidateCache;
+			mes "MOTD schedule regenerated!";
+			close;
+
+		case 4:
+			mes "[Today's MOTD Schedule]";
+			query_sql "SELECT mob_name, tier, DATE_FORMAT(start_time, '%H:%i'), DATE_FORMAT(end_time, '%H:%i') FROM motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@names$, .@tiers$, .@starts$, .@ends$;
+
+			if (getarraysize(.@names$) == 0) {
+				mes "No schedule for today.";
+			} else {
+				for (set .@i, 0; .@i < getarraysize(.@names$); set .@i, .@i + 1) {
+					mes .@starts$[.@i]+"-"+.@ends$[.@i]+": "+.@names$[.@i]+" ["+.@tiers$[.@i]+"]";
+				}
+			}
+			close;
+
+		case 5:
+			end;
+	}
+	end;
+
+// ============================================================
+// Seed MOTD Monsters
+// ============================================================
+S_SeedMonsters:
+	mes "[Seed MOTD Monsters]";
+	mes "This will populate the monster pool";
+	mes "from the mob database.";
+	mes " ";
+	mes "^FF0000Warning: This will clear and rebuild^000000";
+	mes "^FF0000the entire monster pool!^000000";
+	next;
+
+	if (select("Proceed:Cancel") == 1) {
+		donpcevent "MOTDSeeder::OnSeedMonsters";
+		mes "Monster pool has been seeded!";
+		mes "Check the server console for count.";
+	}
+	close;
+
+// ============================================================
+// Event History
+// ============================================================
+S_History:
+	mes "[Event History]";
+	query_sql "SELECT event_code, DATE_FORMAT(actual_start, '%Y-%m-%d %H:%i'), DATE_FORMAT(actual_end, '%H:%i'), status FROM event_instances ORDER BY id DESC LIMIT 10", .@codes$, .@starts$, .@ends$, .@status$;
+
+	if (getarraysize(.@codes$) == 0) {
+		mes "No event history found.";
+	} else {
+		for (set .@i, 0; .@i < getarraysize(.@codes$); set .@i, .@i + 1) {
+			mes .@starts$[.@i]+" - "+.@ends$[.@i];
+			mes "  "+.@codes$[.@i]+" ["+.@status$[.@i]+"]";
+		}
+	}
+	close;
+
+// ============================================================
+// Invalidate Website Cache
+// ============================================================
+S_InvalidateCache:
+	query_sql "UPDATE event_config SET config_value = config_value + 1 WHERE config_key = 'cache_version'";
+	return;
+}

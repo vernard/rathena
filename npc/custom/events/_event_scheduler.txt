@@ -1,0 +1,138 @@
+//===== rAthena Script =======================================
+//= Event Scheduler
+//= Core scheduler that manages all automated events
+//===== Description: =========================================
+//= Timer-based event scheduler that:
+//= - Checks for scheduled events every minute
+//= - Triggers event start/end via donpcevent
+//= - Manages MOTD daily schedule generation
+//============================================================
+
+-	script	EventScheduler	FAKE_NPC,{
+	end;
+
+OnInit:
+	// Generate MOTD schedule on server start
+	donpcevent "EventScheduler::OnGenerateMOTDSchedule";
+
+	// Start the scheduler timer (check every 60 seconds)
+	initnpctimer;
+	end;
+
+OnTimer60000:
+	// Reset timer for next check
+	stopnpctimer;
+	initnpctimer;
+
+	// Check for scheduled events
+	callsub S_CheckScheduledEvents;
+
+	// Check if MOTD needs rotation announcement
+	callsub S_CheckMOTDRotation;
+	end;
+
+// ============================================================
+// Check for scheduled Happy Hour events
+// ============================================================
+S_CheckScheduledEvents:
+	// Check if Happy Hour should start
+	query_sql "SELECT id, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 AND schedule_type = 'fixed' AND day_of_week = WEEKDAY(NOW()) AND start_hour = HOUR(NOW()) AND start_minute = MINUTE(NOW())", .@sched_id, .@duration;
+
+	if (.@sched_id > 0 && !$@HappyHourActive) {
+		// Start Happy Hour
+		set $@HappyHourDuration, .@duration;
+		donpcevent "HappyHour::OnEventStart";
+	}
+	return;
+
+// ============================================================
+// Check MOTD rotation (announce new monster)
+// ============================================================
+S_CheckMOTDRotation:
+	// Get current MOTD
+	query_sql "SELECT mob_id, mob_name FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id, .@mob_name$;
+
+	// Check if this is a new rotation (different from last announced)
+	if (.@mob_id > 0 && .@mob_id != $@LastMOTDMobID) {
+		set $@LastMOTDMobID, .@mob_id;
+		set $@CurrentMOTDName$, .@mob_name$;
+
+		// Calculate time remaining
+		query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE mob_id = "+.@mob_id+" AND NOW() BETWEEN start_time AND end_time", .@mins_left;
+
+		// Check if this monster has a bounty
+		query_sql "SELECT has_bounty FROM motd_monsters WHERE mob_id = "+.@mob_id, .@has_bounty;
+
+		if (.@has_bounty) {
+			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP and Hunt Points for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+		} else {
+			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+		}
+	}
+	return;
+
+// ============================================================
+// Generate MOTD Schedule (called daily at midnight and on init)
+// ============================================================
+OnClock0000:
+OnGenerateMOTDSchedule:
+	// Get configuration
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
+
+	if (.@mode$ == "") set .@mode$, "random";
+	if (.@min_level$ == "") set .@min_level, 50; else set .@min_level, atoi(.@min_level$);
+
+	// Clear today's schedule
+	query_sql "DELETE FROM motd_schedule WHERE DATE(start_time) = CURDATE()";
+
+	// Generate 8 slots (every 3 hours)
+	set .@tier_index, 0;
+	setarray .@tiers$[0], "medium", "hard";
+
+	for (set .@i, 0; .@i < 8; set .@i, .@i + 1) {
+		set .@hour, .@i * 3;
+
+		if (.@mode$ == "tier_rotation") {
+			// Alternate between medium and hard
+			set .@tier$, .@tiers$[.@tier_index % 2];
+			set .@tier_index, .@tier_index + 1;
+
+			// Select random monster from this tier
+			query_sql "SELECT mob_id, mob_name FROM motd_monsters WHERE tier = '"+.@tier$+"' AND enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$;
+		} else {
+			// Random mode - pick any monster
+			query_sql "SELECT mob_id, mob_name, tier FROM motd_monsters WHERE enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$, .@tier$;
+		}
+
+		if (.@mob_id > 0) {
+			// Insert into schedule
+			query_sql "INSERT INTO motd_schedule (mob_id, mob_name, start_time, end_time, tier) VALUES ("+.@mob_id+", '"+escape_sql(.@mob_name$)+"', DATE_ADD(CURDATE(), INTERVAL "+.@hour+" HOUR), DATE_ADD(CURDATE(), INTERVAL "+(.@hour+3)+" HOUR), '"+.@tier$+"')";
+		}
+	}
+
+	debugmes "[EventScheduler] Generated MOTD schedule for today";
+	end;
+}
+
+// ============================================================
+// Helper function to get current MOTD info
+// Called by other NPCs to check if a mob is current MOTD
+// ============================================================
+function	script	F_GetCurrentMOTD	{
+	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id, .@mob_name$, .@mins_left;
+
+	// Return mob_id (0 if none active)
+	return .@mob_id;
+}
+
+// ============================================================
+// Helper function to check if a specific mob is current MOTD
+// ============================================================
+function	script	F_IsMOTD	{
+	set .@check_mob_id, getarg(0, 0);
+
+	query_sql "SELECT 1 FROM motd_schedule WHERE mob_id = "+.@check_mob_id+" AND NOW() BETWEEN start_time AND end_time LIMIT 1", .@is_motd;
+
+	return .@is_motd;
+}

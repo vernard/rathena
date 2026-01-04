@@ -1,0 +1,128 @@
+//===== rAthena Script =======================================
+//= Monster of the Day Display NPC
+//= Shows current and upcoming MOTD monsters
+//===== Description: =========================================
+//= Player-facing NPC that displays:
+//= - Current featured monster with time remaining
+//= - Next 5 upcoming monsters
+//= - Whether bounty board is available for each
+//= Note: The actual 3x bonus is applied in bounty_board.txt
+//============================================================
+
+prontera,152,187,5	script	Monster Hunter Board	4_BOARD3,{
+	mes "[Monster Hunter Board]";
+	mes "^0055FFToday's Featured Hunts^000000";
+	mes "Monsters featured here grant ^FF00003x EXP^000000 and ^FF00003x Hunt Points^000000!";
+	next;
+
+	// Get current MOTD
+	query_sql "SELECT mob_id, mob_name, tier, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@cur_id, .@cur_name$, .@cur_tier$, .@cur_mins;
+
+	if (.@cur_id > 0) {
+		// Check if has bounty
+		query_sql "SELECT has_bounty FROM motd_monsters WHERE mob_id = "+.@cur_id, .@has_bounty;
+
+		// Format time remaining
+		if (.@cur_mins >= 60) {
+			set .@time$, (.@cur_mins / 60)+"h "+(.@cur_mins % 60)+"m";
+		} else {
+			set .@time$, .@cur_mins+"m";
+		}
+
+		mes "^FF0000>> NOW FEATURED <<^000000";
+		mes "^0000FF"+.@cur_name$+"^000000 ["+.@cur_tier$+"]";
+		mes "Time remaining: ^00AA00"+.@time$+"^000000";
+
+		if (.@has_bounty) {
+			mes "^00AA00✓ Bounty available - 3x Hunt Points!^000000";
+		} else {
+			mes "^888888✗ No bounty - 3x EXP only^000000";
+		}
+		next;
+	} else {
+		mes "^888888No monster currently featured.^000000";
+		mes "Schedule may be generating...";
+		next;
+	}
+
+	// Get upcoming monsters
+	mes "[Upcoming Monsters]";
+	query_sql "SELECT mob_id, mob_name, tier, DATE_FORMAT(start_time, '%H:%i') as start, TIMESTAMPDIFF(MINUTE, NOW(), start_time) as mins_until FROM motd_schedule WHERE start_time > NOW() ORDER BY start_time LIMIT 5", .@up_ids, .@up_names$, .@up_tiers$, .@up_starts$, .@up_mins;
+
+	if (getarraysize(.@up_ids) == 0) {
+		mes "^888888No upcoming monsters scheduled.^000000";
+	} else {
+		for (set .@i, 0; .@i < getarraysize(.@up_ids); set .@i, .@i + 1) {
+			// Check if has bounty
+			query_sql "SELECT has_bounty FROM motd_monsters WHERE mob_id = "+.@up_ids[.@i], .@has_bounty;
+
+			// Format time until
+			if (.@up_mins[.@i] >= 60) {
+				set .@until$, "in "+(.@up_mins[.@i] / 60)+"h "+(.@up_mins[.@i] % 60)+"m";
+			} else {
+				set .@until$, "in "+.@up_mins[.@i]+"m";
+			}
+
+			if (.@has_bounty) {
+				mes "> "+.@up_names$[.@i]+" ["+.@up_tiers$[.@i]+"] - "+.@until$+" ^00AA00✓^000000";
+			} else {
+				mes "> "+.@up_names$[.@i]+" ["+.@up_tiers$[.@i]+"] - "+.@until$;
+			}
+		}
+	}
+	next;
+
+	mes "[Monster Hunter Board]";
+	mes "^888888Legend:^000000";
+	mes "^00AA00✓^000000 = Bounty available (3x Hunt Points)";
+	mes "No mark = 3x EXP only";
+	mes " ";
+	mes "Hunt the featured monster to earn bonus rewards!";
+	close;
+}
+
+// ============================================================
+// Seed MOTD Monsters from mob_db
+// Run this once to populate the motd_monsters table
+// ============================================================
+-	script	MOTDSeeder	FAKE_NPC,{
+	end;
+
+OnSeedMonsters:
+	// This is called manually or via GM command to populate monsters
+	// Gets monsters from the SQL mob_db table
+
+	// Get minimum level from config
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
+	if (.@min_level$ == "") set .@min_level, 50; else set .@min_level, atoi(.@min_level$);
+
+	// Clear existing monsters
+	query_sql "DELETE FROM motd_monsters";
+
+	// Insert monsters from mob_db
+	// Exclude: MVPs (mode & 0x20 = MVP), mini-bosses
+	// Only level 50+ (or configured min level)
+	// Tier: medium (50-75), hard (76+)
+	query_sql "INSERT INTO motd_monsters (mob_id, mob_name, mob_level, tier, has_bounty, enabled) SELECT ID, iName, LV, CASE WHEN LV <= 75 THEN 'medium' ELSE 'hard' END, 0, 1 FROM mob_db WHERE LV >= "+.@min_level+" AND (Mode & 32) = 0 AND (Mode & 8192) = 0 AND ID < 2000";
+
+	// Count inserted
+	query_sql "SELECT COUNT(*) FROM motd_monsters", .@count;
+
+	announce "[MOTD] Seeded "+.@count+" monsters into the pool.", bc_self;
+	debugmes "[MOTDSeeder] Seeded "+.@count+" monsters";
+	end;
+
+OnUpdateBountyFlags:
+	// Updates the has_bounty flag based on bounty board configuration
+	// This checks if the monster exists in any bounty board location
+
+	// For now, we'll mark has_bounty = 0 for all
+	// This would need to be updated based on your bounty board monster lists
+	query_sql "UPDATE motd_monsters SET has_bounty = 0";
+
+	// You can add specific monster IDs that have bounties here
+	// Example: UPDATE motd_monsters SET has_bounty = 1 WHERE mob_id IN (1001, 1002, ...)
+
+	debugmes "[MOTDSeeder] Updated bounty flags";
+	end;
+}
