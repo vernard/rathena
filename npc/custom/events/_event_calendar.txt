@@ -8,7 +8,7 @@
 //= - Event descriptions and rewards
 //============================================================
 
-prontera,150,180,5	script	Event Calendar	4_F_KAFRA1,{
+prontera,141,172,5	script	Event Calendar	4_F_KAFRA1,{
 	mes "[Event Calendar]";
 	mes "Welcome to the Server Event Calendar!";
 	mes "Here you can see all active and upcoming events.";

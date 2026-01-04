@@ -9,7 +9,7 @@
 //= - Viewing event history
 //============================================================
 
-prontera,148,180,3	script	Event Manager	4_M_MANAGER,{
+prontera,138,172,3	script	Event Manager	4_M_MANAGER,{
 	// GM check (level 60+)
 	if (getgmlevel() < 60) {
 		mes "[Event Manager]";
