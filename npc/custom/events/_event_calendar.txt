@@ -4,7 +4,7 @@
 //= Includes GM management options for staff
 //============================================================
 
-prontera,141,172,5	script	Events Manager	4_ANGELING,{
+prontera,141,172,5	script	Events Manager	4_M_FAIRYKING,{
 	mes "[Events Manager]";
 	mes "Welcome to the Server Events!";
 	mes "Here you can see all active and upcoming events.";
