@@ -9,7 +9,7 @@
 //= Note: The actual 3x bonus is applied in bounty_board.txt
 //============================================================
 
-prontera,152,187,5	script	Monster Hunter Board	4_BOARD3,{
+prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 	mes "[Monster Hunter Board]";
 	mes "^0055FFToday's Featured Hunts^000000";
 	mes "Featured monsters grant";
