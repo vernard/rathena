@@ -89,18 +89,34 @@ S_InitializeNextRun:
 
 // ============================================================
 // Restore active events after server restart
+// Also picks up 'once' events that are within their time window
 // ============================================================
 S_RestoreActiveEvents:
-	// Check for active EXP Boost (one-time event still within time window)
+	// Check for EXP Boost (one-time event within its time window)
+	// Handles both 'active' (was running) and 'scheduled' (should have started)
 	if (!$@ExpBoostActive) {
-		query_sql "SELECT id, multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM event_schedule WHERE event_code = 'exp_boost' AND enabled = 1 AND schedule_type = 'once' AND status = 'active' AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@eb_id, .@eb_mult, .@eb_remaining;
+		query_sql "SELECT es.id, es.multiplier, TIMESTAMPDIFF(MINUTE, NOW(), es.end_datetime), es.status FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE es.event_code = 'exp_boost' AND es.enabled = 1 AND et.enabled = 1 AND es.schedule_type = 'once' AND es.status IN ('scheduled', 'active') AND NOW() BETWEEN es.start_datetime AND es.end_datetime LIMIT 1", .@eb_id, .@eb_mult, .@eb_remaining, .@eb_status$;
 
 		if (.@eb_id > 0 && .@eb_remaining > 0) {
+			// Create instance if this was 'scheduled' (not yet started)
+			if (.@eb_status$ == "scheduled") {
+				query_sql "SELECT id FROM event_types WHERE code = 'exp_boost'", .@type_id;
+				query_sql "INSERT INTO event_instances (event_type_id, event_code, schedule_id, actual_start, status, trigger_type) VALUES ("+.@type_id+", 'exp_boost', "+.@eb_id+", NOW(), 'active', 'scheduled')";
+				query_sql "SELECT LAST_INSERT_ID()", .@instance_id;
+				set $@ExpBoostInstanceId, .@instance_id;
+
+				// Update schedule to active
+				query_sql "UPDATE event_schedule SET status = 'active', actual_start = NOW() WHERE id = "+.@eb_id;
+
+				// Update cache
+				query_sql "UPDATE event_current_state SET instance_id = "+.@instance_id+", is_active = 1, cache_data = JSON_OBJECT('schedule_id', "+.@eb_id+", 'multiplier', "+.@eb_mult+") WHERE event_type_id = "+.@type_id;
+			}
+
 			set $@ExpBoostMultiplier, .@eb_mult;
 			set $@ExpBoostDuration, .@eb_remaining;
 			set $@ExpBoostScheduleId, .@eb_id;
 			donpcevent "ExpBoost::OnEventStart";
-			debugmes "[EventScheduler] Restored active EXP Boost";
+			debugmes "[EventScheduler] Restored EXP Boost (was "+.@eb_status$+")";
 		}
 	}
 

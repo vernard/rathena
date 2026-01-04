@@ -38,7 +38,8 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 		set .@has_active, 1;
 	} else {
 		// Check database for active boost not yet loaded by scheduler
-		query_sql "SELECT multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM event_schedule WHERE event_code = 'exp_boost' AND schedule_type = 'once' AND status IN ('scheduled', 'active') AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@eb_mult, .@eb_remaining;
+		// Must be enabled in both event_schedule AND event_types
+		query_sql "SELECT es.multiplier, TIMESTAMPDIFF(MINUTE, NOW(), es.end_datetime) FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE es.event_code = 'exp_boost' AND es.enabled = 1 AND et.enabled = 1 AND es.schedule_type = 'once' AND es.status IN ('scheduled', 'active') AND NOW() BETWEEN es.start_datetime AND es.end_datetime LIMIT 1", .@eb_mult, .@eb_remaining;
 		if (.@eb_mult > 0 && .@eb_remaining > 0) {
 			set .@mult$, callfunc("F_FormatExpMultiplier", .@eb_mult);
 			set .@remaining$, callfunc("F_FormatDuration", .@eb_remaining);
@@ -375,7 +376,8 @@ L_ExpBoost:
 	}
 
 	// Check database for active boost not yet loaded by scheduler
-	query_sql "SELECT id, multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM event_schedule WHERE event_code = 'exp_boost' AND schedule_type = 'once' AND status IN ('scheduled', 'active') AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@active_id, .@active_mult, .@active_remaining;
+	// Must be enabled to show as "loading" (disabled boosts won't be picked up)
+	query_sql "SELECT es.id, es.multiplier, TIMESTAMPDIFF(MINUTE, NOW(), es.end_datetime) FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE es.event_code = 'exp_boost' AND es.enabled = 1 AND et.enabled = 1 AND es.schedule_type = 'once' AND es.status IN ('scheduled', 'active') AND NOW() BETWEEN es.start_datetime AND es.end_datetime LIMIT 1", .@active_id, .@active_mult, .@active_remaining;
 	if (.@active_id > 0 && .@active_remaining > 0) {
 		set .@mult$, callfunc("F_FormatExpMultiplier", .@active_mult);
 		set .@remaining$, callfunc("F_FormatDuration", .@active_remaining);
