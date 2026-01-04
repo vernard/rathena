@@ -1,16 +1,12 @@
 //===== rAthena Script =======================================
-//= Event Calendar NPC
+//= Events Manager NPC
 //= Shows all current and upcoming server events
-//===== Description: =========================================
-//= Player-facing NPC that displays:
-//= - Currently active events
-//= - Upcoming scheduled events
-//= - Event descriptions and rewards
+//= Includes GM management options for staff
 //============================================================
 
-prontera,141,172,5	script	Event Calendar	4_F_KAFRA1,{
-	mes "[Event Calendar]";
-	mes "Welcome to the Server Event Calendar!";
+prontera,141,172,5	script	Events Manager	4_ANGELING,{
+	mes "[Events Manager]";
+	mes "Welcome to the Server Events!";
 	mes "Here you can see all active and upcoming events.";
 	next;
 
@@ -69,35 +65,252 @@ prontera,141,172,5	script	Event Calendar	4_F_KAFRA1,{
 	next;
 
 	// ========================================
-	// MENU
+	// MENU (with GM options if applicable)
 	// ========================================
-	switch(select("View Event Details:View My Event Stats:Close")) {
+	if (getgmlevel() >= 60) {
+		switch(select("View Event Details:View My Event Stats:^FF0000[GM] Manage Events^000000:Close")) {
+			case 1: goto L_EventDetails;
+			case 2: goto L_MyStats;
+			case 3: goto L_GMMenu;
+			case 4: close;
+		}
+	} else {
+		switch(select("View Event Details:View My Event Stats:Close")) {
+			case 1: goto L_EventDetails;
+			case 2: goto L_MyStats;
+			case 3: close;
+		}
+	}
+	end;
+
+L_EventDetails:
+	mes "[Event Details]";
+	mes "^FFD700Happy Hour^000000";
+	mes "2x EXP rates for all monsters!";
+	mes "Scheduled 1-2 times per week.";
+	next;
+	mes "^00FF00Monster of the Day^000000";
+	mes "3x EXP and Hunt Points for a";
+	mes "featured monster. Changes every";
+	mes "3 hours. Check the Monster Hunter";
+	mes "Board for current target!";
+	close;
+
+L_MyStats:
+	mes "[Your Event Stats]";
+	// Get event coin balance
+	query_sql "SELECT coins, total_earned FROM event_coins WHERE account_id = "+getcharid(3), .@coins, .@total;
+	mes "Event Coins: ^0000FF"+.@coins+"^000000";
+	mes "Total Earned: "+.@total;
+	mes " ";
+	// Get MOTD completions
+	query_sql "SELECT COUNT(*) FROM motd_completions WHERE char_id = "+getcharid(0), .@motd_count;
+	mes "MOTD Hunts Completed: "+.@motd_count;
+	close;
+
+// ============================================================
+// GM MANAGEMENT MENU
+// ============================================================
+L_GMMenu:
+	mes "[^FF0000GM Event Manager^000000]";
+	mes "Welcome, "+strcharinfo(0)+".";
+	mes "What would you like to manage?";
+	next;
+
+	switch(select("Happy Hour:Monster of the Day:Regenerate MOTD Schedule:Event History:Back")) {
+		case 1: goto L_HappyHour;
+		case 2: goto L_MOTD;
+		case 3:
+			donpcevent "EventScheduler::OnGenerateMOTDSchedule";
+			callsub S_InvalidateCache;
+			mes "MOTD schedule regenerated!";
+			close;
+		case 4: goto L_History;
+		case 5: close;
+	}
+	end;
+
+// ============================================================
+// Happy Hour Management
+// ============================================================
+L_HappyHour:
+	mes "[Happy Hour Management]";
+
+	if ($@HappyHourActive) {
+		set .@remaining, callfunc("F_HappyHourRemaining");
+		mes "^00AA00Status: ACTIVE^000000";
+		mes "Time remaining: "+.@remaining+" minutes";
+		next;
+
+		if (select("Stop Happy Hour:Back") == 1) {
+			donpcevent "HappyHour::OnManualStop";
+			mes "[Events Manager]";
+			mes "Happy Hour has been stopped.";
+			close;
+		}
+		goto L_HappyHour;
+	}
+
+	mes "^FF0000Status: INACTIVE^000000";
+	next;
+
+	switch(select("Start Happy Hour:Manage Schedule:Back")) {
 		case 1:
-			mes "[Event Details]";
-			mes "^FFD700Happy Hour^000000";
-			mes "2x EXP rates for all monsters!";
-			mes "Scheduled 1-2 times per week.";
+			mes "[Start Happy Hour]";
+			mes "Select duration:";
 			next;
-			mes "^00FF00Monster of the Day^000000";
-			mes "3x EXP and Hunt Points for a";
-			mes "featured monster. Changes every";
-			mes "3 hours. Check the Monster Hunter";
-			mes "Board for current target!";
+			set .@choice, select("30 minutes:1 hour:2 hours:3 hours:Custom");
+			switch(.@choice) {
+				case 1: set $@HappyHourDuration, 30; break;
+				case 2: set $@HappyHourDuration, 60; break;
+				case 3: set $@HappyHourDuration, 120; break;
+				case 4: set $@HappyHourDuration, 180; break;
+				case 5:
+					mes "[Custom Duration]";
+					mes "Enter duration in minutes:";
+					input .@custom;
+					if (.@custom < 10 || .@custom > 480) {
+						mes "Invalid duration. Must be 10-480 minutes.";
+						close;
+					}
+					set $@HappyHourDuration, .@custom;
+					break;
+			}
+			donpcevent "HappyHour::OnEventStart";
+			mes "[Events Manager]";
+			mes "Happy Hour started for "+$@HappyHourDuration+" minutes!";
 			close;
 
 		case 2:
-			mes "[Your Event Stats]";
-			// Get event coin balance
-			query_sql "SELECT coins, total_earned FROM event_coins WHERE account_id = "+getcharid(3), .@coins, .@total;
-			mes "Event Coins: ^0000FF"+.@coins+"^000000";
-			mes "Total Earned: "+.@total;
-			mes " ";
-			// Get MOTD completions
-			query_sql "SELECT COUNT(*) FROM motd_completions WHERE char_id = "+getcharid(0), .@motd_count;
-			mes "MOTD Hunts Completed: "+.@motd_count;
+			mes "[Happy Hour Schedule]";
+			query_sql "SELECT id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), start_hour, start_minute, duration_minutes, enabled FROM event_schedule WHERE event_code = 'happy_hour' ORDER BY day_of_week", .@ids, .@days$, .@hours, .@mins, .@durations, .@enabled;
+
+			if (getarraysize(.@ids) == 0) {
+				mes "No scheduled Happy Hours.";
+			} else {
+				for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+					set .@status$, (.@enabled[.@i] ? "^00AA00ON^000000" : "^FF0000OFF^000000");
+					mes .@days$[.@i]+" "+.@hours[.@i]+":"+(.@mins[.@i] < 10 ? "0" : "")+.@mins[.@i]+" ("+.@durations[.@i]+"m) ["+.@status$+"]";
+				}
+			}
+			next;
+
+			switch(select("Add Schedule:Toggle Schedule:Remove Schedule:Back")) {
+				case 1:
+					mes "Select day:";
+					next;
+					set .@day, select("Monday:Tuesday:Wednesday:Thursday:Friday:Saturday:Sunday") - 1;
+					mes "Enter hour (0-23):";
+					input .@hour;
+					if (.@hour < 0 || .@hour > 23) { mes "Invalid hour."; close; }
+					mes "Enter minute (0-59):";
+					input .@minute;
+					if (.@minute < 0 || .@minute > 59) { mes "Invalid minute."; close; }
+					mes "Duration (minutes):";
+					input .@duration;
+					if (.@duration < 10 || .@duration > 480) { mes "Invalid duration."; close; }
+
+					query_sql "INSERT INTO event_schedule (event_code, schedule_type, day_of_week, start_hour, start_minute, duration_minutes, enabled) VALUES ('happy_hour', 'fixed', "+.@day+", "+.@hour+", "+.@minute+", "+.@duration+", 1)";
+					callsub S_InvalidateCache;
+					mes "Schedule added!";
+					close;
+
+				case 2:
+					if (getarraysize(.@ids) == 0) { mes "No schedules to toggle."; close; }
+					mes "Enter schedule ID to toggle:";
+					input .@toggle_id;
+					query_sql "UPDATE event_schedule SET enabled = NOT enabled WHERE id = "+.@toggle_id;
+					callsub S_InvalidateCache;
+					mes "Schedule toggled!";
+					close;
+
+				case 3:
+					if (getarraysize(.@ids) == 0) { mes "No schedules to remove."; close; }
+					mes "Enter schedule ID to remove:";
+					input .@remove_id;
+					query_sql "DELETE FROM event_schedule WHERE id = "+.@remove_id;
+					callsub S_InvalidateCache;
+					mes "Schedule removed!";
+					close;
+
+				case 4:
+					goto L_GMMenu;
+			}
 			close;
 
 		case 3:
-			close;
+			goto L_GMMenu;
 	}
+	end;
+
+// ============================================================
+// Monster of the Day Management
+// ============================================================
+L_MOTD:
+	mes "[MOTD Settings]";
+
+	// Get current config
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
+
+	mes "Current Settings:";
+	mes "Selection Mode: ^0000FF"+.@mode$+"^000000";
+	mes "Min Monster Level: ^0000FF"+.@min_level$+"^000000";
+	next;
+
+	switch(select("Change Selection Mode:View Today's Schedule:Back")) {
+		case 1:
+			mes "Select mode:";
+			next;
+			set .@new_mode, select("Random:Tier Rotation");
+			if (.@new_mode == 1) {
+				query_sql "UPDATE event_config SET config_value = 'random' WHERE config_key = 'motd_selection_mode'";
+			} else {
+				query_sql "UPDATE event_config SET config_value = 'tier_rotation' WHERE config_key = 'motd_selection_mode'";
+			}
+			callsub S_InvalidateCache;
+			mes "Mode updated!";
+			close;
+
+		case 2:
+			mes "[Today's MOTD Schedule]";
+			query_sql "SELECT mob_name, tier, DATE_FORMAT(start_time, '%H:%i'), DATE_FORMAT(end_time, '%H:%i') FROM motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@names$, .@tiers$, .@starts$, .@ends$;
+
+			if (getarraysize(.@names$) == 0) {
+				mes "No schedule for today.";
+			} else {
+				for (set .@i, 0; .@i < getarraysize(.@names$); set .@i, .@i + 1) {
+					mes .@starts$[.@i]+"-"+.@ends$[.@i]+": "+.@names$[.@i]+" ["+.@tiers$[.@i]+"]";
+				}
+			}
+			close;
+
+		case 3:
+			goto L_GMMenu;
+	}
+	end;
+
+// ============================================================
+// Event History
+// ============================================================
+L_History:
+	mes "[Event History]";
+	query_sql "SELECT event_code, DATE_FORMAT(actual_start, '%Y-%m-%d %H:%i'), DATE_FORMAT(actual_end, '%H:%i'), status FROM event_instances ORDER BY id DESC LIMIT 10", .@codes$, .@starts$, .@ends$, .@status$;
+
+	if (getarraysize(.@codes$) == 0) {
+		mes "No event history found.";
+	} else {
+		for (set .@i, 0; .@i < getarraysize(.@codes$); set .@i, .@i + 1) {
+			mes .@starts$[.@i]+" - "+.@ends$[.@i];
+			mes "  "+.@codes$[.@i]+" ["+.@status$[.@i]+"]";
+		}
+	}
+	close;
+
+// ============================================================
+// Invalidate Website Cache
+// ============================================================
+S_InvalidateCache:
+	query_sql "UPDATE event_config SET config_value = config_value + 1 WHERE config_key = 'cache_version'";
+	return;
 }
