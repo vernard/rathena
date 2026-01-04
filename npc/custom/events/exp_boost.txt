@@ -1,0 +1,143 @@
+//===== rAthena Script =======================================
+//= Custom EXP Boost Event
+//= GM-configurable server-wide EXP multiplier
+//===== Description: =========================================
+//= Server-wide EXP boost with configurable multiplier.
+//= - Triggered manually by GMs via Events Manager
+//= - Multiplier is configurable (1.5x to 5x)
+//= - Stays active until manually stopped
+//= - Stacks with other events (Happy Hour, MOTD)
+//= - Uses setbattleflag for true server-wide effect
+//============================================================
+
+-	script	ExpBoost	FAKE_NPC,{
+	end;
+
+OnInit:
+	// Initialize state
+	set $@ExpBoostActive, 0;
+	set $@ExpBoostMultiplier, 0;
+	set $@ExpBoostStartTime, 0;
+	end;
+
+// ============================================================
+// Event Start - Called by Events Manager
+// Expects $@ExpBoostMultiplier to be set (e.g., 200 = 2x, 300 = 3x)
+// ============================================================
+OnEventStart:
+	if ($@ExpBoostActive) {
+		debugmes "[ExpBoost] Already active, ignoring start request";
+		end;
+	}
+
+	// Validate multiplier (minimum 150 = 1.5x, maximum 500 = 5x)
+	if ($@ExpBoostMultiplier < 150 || $@ExpBoostMultiplier > 500) {
+		debugmes "[ExpBoost] Invalid multiplier: "+$@ExpBoostMultiplier+", using 200 (2x)";
+		set $@ExpBoostMultiplier, 200;
+	}
+
+	// Store original rates
+	set $@EB_OrigBaseExp, getbattleflag("base_exp_rate");
+	set $@EB_OrigJobExp, getbattleflag("job_exp_rate");
+
+	// Calculate new rates
+	// Multiplier is in percentage (200 = 2x), so: orig_rate * multiplier / 100
+	set .@new_base, $@EB_OrigBaseExp * $@ExpBoostMultiplier / 100;
+	set .@new_job, $@EB_OrigJobExp * $@ExpBoostMultiplier / 100;
+
+	// Apply new rates
+	setbattleflag("base_exp_rate", .@new_base);
+	setbattleflag("job_exp_rate", .@new_job, true);  // true = reload
+
+	// Mark as active
+	set $@ExpBoostActive, 1;
+	set $@ExpBoostStartTime, gettimetick(2);
+
+	// Format multiplier for display (e.g., 200 -> "2x", 150 -> "1.5x")
+	set .@whole, $@ExpBoostMultiplier / 100;
+	set .@decimal, ($@ExpBoostMultiplier % 100) / 10;
+	if (.@decimal > 0) {
+		set .@mult$, .@whole + "." + .@decimal + "x";
+	} else {
+		set .@mult$, .@whole + "x";
+	}
+
+	// Log to database
+	query_sql "INSERT INTO event_instances (event_type_id, event_code, actual_start, status, trigger_type) VALUES (0, 'exp_boost', NOW(), 'active', 'manual')";
+
+	// Announce
+	announce "===========================================", bc_all, 0x00BFFF;
+	announce "      EXP BOOST ACTIVATED!", bc_all, 0x00BFFF;
+	announce "   "+.@mult$+" EXP rates are now active!", bc_all, 0x00BFFF;
+	announce "===========================================", bc_all, 0x00BFFF;
+
+	debugmes "[ExpBoost] Started - Multiplier: "+.@mult$+" ("+$@ExpBoostMultiplier+"%)";
+	end;
+
+// ============================================================
+// Event End - Called by Events Manager
+// ============================================================
+OnEventEnd:
+	if (!$@ExpBoostActive) {
+		debugmes "[ExpBoost] Not active, ignoring end request";
+		end;
+	}
+
+	// Restore original rates
+	setbattleflag("base_exp_rate", $@EB_OrigBaseExp);
+	setbattleflag("job_exp_rate", $@EB_OrigJobExp, true);  // true = reload
+
+	// Mark as inactive
+	set $@ExpBoostActive, 0;
+	set $@ExpBoostMultiplier, 0;
+	set $@ExpBoostStartTime, 0;
+
+	// Update database
+	query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE event_code = 'exp_boost' AND status = 'active' ORDER BY id DESC LIMIT 1";
+
+	// Announce
+	announce "===========================================", bc_all, 0x00BFFF;
+	announce "      EXP BOOST DEACTIVATED!", bc_all, 0x00BFFF;
+	announce "   EXP rates have returned to normal.", bc_all, 0x00BFFF;
+	announce "===========================================", bc_all, 0x00BFFF;
+
+	debugmes "[ExpBoost] Ended";
+	end;
+}
+
+// ============================================================
+// Helper function to check if EXP Boost is active
+// ============================================================
+function	script	F_IsExpBoostActive	{
+	return $@ExpBoostActive;
+}
+
+// ============================================================
+// Helper function to get current EXP Boost multiplier
+// Returns multiplier as percentage (e.g., 200 = 2x)
+// ============================================================
+function	script	F_GetExpBoostMultiplier	{
+	if (!$@ExpBoostActive) return 100;
+	return $@ExpBoostMultiplier;
+}
+
+// ============================================================
+// Helper function to get EXP Boost duration (minutes since start)
+// ============================================================
+function	script	F_ExpBoostDuration	{
+	if (!$@ExpBoostActive) return 0;
+	return (gettimetick(2) - $@ExpBoostStartTime) / 60;
+}
+
+// ============================================================
+// Helper function to format multiplier for display
+// ============================================================
+function	script	F_FormatExpMultiplier	{
+	set .@mult, getarg(0, 100);
+	set .@whole, .@mult / 100;
+	set .@decimal, (.@mult % 100) / 10;
+	if (.@decimal > 0) {
+		return .@whole + "." + .@decimal + "x";
+	}
+	return .@whole + "x";
+}

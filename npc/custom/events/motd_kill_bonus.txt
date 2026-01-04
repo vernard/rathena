@@ -5,7 +5,7 @@
 //= Uses OnNPCKillEvent to give 2x additional EXP when killing
 //= the current MOTD monster, resulting in 3x total EXP.
 //=
-//= Reads current server EXP rate via getbattleflag() so the
+//= The getexp command automatically applies server rates, so
 //= bonus scales correctly during rate events (e.g., Happy Hour).
 //=
 //= Limitations:
@@ -17,28 +17,32 @@
 -	script	MOTD_KillBonus	FAKE_NPC,{
 	end;
 
+OnInit:
+	// Store original config rates before any events modify them
+	// getmonsterinfo() uses these config rates, not runtime-modified rates
+	set $@MOTD_OrigBaseRate, getbattleflag("base_exp_rate");
+	set $@MOTD_OrigJobRate, getbattleflag("job_exp_rate");
+	end;
+
 OnNPCKillEvent:
 	// Check if MOTD is enabled and killed monster is current MOTD
 	// $@LastMOTDMobID is set by EventScheduler when MOTD rotates
 	if (callfunc("F_IsMOTDEnabled") && killedrid == $@LastMOTDMobID && $@LastMOTDMobID > 0) {
-		// Get monster's base EXP values
+		// Get monster's EXP values (uses CONFIG rate, not runtime rate!)
 		.@base_exp = getmonsterinfo(killedrid, MOB_BASEEXP);
 		.@job_exp = getmonsterinfo(killedrid, MOB_JOBEXP);
 
-		// Get current server EXP rates (100 = 1x, 1500 = 15x, etc.)
-		.@base_rate = getbattleflag("base_exp_rate");
-		.@job_rate = getbattleflag("job_exp_rate");
+		// Convert to raw using ORIGINAL config rate (not current boosted rate)
+		// This allows getexp to apply the CURRENT rate, making bonus scale with events
+		.@base_raw = .@base_exp * 100 / $@MOTD_OrigBaseRate;
+		.@job_raw = .@job_exp * 100 / $@MOTD_OrigJobRate;
 
-		// Calculate bonus: 2x additional EXP at current server rate = 3x total
-		// Formula: base_exp * (server_rate / 100) * 2
-		// Example at 15x: 100 base * 15 * 2 = 3000 bonus (+ 1500 normal = 4500 total = 45x)
-		.@base_bonus = .@base_exp * .@base_rate / 100 * 2;
-		.@job_bonus = .@job_exp * .@job_rate / 100 * 2;
+		// Give 2x additional raw EXP (getexp applies current rate including boosts)
+		// Result: normal (1x) + bonus (2x) = 3x total, scales with Happy Hour/EXP Boost
+		.@base_bonus = .@base_raw * 2;
+		.@job_bonus = .@job_raw * 2;
 
 		getexp .@base_bonus, .@job_bonus;
-
-		// Debug message (disable in production)
-		// dispbottom "[MOTD] Bonus EXP: +" + .@base_bonus + " Base, +" + .@job_bonus + " Job", 0x00FF00;
 	}
 	end;
 }

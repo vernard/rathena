@@ -414,16 +414,21 @@ L_MOTD:
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
 
+	// Get current MOTD
+	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@cur_mob_id, .@cur_mob_name$, .@cur_mins;
+
 	if (.@motd_enabled$ == "0") {
 		mes "Status: ^FF0000DISABLED^000000";
 	} else {
 		mes "Status: ^00AA00ENABLED^000000";
 	}
-	mes "Selection Mode: ^0000FF"+.@mode$+"^000000";
-	mes "Min Monster Level: ^0000FF"+.@min_level$+"^000000";
+	if (.@cur_mob_name$ != "") {
+		mes "Current: ^0000FF"+.@cur_mob_name$+"^000000 ("+.@cur_mins+"m left)";
+	}
+	mes "Mode: ^0000FF"+.@mode$+"^000000";
 	next;
 
-	switch(select("Toggle MOTD On/Off:Change Selection Mode:View Today's Schedule:Back")) {
+	switch(select("Toggle MOTD On/Off:Change Current MOTD:Edit Today's Schedule:Change Selection Mode:Back")) {
 		case 1:
 			if (.@motd_enabled$ == "0") {
 				query_sql "UPDATE event_config SET config_value = '1' WHERE config_key = 'motd_enabled'";
@@ -444,6 +449,12 @@ L_MOTD:
 			close;
 
 		case 2:
+			goto L_ChangeMOTD;
+
+		case 3:
+			goto L_EditMOTDSchedule;
+
+		case 4:
 			mes "Select mode:";
 			next;
 			set .@new_mode, select("Random:Tier Rotation");
@@ -456,23 +467,141 @@ L_MOTD:
 			mes "Mode updated!";
 			close;
 
-		case 3:
-			mes "[Today's MOTD Schedule]";
-			query_sql "SELECT mob_name, tier, DATE_FORMAT(start_time, '%H:%i'), DATE_FORMAT(end_time, '%H:%i') FROM motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@names$, .@tiers$, .@starts$, .@ends$;
-
-			if (getarraysize(.@names$) == 0) {
-				mes "No schedule for today.";
-			} else {
-				for (set .@i, 0; .@i < getarraysize(.@names$); set .@i, .@i + 1) {
-					mes .@starts$[.@i]+"-"+.@ends$[.@i]+": "+.@names$[.@i]+" ["+.@tiers$[.@i]+"]";
-				}
-			}
-			close;
-
-		case 4:
+		case 5:
 			goto L_GMMenu;
 	}
 	end;
+
+// ============================================================
+// Change Current MOTD Monster
+// ============================================================
+L_ChangeMOTD:
+	mes "[Change Current MOTD]";
+
+	// Check if there's an active slot
+	query_sql "SELECT id FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@slot_id;
+	if (.@slot_id == 0) {
+		mes "No active MOTD time slot.";
+		mes "Generate a schedule first.";
+		close;
+	}
+
+	mes "Enter Monster ID:";
+	mes "(e.g., 1002 = Poring, 1038 = Osiris)";
+	input .@mob_id;
+
+	// Validate monster exists
+	set .@mob_name$, getmonsterinfo(.@mob_id, MOB_NAME);
+	if (.@mob_name$ == "" || .@mob_name$ == "null") {
+		mes "Invalid monster ID.";
+		close;
+	}
+
+	// Check if in MOTD pool, get tier
+	query_sql "SELECT tier FROM motd_monsters WHERE mob_id = "+.@mob_id, .@tier$;
+	if (.@tier$ == "") {
+		set .@tier$, "custom";  // Not in pool, mark as custom
+	}
+
+	// Update the current schedule slot
+	query_sql "UPDATE motd_schedule SET mob_id = "+.@mob_id+", mob_name = '"+escape_sql(.@mob_name$)+"', tier = '"+.@tier$+"' WHERE id = "+.@slot_id;
+
+	// Update global variables
+	set $@LastMOTDMobID, .@mob_id;
+	set $@CurrentMOTDName$, .@mob_name$;
+
+	// Invalidate cache
+	callsub S_InvalidateCache;
+
+	// Announce the change
+	query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE id = "+.@slot_id, .@mins_left;
+	announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+
+	mes "[Events Manager]";
+	mes "MOTD changed to ^0000FF"+.@mob_name$+"^000000!";
+	mes "Announced to all players.";
+	close;
+
+// ============================================================
+// Edit Today's MOTD Schedule
+// ============================================================
+L_EditMOTDSchedule:
+	mes "[Today's MOTD Schedule]";
+	query_sql "SELECT id, mob_name, tier, DATE_FORMAT(start_time, '%H:%i'), DATE_FORMAT(end_time, '%H:%i'), NOW() BETWEEN start_time AND end_time FROM motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@ids, .@names$, .@tiers$, .@starts$, .@ends$, .@is_current;
+
+	if (getarraysize(.@ids) == 0) {
+		mes "No schedule for today.";
+		mes "Use 'Regenerate MOTD Schedule'";
+		mes "from the main GM menu.";
+		close;
+	}
+
+	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+		if (.@is_current[.@i]) {
+			mes "^00FF00► "+.@starts$[.@i]+"-"+.@ends$[.@i]+": "+.@names$[.@i]+" ["+.@tiers$[.@i]+"]^000000";
+		} else {
+			mes .@starts$[.@i]+"-"+.@ends$[.@i]+": "+.@names$[.@i]+" ["+.@tiers$[.@i]+"]";
+		}
+	}
+	next;
+
+	mes "Select a time slot to change:";
+	next;
+
+	// Build menu from time slots
+	set .@menu$, "";
+	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+		set .@menu$, .@menu$ + .@starts$[.@i] + "-" + .@ends$[.@i] + " (" + .@names$[.@i] + ")";
+		if (.@i < getarraysize(.@ids) - 1) set .@menu$, .@menu$ + ":";
+	}
+	set .@menu$, .@menu$ + ":Back";
+
+	set .@slot_choice, select(.@menu$);
+	if (.@slot_choice > getarraysize(.@ids)) {
+		goto L_MOTD;
+	}
+
+	set .@edit_slot_id, .@ids[.@slot_choice - 1];
+	set .@edit_is_current, .@is_current[.@slot_choice - 1];
+
+	// Enter monster ID
+	mes "[Change Slot "+.@starts$[.@slot_choice - 1]+"-"+.@ends$[.@slot_choice - 1]+"]";
+	mes "Enter Monster ID:";
+	input .@mob_id;
+
+	// Validate monster exists
+	set .@mob_name$, getmonsterinfo(.@mob_id, MOB_NAME);
+	if (.@mob_name$ == "" || .@mob_name$ == "null") {
+		mes "Invalid monster ID.";
+		close;
+	}
+
+	// Check if in MOTD pool, get tier
+	query_sql "SELECT tier FROM motd_monsters WHERE mob_id = "+.@mob_id, .@tier$;
+	if (.@tier$ == "") {
+		set .@tier$, "custom";
+	}
+
+	// Update the schedule slot
+	query_sql "UPDATE motd_schedule SET mob_id = "+.@mob_id+", mob_name = '"+escape_sql(.@mob_name$)+"', tier = '"+.@tier$+"' WHERE id = "+.@edit_slot_id;
+
+	// If this is the current slot, update globals and announce
+	if (.@edit_is_current) {
+		set $@LastMOTDMobID, .@mob_id;
+		set $@CurrentMOTDName$, .@mob_name$;
+
+		query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE id = "+.@edit_slot_id, .@mins_left;
+		announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+	}
+
+	callsub S_InvalidateCache;
+
+	mes "[Events Manager]";
+	mes "Slot updated to ^0000FF"+.@mob_name$+"^000000!";
+	if (.@edit_is_current) {
+		mes "Announced to all players.";
+	}
+	close;
 
 // ============================================================
 // Event History
