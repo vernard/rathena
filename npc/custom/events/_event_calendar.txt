@@ -23,7 +23,7 @@ prontera,150,180,5	script	Event Calendar	4_F_KAFRA1,{
 	// Check Happy Hour
 	if ($@HappyHourActive) {
 		set .@remaining, callfunc("F_HappyHourRemaining");
-		mes "^FFD700★ Happy Hour^000000";
+		mes "^FFD700[Active] Happy Hour^000000";
 		mes "   2x EXP rates!";
 		mes "   Time left: ^00AA00"+.@remaining+" minutes^000000";
 		set .@has_active, 1;
@@ -32,7 +32,7 @@ prontera,150,180,5	script	Event Calendar	4_F_KAFRA1,{
 	// Check Monster of the Day
 	query_sql "SELECT mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@motd_name$, .@motd_mins;
 	if (.@motd_name$ != "") {
-		mes "^00FF00★ Monster of the Day^000000";
+		mes "^00FF00[Active] Monster of the Day^000000";
 		mes "   Featured: ^0000FF"+.@motd_name$+"^000000";
 		mes "   3x EXP & Hunt Points!";
 		mes "   Time left: ^00AA00"+.@motd_mins+" minutes^000000";
