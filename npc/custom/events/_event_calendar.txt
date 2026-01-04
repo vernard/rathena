@@ -28,10 +28,17 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 	// Check EXP Boost
 	if ($@ExpBoostActive) {
 		set .@mult$, callfunc("F_FormatExpMultiplier", $@ExpBoostMultiplier);
-		set .@duration, callfunc("F_ExpBoostDuration");
+		set .@remaining, callfunc("F_ExpBoostRemaining");
 		mes "^00BFFF[Active] EXP Boost^000000";
 		mes "   "+.@mult$+" EXP rates!";
-		mes "   Running for: ^00AA00"+.@duration+" minutes^000000";
+		if (.@remaining > 0) {
+			set .@remaining$, callfunc("F_FormatDuration", .@remaining);
+			mes "   Time left: ^00AA00"+.@remaining$+"^000000";
+		} else {
+			set .@duration, callfunc("F_ExpBoostDuration");
+			set .@duration$, callfunc("F_FormatDuration", .@duration);
+			mes "   Running for: ^00AA00"+.@duration$+"^000000";
+		}
 		set .@has_active, 1;
 	}
 
@@ -44,7 +51,7 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 		if (.@motd_name$ != "") {
 			mes "^00FF00[Active] Monster of the Day^000000";
 			mes "   Featured: ^0000FF"+.@motd_name$+"^000000";
-			mes "   3x EXP & Hunt Points!";
+			mes "   3x EXP, Drops & Hunt Points!";
 			mes "   Time left: ^00AA00"+.@motd_mins+" minutes^000000";
 			set .@has_active, 1;
 		}
@@ -159,8 +166,8 @@ L_EventDetails:
 			mes " ";
 			mes "^0000FFWhat is it?^000000";
 			mes "A rotating featured monster that";
-			mes "gives ^FF00003x Base/Job EXP^000000 and bonus";
-			mes "^FF0000Hunt Points^000000 when killed!";
+			mes "gives ^FF00003x EXP, 3x Drops^000000, and";
+			mes "bonus ^FF0000Hunt Points^000000 when killed!";
 			next;
 			mes "[^00FF00Monster of the Day^000000]";
 			mes "^0000FFHow does it work?^000000";
@@ -338,70 +345,184 @@ L_HappyHour:
 	end;
 
 // ============================================================
-// EXP Boost Management
+// EXP Boost Management (Simplified)
 // ============================================================
 L_ExpBoost:
 	mes "[EXP Boost Management]";
 
+	// Show current status
 	if ($@ExpBoostActive) {
 		set .@mult$, callfunc("F_FormatExpMultiplier", $@ExpBoostMultiplier);
-		set .@duration, callfunc("F_ExpBoostDuration");
+		set .@remaining, callfunc("F_ExpBoostRemaining");
+		set .@remaining$, callfunc("F_FormatDuration", .@remaining);
 		mes "^00AA00Status: ACTIVE^000000";
 		mes "Multiplier: "+.@mult$;
-		mes "Running for: "+.@duration+" minutes";
+		mes "Time left: "+.@remaining$;
 		next;
 
-		if (select("Stop EXP Boost:Back") == 1) {
-			donpcevent "ExpBoost::OnEventEnd";
-			mes "[Events Manager]";
-			mes "EXP Boost has been stopped.";
-			mes "Rates restored to normal.";
-			close;
+		switch(select("Stop EXP Boost:Back")) {
+			case 1:
+				donpcevent "ExpBoost::OnEventEnd";
+				mes "[Events Manager]";
+				mes "EXP Boost has been stopped.";
+				mes "Rates restored to normal.";
+				close;
+			case 2:
+				goto L_GMMenu;
 		}
-		goto L_ExpBoost;
 	}
+
+	// Show pending scheduled boosts
+	query_sql "SELECT id, DATE_FORMAT(start_datetime, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, start_datetime, end_datetime), multiplier FROM exp_boost_schedule WHERE enabled = 1 AND start_datetime > NOW() ORDER BY start_datetime LIMIT 3", .@pend_ids, .@pend_starts$, .@pend_durs, .@pend_mults;
 
 	mes "^FF0000Status: INACTIVE^000000";
-	mes " ";
-	mes "EXP Boost multiplies server rates";
-	mes "by a custom amount (1.5x to 5x).";
-	mes "Stacks with Happy Hour!";
+	if (getarraysize(.@pend_ids) > 0) {
+		mes " ";
+		mes "^0055FFPending:^000000";
+		for (set .@i, 0; .@i < getarraysize(.@pend_ids); set .@i, .@i + 1) {
+			set .@m$, callfunc("F_FormatExpMultiplier", .@pend_mults[.@i]);
+			set .@d$, callfunc("F_FormatDuration", .@pend_durs[.@i]);
+			mes "  "+.@pend_starts$[.@i]+" - "+.@m$+" ("+.@d$+")";
+		}
+	}
 	next;
 
-	switch(select("Start EXP Boost:Back")) {
-		case 1:
-			mes "[Start EXP Boost]";
-			mes "Select multiplier:";
-			next;
-			set .@choice, select("1.5x:2x:3x:4x:5x:Custom");
-			switch(.@choice) {
-				case 1: set $@ExpBoostMultiplier, 150; break;
-				case 2: set $@ExpBoostMultiplier, 200; break;
-				case 3: set $@ExpBoostMultiplier, 300; break;
-				case 4: set $@ExpBoostMultiplier, 400; break;
-				case 5: set $@ExpBoostMultiplier, 500; break;
-				case 6:
-					mes "[Custom Multiplier]";
-					mes "Enter multiplier as percentage:";
-					mes "(150 = 1.5x, 200 = 2x, 300 = 3x)";
-					input .@custom;
-					if (.@custom < 150 || .@custom > 500) {
-						mes "Invalid. Must be 150-500.";
-						close;
-					}
-					set $@ExpBoostMultiplier, .@custom;
-					break;
-			}
-			donpcevent "ExpBoost::OnEventStart";
-			set .@mult$, callfunc("F_FormatExpMultiplier", $@ExpBoostMultiplier);
-			mes "[Events Manager]";
-			mes "EXP Boost started at "+.@mult$+"!";
-			close;
-
-		case 2:
-			goto L_GMMenu;
+	if (getarraysize(.@pend_ids) > 0) {
+		switch(select("Schedule EXP Boost:Cancel Scheduled:Back")) {
+			case 1: goto L_ScheduleExpBoost;
+			case 2: goto L_CancelExpBoost;
+			case 3: goto L_GMMenu;
+		}
+	} else {
+		switch(select("Schedule EXP Boost:Back")) {
+			case 1: goto L_ScheduleExpBoost;
+			case 2: goto L_GMMenu;
+		}
 	}
 	end;
+
+// ============================================================
+// Schedule EXP Boost (NOW or future)
+// ============================================================
+L_ScheduleExpBoost:
+	mes "[Schedule EXP Boost]";
+	mes "When should it start?";
+	next;
+
+	switch(select("Start NOW:Schedule for later:Back")) {
+		case 1:
+			set .@start_now, 1;
+			break;
+		case 2:
+			set .@start_now, 0;
+			mes "Enter start date/time:";
+			mes "^888888Format: YYYY-MM-DD HH:MM^000000";
+			mes "^888888(e.g., 2025-01-15 18:00)^000000";
+			input .@start_dt$;
+			next;
+			break;
+		case 3:
+			goto L_ExpBoost;
+	}
+
+	mes "How long should it last?";
+	next;
+	switch(select("1 hour:2 hours:6 hours:12 hours:1 day:3 days:7 days:Custom")) {
+		case 1: set .@duration, 60; break;
+		case 2: set .@duration, 120; break;
+		case 3: set .@duration, 360; break;
+		case 4: set .@duration, 720; break;
+		case 5: set .@duration, 1440; break;
+		case 6: set .@duration, 4320; break;
+		case 7: set .@duration, 10080; break;
+		case 8:
+			mes "Enter duration in hours:";
+			mes "^888888(e.g., 48 = 2 days)^000000";
+			input .@hours;
+			if (.@hours < 1) {
+				mes "Minimum 1 hour.";
+				close;
+			}
+			set .@duration, .@hours * 60;
+			break;
+	}
+
+	mes "Select multiplier:";
+	next;
+	switch(select("1.5x:2x:3x:4x:5x:Custom")) {
+		case 1: set .@mult, 150; break;
+		case 2: set .@mult, 200; break;
+		case 3: set .@mult, 300; break;
+		case 4: set .@mult, 400; break;
+		case 5: set .@mult, 500; break;
+		case 6:
+			mes "Enter multiplier as percentage:";
+			mes "^888888(150 = 1.5x, 200 = 2x, 300 = 3x)^000000";
+			input .@mult;
+			if (.@mult < 150 || .@mult > 500) {
+				mes "Invalid. Must be 150-500.";
+				close;
+			}
+			break;
+	}
+
+	// Insert into schedule table
+	if (.@start_now) {
+		query_sql "INSERT INTO exp_boost_schedule (start_datetime, end_datetime, multiplier) VALUES (NOW(), DATE_ADD(NOW(), INTERVAL "+.@duration+" MINUTE), "+.@mult+")";
+		query_sql "SELECT LAST_INSERT_ID()", .@new_id;
+
+		// Start immediately (scheduler will handle announcement)
+		set $@ExpBoostMultiplier, .@mult;
+		set $@ExpBoostDuration, .@duration;
+		set $@ExpBoostScheduleId, .@new_id;
+		donpcevent "ExpBoost::OnEventStart";
+
+		set .@mult$, callfunc("F_FormatExpMultiplier", .@mult);
+		set .@dur$, callfunc("F_FormatDuration", .@duration);
+		mes "[Events Manager]";
+		mes "EXP Boost started!";
+		mes "Multiplier: "+.@mult$;
+		mes "Duration: "+.@dur$;
+	} else {
+		query_sql "INSERT INTO exp_boost_schedule (start_datetime, end_datetime, multiplier) VALUES ('"+.@start_dt$+"', DATE_ADD('"+.@start_dt$+"', INTERVAL "+.@duration+" MINUTE), "+.@mult+")";
+
+		set .@mult$, callfunc("F_FormatExpMultiplier", .@mult);
+		set .@dur$, callfunc("F_FormatDuration", .@duration);
+		mes "[Events Manager]";
+		mes "EXP Boost scheduled!";
+		mes "Start: "+.@start_dt$;
+		mes "Multiplier: "+.@mult$;
+		mes "Duration: "+.@dur$;
+	}
+	close;
+
+// ============================================================
+// Cancel Scheduled EXP Boost
+// ============================================================
+L_CancelExpBoost:
+	mes "[Cancel Scheduled Boost]";
+	query_sql "SELECT id, DATE_FORMAT(start_datetime, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, start_datetime, end_datetime), multiplier FROM exp_boost_schedule WHERE enabled = 1 AND start_datetime > NOW() ORDER BY start_datetime", .@ids, .@starts$, .@durs, .@mults;
+
+	if (getarraysize(.@ids) == 0) {
+		mes "No pending boosts to cancel.";
+		close;
+	}
+
+	mes "Select boost to cancel:";
+	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+		set .@m$, callfunc("F_FormatExpMultiplier", .@mults[.@i]);
+		set .@d$, callfunc("F_FormatDuration", .@durs[.@i]);
+		mes "["+.@ids[.@i]+"] "+.@starts$[.@i]+" - "+.@m$+" ("+.@d$+")";
+	}
+	next;
+
+	mes "Enter ID to cancel (0 = back):";
+	input .@cancel_id;
+	if (.@cancel_id == 0) goto L_ExpBoost;
+
+	query_sql "DELETE FROM exp_boost_schedule WHERE id = "+.@cancel_id+" AND start_datetime > NOW()";
+	mes "Schedule cancelled!";
+	close;
 
 // ============================================================
 // Monster of the Day Management
@@ -515,7 +636,7 @@ L_ChangeMOTD:
 
 	// Announce the change
 	query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE id = "+.@slot_id, .@mins_left;
-	announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+	announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 
 	mes "[Events Manager]";
 	mes "MOTD changed to ^0000FF"+.@mob_name$+"^000000!";
@@ -591,7 +712,7 @@ L_EditMOTDSchedule:
 		set $@CurrentMOTDName$, .@mob_name$;
 
 		query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE id = "+.@edit_slot_id, .@mins_left;
-		announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+		announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 	}
 
 	callsub S_InvalidateCache;

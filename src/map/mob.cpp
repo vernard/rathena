@@ -43,6 +43,9 @@
 // PATCH START: Rare drop tracking module
 #include "raredrop.hpp"
 // PATCH END: Rare drop tracking module
+// PATCH START: Monster of the Day drop bonus
+#include "motd.hpp"
+// PATCH END: Monster of the Day drop bonus
 
 using namespace rathena;
 
@@ -2537,6 +2540,13 @@ int mob_getdroprate(struct block_list *src, std::shared_ptr<s_mob_db> mob, int b
 
 			drop_rate = (int)( 0.5 + drop_rate * drop_rate_bonus / 100. );
 
+			// PATCH START: Monster of the Day drop bonus
+			// Apply 3x multiplier for MOTD monsters (stacks with Bubblegum, VIP, etc.)
+			if (motd_is_current_monster(mob->id)) {
+				drop_rate = drop_rate * MOTD_DROP_MULTIPLIER / 100;
+			}
+			// PATCH END: Monster of the Day drop bonus
+
 			// Now limit the drop rate to never be exceed the cap (default: 90%), unless it is originally above it already.
 			if( drop_rate > cap && base_rate < cap ){
 				drop_rate = cap;
@@ -2754,6 +2764,16 @@ int mob_dead(struct mob_data *md, struct block_list *src, int type)
 				exp = apply_rate(exp, map_getmapflag(m, MF_JEXP));
 				job_exp = (t_exp)cap_value(exp, 1, MAX_EXP);
 			}
+
+			// PATCH START: Monster of the Day EXP bonus
+			// Apply 3x multiplier for MOTD monsters (before party distribution)
+			if (motd_is_current_monster(md->mob_id)) {
+				if (base_exp > 0)
+					base_exp = (t_exp)cap_value((double)base_exp * MOTD_EXP_MULTIPLIER / 100, 1, MAX_EXP);
+				if (job_exp > 0)
+					job_exp = (t_exp)cap_value((double)job_exp * MOTD_EXP_MULTIPLIER / 100, 1, MAX_EXP);
+			}
+			// PATCH END: Monster of the Day EXP bonus
 
 			if ((base_exp > 0 || job_exp > 0) && md->dmglog[i].flag == MDLF_HOMUN && homkillonly && battle_config.hom_idle_no_share && pc_isidle_hom(tmpsd[i]))
 				base_exp = job_exp = 0;

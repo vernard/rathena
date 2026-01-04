@@ -15,6 +15,9 @@ OnInit:
 	// Generate MOTD schedule on server start
 	donpcevent "EventScheduler::OnGenerateMOTDSchedule";
 
+	// Check for active events immediately (e.g., boost still running after restart)
+	callsub S_CheckScheduledEvents;
+
 	// Start the scheduler timer (check every 60 seconds)
 	initnpctimer;
 	end;
@@ -32,16 +35,33 @@ OnTimer60000:
 	end;
 
 // ============================================================
-// Check for scheduled Happy Hour events
+// Check for scheduled events (Happy Hour, EXP Boost)
 // ============================================================
 S_CheckScheduledEvents:
 	// Check if Happy Hour should start
-	query_sql "SELECT id, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 AND schedule_type = 'fixed' AND day_of_week = WEEKDAY(NOW()) AND start_hour = HOUR(NOW()) AND start_minute = MINUTE(NOW())", .@sched_id, .@duration;
+	query_sql "SELECT id, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 AND schedule_type = 'fixed' AND day_of_week = WEEKDAY(NOW()) AND start_hour = HOUR(NOW()) AND start_minute = MINUTE(NOW())", .@hh_id, .@hh_duration;
 
-	if (.@sched_id > 0 && !$@HappyHourActive) {
+	if (.@hh_id > 0 && !$@HappyHourActive) {
 		// Start Happy Hour
-		set $@HappyHourDuration, .@duration;
+		set $@HappyHourDuration, .@hh_duration;
 		donpcevent "HappyHour::OnEventStart";
+	}
+
+	// Check if scheduled EXP Boost should start
+	// Uses exp_boost_schedule table for one-time datetime-based schedules
+	debugmes "[Scheduler] Checking EXP Boost - $@ExpBoostActive = "+$@ExpBoostActive;
+	if (!$@ExpBoostActive) {
+		query_sql "SELECT id, multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM exp_boost_schedule WHERE enabled = 1 AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@eb_id, .@eb_mult, .@eb_remaining;
+		debugmes "[Scheduler] Found boost: id="+.@eb_id+", mult="+.@eb_mult+", remaining="+.@eb_remaining;
+
+		if (.@eb_id > 0 && .@eb_remaining > 0) {
+			// Start EXP Boost with scheduled multiplier and remaining duration
+			debugmes "[Scheduler] Starting EXP Boost via donpcevent";
+			set $@ExpBoostMultiplier, .@eb_mult;
+			set $@ExpBoostDuration, .@eb_remaining;
+			set $@ExpBoostScheduleId, .@eb_id;
+			donpcevent "ExpBoost::OnEventStart";
+		}
 	}
 	return;
 
@@ -75,9 +95,9 @@ S_CheckMOTDRotation:
 		query_sql "SELECT has_bounty FROM motd_monsters WHERE mob_id = "+.@mob_id, .@has_bounty;
 
 		if (.@has_bounty) {
-			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP and Hunt Points for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP, Drops & Hunt Points for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 		} else {
-			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 		}
 	}
 	return;

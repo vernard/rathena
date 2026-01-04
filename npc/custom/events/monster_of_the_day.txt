@@ -25,7 +25,8 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 
 	mes "^0055FFToday's Featured Hunts^000000";
 	mes "Featured monsters grant";
-	mes "^FF00003x EXP^000000 and ^FF00003x Hunt Points^000000!";
+	mes "^FF00003x EXP^000000, ^FF00003x Drops^000000,";
+	mes "and ^FF00003x Hunt Points^000000!";
 	next;
 
 	// Get current MOTD with location from motd_monsters
@@ -96,8 +97,9 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 	mes "All featured monsters have";
 	mes "^00AA00Bounty Board quests^000000!";
 	mes " ";
-	mes "Hunt the featured monster and";
-	mes "complete your bounty for 3x rewards!";
+	mes "Hunt the featured monster for";
+	mes "^FF00003x EXP and 3x Drops^000000, then";
+	mes "complete your bounty for bonus!";
 	close;
 }
 
