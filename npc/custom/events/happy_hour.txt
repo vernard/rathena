@@ -42,8 +42,8 @@ OnEventStart:
 	set $@HappyHourEndTime, gettimetick(2) + ($@HappyHourDuration * 60);
 	set $@HappyHourStartTime, gettimetick(2);
 
-	// Log to database
-	query_sql "INSERT INTO event_instances (event_type_id, event_code, actual_start, status, trigger_type) SELECT id, 'happy_hour', NOW(), 'active', 'scheduled' FROM event_types WHERE code = 'happy_hour'";
+	// Note: event_instances is created by EventScheduler when it triggers this event
+	// $@HappyHourInstanceId is set by scheduler before calling OnEventStart
 
 	// Announce
 	announce "===========================================", bc_all, 0xFFD700;
@@ -97,8 +97,10 @@ OnEventEnd:
 	set $@HappyHourActive, 0;
 	set $@HappyHourEndTime, 0;
 
-	// Update database
-	query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE event_code = 'happy_hour' AND status = 'active' ORDER BY id DESC LIMIT 1";
+	// Update instance and cache via helper function
+	callfunc "F_EndEventInstance", $@HappyHourInstanceId;
+	set $@HappyHourInstanceId, 0;
+	set $@HappyHourScheduleId, 0;
 
 	// Stop timer
 	stopnpctimer;

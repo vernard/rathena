@@ -1,25 +1,31 @@
 //===== rAthena Script =======================================
-//= Event Scheduler
-//= Core scheduler that manages all automated events
+//= Event Scheduler v2
+//= Unified scheduler for all automated events
 //===== Description: =========================================
 //= Timer-based event scheduler that:
-//= - Checks for scheduled events every minute
-//= - Triggers event start/end via donpcevent
-//= - Manages MOTD daily schedule generation
+//= - Uses next_run based scheduling (efficient)
+//= - Supports: interval, daily, weekly, biweekly, monthly, once
+//= - Creates event_instances for history
+//= - Updates event_current_state cache for hot-path queries
+//= - Manages MOTD rotation with event_instances
 //============================================================
 
 -	script	EventScheduler	FAKE_NPC,{
 	end;
 
 OnInit:
+	// Initialize next_run for all enabled schedules
+	callsub S_InitializeNextRun;
+
 	// Generate MOTD schedule on server start
 	donpcevent "EventScheduler::OnGenerateMOTDSchedule";
 
-	// Check for active events immediately (e.g., boost still running after restart)
-	callsub S_CheckScheduledEvents;
+	// Restore active events after restart (e.g., boost still running)
+	callsub S_RestoreActiveEvents;
 
 	// Start the scheduler timer (check every 60 seconds)
 	initnpctimer;
+	debugmes "[EventScheduler] Initialized";
 	end;
 
 OnTimer60000:
@@ -27,7 +33,7 @@ OnTimer60000:
 	stopnpctimer;
 	initnpctimer;
 
-	// Check for scheduled events
+	// Check for events ready to trigger
 	callsub S_CheckScheduledEvents;
 
 	// Check if MOTD needs rotation announcement
@@ -35,61 +41,219 @@ OnTimer60000:
 	end;
 
 // ============================================================
-// Check for scheduled events (Happy Hour, EXP Boost, etc.)
-// Uses unified event_schedule table
+// Initialize next_run for schedules that don't have it set
 // ============================================================
-S_CheckScheduledEvents:
-	// Check weekly Happy Hour (every week on specific day/time)
-	query_sql "SELECT id, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 AND schedule_type = 'weekly' AND day_of_week = WEEKDAY(NOW()) AND start_hour = HOUR(NOW()) AND start_minute = MINUTE(NOW()) AND status = 'scheduled'", .@hh_id, .@hh_duration;
+S_InitializeNextRun:
+	// Get schedules without next_run
+	query_sql "SELECT id, schedule_type, interval_minutes, day_of_week, day_of_month, start_hour, start_minute, week_interval, anchor_date FROM event_schedule WHERE enabled = 1 AND next_run IS NULL", .@ids, .@types$, .@intervals, .@dow, .@dom, .@hours, .@mins, .@week_int, .@anchors$;
 
-	if (.@hh_id > 0 && !$@HappyHourActive) {
-		set $@HappyHourDuration, .@hh_duration;
-		set $@HappyHourScheduleId, .@hh_id;
-		query_sql "UPDATE event_schedule SET status = 'active', actual_start = NOW() WHERE id = "+.@hh_id;
-		donpcevent "HappyHour::OnEventStart";
+	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+		set .@next$, "";
+
+		if (.@types$[.@i] == "interval") {
+			// Interval: next aligned boundary
+			// For 180 min interval, align to 0:00, 3:00, 6:00, etc.
+			set .@interval, .@intervals[.@i];
+			if (.@interval > 0) {
+				query_sql "SELECT DATE_ADD(NOW(), INTERVAL ("+.@interval+" - (MINUTE(NOW()) % "+.@interval+")) MINUTE)", .@next$;
+			}
+		}
+		else if (.@types$[.@i] == "daily") {
+			// Daily: next occurrence of this time
+			query_sql "SELECT IF(CURTIME() < MAKETIME("+.@hours[.@i]+", "+.@mins[.@i]+", 0), CONCAT(CURDATE(), ' ', MAKETIME("+.@hours[.@i]+", "+.@mins[.@i]+", 0)), CONCAT(DATE_ADD(CURDATE(), INTERVAL 1 DAY), ' ', MAKETIME("+.@hours[.@i]+", "+.@mins[.@i]+", 0)))", .@next$;
+		}
+		else if (.@types$[.@i] == "weekly" || .@types$[.@i] == "fixed") {
+			// Weekly: next occurrence of this day/time
+			query_sql "SELECT DATE_ADD(DATE_ADD(CURDATE(), INTERVAL (("+.@dow[.@i]+" - WEEKDAY(CURDATE()) + 7) % 7) DAY), INTERVAL "+.@hours[.@i]+" * 60 + "+.@mins[.@i]+" MINUTE)", .@next$;
+			// If that time has passed today, add a week
+			query_sql "SELECT IF('"+.@next$+"' <= NOW(), DATE_ADD('"+.@next$+"', INTERVAL 7 DAY), '"+.@next$+"')", .@next$;
+		}
+		else if (.@types$[.@i] == "biweekly") {
+			// Biweekly: similar to weekly but every 2 weeks
+			query_sql "SELECT DATE_ADD(DATE_ADD(CURDATE(), INTERVAL (("+.@dow[.@i]+" - WEEKDAY(CURDATE()) + 7) % 7) DAY), INTERVAL "+.@hours[.@i]+" * 60 + "+.@mins[.@i]+" MINUTE)", .@next$;
+			query_sql "SELECT IF('"+.@next$+"' <= NOW(), DATE_ADD('"+.@next$+"', INTERVAL 14 DAY), '"+.@next$+"')", .@next$;
+		}
+		else if (.@types$[.@i] == "monthly") {
+			// Monthly: next occurrence of this day of month
+			if (.@dom[.@i] > 0) {
+				query_sql "SELECT IF(DAY(NOW()) < "+.@dom[.@i]+" OR (DAY(NOW()) = "+.@dom[.@i]+" AND CURTIME() < MAKETIME("+.@hours[.@i]+", "+.@mins[.@i]+", 0)), CONCAT(DATE_FORMAT(CURDATE(), '%Y-%m-'), LPAD("+.@dom[.@i]+", 2, '0'), ' ', MAKETIME("+.@hours[.@i]+", "+.@mins[.@i]+", 0)), CONCAT(DATE_FORMAT(DATE_ADD(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-'), LPAD("+.@dom[.@i]+", 2, '0'), ' ', MAKETIME("+.@hours[.@i]+", "+.@mins[.@i]+", 0)))", .@next$;
+			}
+		}
+
+		if (.@next$ != "") {
+			query_sql "UPDATE event_schedule SET next_run = '"+.@next$+"' WHERE id = "+.@ids[.@i];
+			debugmes "[EventScheduler] Set next_run for schedule "+.@ids[.@i]+": "+.@next$;
+		}
 	}
+	return;
 
-	// Check one-time EXP Boost (specific start/end datetime)
+// ============================================================
+// Restore active events after server restart
+// ============================================================
+S_RestoreActiveEvents:
+	// Check for active EXP Boost (one-time event still within time window)
 	if (!$@ExpBoostActive) {
-		query_sql "SELECT id, multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM event_schedule WHERE event_code = 'exp_boost' AND enabled = 1 AND schedule_type = 'once' AND status IN ('scheduled', 'active') AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@eb_id, .@eb_mult, .@eb_remaining;
+		query_sql "SELECT id, multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM event_schedule WHERE event_code = 'exp_boost' AND enabled = 1 AND schedule_type = 'once' AND status = 'active' AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@eb_id, .@eb_mult, .@eb_remaining;
 
 		if (.@eb_id > 0 && .@eb_remaining > 0) {
 			set $@ExpBoostMultiplier, .@eb_mult;
 			set $@ExpBoostDuration, .@eb_remaining;
 			set $@ExpBoostScheduleId, .@eb_id;
-			query_sql "UPDATE event_schedule SET status = 'active', actual_start = NOW() WHERE id = "+.@eb_id+" AND status = 'scheduled'";
 			donpcevent "ExpBoost::OnEventStart";
+			debugmes "[EventScheduler] Restored active EXP Boost";
 		}
 	}
 
-	// TODO: Add biweekly and monthly checks here when needed
+	// Note: Happy Hour is time-based so it doesn't need restoration
+	// MOTD is handled by S_CheckMOTDRotation
+	return;
+
+// ============================================================
+// Main scheduler: check for events ready to trigger
+// Uses next_run for efficient lookup
+// ============================================================
+S_CheckScheduledEvents:
+	// Find all schedules ready to trigger (next_run <= NOW)
+	// Excludes already active events and disabled schedules
+	query_sql "SELECT es.id, es.event_type_id, es.event_code, es.schedule_type, es.interval_minutes, es.duration_minutes, es.day_of_week, es.start_hour, es.start_minute, es.week_interval, es.multiplier, et.code FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE es.enabled = 1 AND et.enabled = 1 AND es.next_run IS NOT NULL AND es.next_run <= NOW() AND es.status IN ('scheduled', '') ORDER BY es.next_run LIMIT 10", .@ids, .@type_ids, .@codes$, .@sched_types$, .@intervals, .@durations, .@dow, .@hours, .@mins, .@week_int, .@mults, .@et_codes$;
+
+	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+		set .@schedule_id, .@ids[.@i];
+		set .@event_code$, .@codes$[.@i];
+		set .@schedule_type$, .@sched_types$[.@i];
+		set .@duration, .@durations[.@i];
+
+		// Check if this event type is already active (prevent overlap)
+		query_sql "SELECT 1 FROM event_instances WHERE event_type_id = "+.@type_ids[.@i]+" AND status = 'active' LIMIT 1", .@already_active;
+		if (.@already_active) {
+			debugmes "[EventScheduler] Skipping "+.@event_code$+" - already active (overlap prevention)";
+			// Still update next_run to prevent repeated attempts
+			callsub S_CalculateNextRun, .@schedule_id, .@schedule_type$, .@intervals[.@i], .@dow[.@i], .@hours[.@i], .@mins[.@i], .@week_int[.@i];
+			continue;
+		}
+
+		debugmes "[EventScheduler] Triggering event: "+.@event_code$+" (schedule "+.@schedule_id+")";
+
+		// Create event instance
+		query_sql "INSERT INTO event_instances (event_type_id, event_code, schedule_id, actual_start, status, trigger_type) VALUES ("+.@type_ids[.@i]+", '"+.@event_code$+"', "+.@schedule_id+", NOW(), 'active', 'scheduled')";
+		query_sql "SELECT LAST_INSERT_ID()", .@instance_id;
+
+		// Update event_current_state cache
+		query_sql "UPDATE event_current_state SET instance_id = "+.@instance_id+", is_active = 1, cache_data = JSON_OBJECT('schedule_id', "+.@schedule_id+", 'duration', "+.@duration+") WHERE event_type_id = "+.@type_ids[.@i];
+
+		// Update schedule status and last_run
+		query_sql "UPDATE event_schedule SET status = 'active', last_run = NOW() WHERE id = "+.@schedule_id;
+
+		// Trigger the event NPC
+		if (.@event_code$ == "happy_hour") {
+			set $@HappyHourDuration, .@duration;
+			set $@HappyHourScheduleId, .@schedule_id;
+			set $@HappyHourInstanceId, .@instance_id;
+			donpcevent "HappyHour::OnEventStart";
+		}
+		else if (.@event_code$ == "exp_boost") {
+			set $@ExpBoostMultiplier, .@mults[.@i];
+			set $@ExpBoostDuration, .@duration;
+			set $@ExpBoostScheduleId, .@schedule_id;
+			set $@ExpBoostInstanceId, .@instance_id;
+			donpcevent "ExpBoost::OnEventStart";
+		}
+		else if (.@event_code$ == "motd") {
+			// MOTD is handled separately by S_CheckMOTDRotation
+			// This just marks the schedule as triggered
+		}
+		else {
+			// Generic event - try to call OnEventStart
+			donpcevent .@event_code$+"::OnEventStart";
+		}
+
+		// Calculate and set next_run
+		callsub S_CalculateNextRun, .@schedule_id, .@schedule_type$, .@intervals[.@i], .@dow[.@i], .@hours[.@i], .@mins[.@i], .@week_int[.@i];
+	}
+	return;
+
+// ============================================================
+// Calculate next_run for a schedule after it triggers
+// ============================================================
+S_CalculateNextRun:
+	set .@schedule_id, getarg(0);
+	set .@type$, getarg(1);
+	set .@interval, getarg(2);
+	set .@dow, getarg(3);
+	set .@hour, getarg(4);
+	set .@minute, getarg(5);
+	set .@week_int, getarg(6);
+
+	set .@next$, "";
+
+	if (.@type$ == "interval") {
+		// Add interval minutes to now
+		query_sql "SELECT DATE_ADD(NOW(), INTERVAL "+.@interval+" MINUTE)", .@next$;
+	}
+	else if (.@type$ == "daily") {
+		// Tomorrow at same time
+		query_sql "SELECT CONCAT(DATE_ADD(CURDATE(), INTERVAL 1 DAY), ' ', MAKETIME("+.@hour+", "+.@minute+", 0))", .@next$;
+	}
+	else if (.@type$ == "weekly" || .@type$ == "fixed") {
+		// Next week same day/time
+		query_sql "SELECT DATE_ADD(NOW(), INTERVAL 7 DAY)", .@next$;
+		// Align to exact day/time
+		query_sql "SELECT DATE_ADD(DATE_ADD(CURDATE(), INTERVAL (("+.@dow+" - WEEKDAY(CURDATE()) + 7) % 7 + 7) DAY), INTERVAL "+.@hour+" * 60 + "+.@minute+" MINUTE)", .@next$;
+	}
+	else if (.@type$ == "biweekly") {
+		// Two weeks from now
+		query_sql "SELECT DATE_ADD(NOW(), INTERVAL 14 DAY)", .@next$;
+	}
+	else if (.@type$ == "once") {
+		// One-time event - clear next_run, mark schedule as completed
+		query_sql "UPDATE event_schedule SET next_run = NULL, status = 'completed' WHERE id = "+.@schedule_id;
+		return;
+	}
+
+	if (.@next$ != "") {
+		query_sql "UPDATE event_schedule SET next_run = '"+.@next$+"', status = 'scheduled' WHERE id = "+.@schedule_id;
+		debugmes "[EventScheduler] Next run for schedule "+.@schedule_id+": "+.@next$;
+	}
 	return;
 
 // ============================================================
 // Check MOTD rotation (announce new monster)
+// Updates event_current_state cache for C++ hot-path
 // ============================================================
 S_CheckMOTDRotation:
 	// Check if MOTD is enabled (centralized in event_types)
-	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
+	query_sql "SELECT id, enabled FROM event_types WHERE code = 'motd'", .@motd_type_id, .@enabled;
 	if (!.@enabled) {
-		// MOTD disabled - clear the active mob ID to stop bonuses
+		// MOTD disabled - clear cache and globals
 		if ($@LastMOTDMobID > 0) {
 			set $@LastMOTDMobID, 0;
 			set $@CurrentMOTDName$, "";
+			query_sql "UPDATE event_current_state SET is_active = 0, instance_id = NULL, cache_data = NULL WHERE event_type_id = "+.@motd_type_id;
 		}
 		return;
 	}
 
-	// Get current MOTD
-	query_sql "SELECT mob_id, mob_name FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id, .@mob_name$;
+	// Get current MOTD from motd_schedule
+	query_sql "SELECT mob_id, mob_name, tier, TIMESTAMPDIFF(MINUTE, NOW(), end_time), end_time FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id, .@mob_name$, .@tier$, .@mins_left, .@end_time$;
 
 	// Check if this is a new rotation (different from last announced)
 	if (.@mob_id > 0 && .@mob_id != $@LastMOTDMobID) {
+		// Complete previous MOTD instance if exists
+		if ($@CurrentMOTDInstanceId > 0) {
+			query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE id = "+$@CurrentMOTDInstanceId;
+		}
+
+		// Create new MOTD instance with event_data
+		query_sql "INSERT INTO event_instances (event_type_id, event_code, actual_start, status, trigger_type, event_data) VALUES ("+.@motd_type_id+", 'motd', NOW(), 'active', 'scheduled', JSON_OBJECT('mob_id', "+.@mob_id+", 'mob_name', '"+escape_sql(.@mob_name$)+"', 'tier', '"+.@tier$+"'))";
+		query_sql "SELECT LAST_INSERT_ID()", .@instance_id;
+		set $@CurrentMOTDInstanceId, .@instance_id;
+
+		// Update event_current_state cache (used by C++)
+		query_sql "UPDATE event_current_state SET instance_id = "+.@instance_id+", is_active = 1, cache_data = JSON_OBJECT('mob_id', "+.@mob_id+", 'mob_name', '"+escape_sql(.@mob_name$)+"', 'tier', '"+.@tier$+"', 'end_time', '"+.@end_time$+"') WHERE event_type_id = "+.@motd_type_id;
+
+		// Update globals
 		set $@LastMOTDMobID, .@mob_id;
 		set $@CurrentMOTDName$, .@mob_name$;
-
-		// Calculate time remaining
-		query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE mob_id = "+.@mob_id+" AND NOW() BETWEEN start_time AND end_time", .@mins_left;
 
 		// Check if this monster has a bounty
 		query_sql "SELECT has_bounty FROM motd_monsters WHERE mob_id = "+.@mob_id, .@has_bounty;
@@ -99,6 +263,8 @@ S_CheckMOTDRotation:
 		} else {
 			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 		}
+
+		debugmes "[EventScheduler] MOTD rotated to: "+.@mob_name$+" ("+.@mob_id+")";
 	}
 	return;
 
@@ -107,6 +273,13 @@ S_CheckMOTDRotation:
 // ============================================================
 OnClock0000:
 OnGenerateMOTDSchedule:
+	// Check if MOTD is enabled
+	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
+	if (!.@enabled) {
+		debugmes "[EventScheduler] MOTD disabled, skipping schedule generation";
+		end;
+	}
+
 	// Get configuration
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
@@ -143,19 +316,36 @@ OnGenerateMOTDSchedule:
 	}
 
 	debugmes "[EventScheduler] Generated MOTD schedule for today";
+
+	// Immediately check for MOTD rotation (in case we just generated for current slot)
+	callsub S_CheckMOTDRotation;
 	end;
+
+// ============================================================
+// Called by event NPCs when they end (to update instance)
+// ============================================================
+OnEventEnd:
+	set .@event_code$, getarg(0, "");
+	set .@instance_id, getarg(1, 0);
+
+	if (.@instance_id > 0) {
+		query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE id = "+.@instance_id;
+
+		// Clear event_current_state cache
+		query_sql "UPDATE event_current_state ecs JOIN event_instances ei ON ecs.instance_id = ei.id SET ecs.is_active = 0, ecs.instance_id = NULL, ecs.cache_data = NULL WHERE ei.id = "+.@instance_id;
+	}
+	return;
 }
 
 // ============================================================
-// Helper function to get current MOTD info
-// Called by other NPCs to check if a mob is current MOTD
+// Helper function to get current MOTD info (uses cache)
 // ============================================================
 function	script	F_GetCurrentMOTD	{
-	// Check if MOTD is enabled (centralized in event_types)
-	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
-	if (!.@enabled) return 0;
+	// Use global variable first (fastest)
+	if ($@LastMOTDMobID > 0) return $@LastMOTDMobID;
 
-	query_sql "SELECT mob_id FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id;
+	// Fall back to cache
+	query_sql "SELECT JSON_EXTRACT(cache_data, '$.mob_id') FROM event_current_state ecs JOIN event_types et ON ecs.event_type_id = et.id WHERE et.code = 'motd' AND ecs.is_active = 1", .@mob_id;
 	return .@mob_id;
 }
 
@@ -163,13 +353,12 @@ function	script	F_GetCurrentMOTD	{
 // Helper function to check if a specific mob is current MOTD
 // ============================================================
 function	script	F_IsMOTD	{
-	// Check if MOTD is enabled (centralized in event_types)
-	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
-	if (!.@enabled) return 0;
-
 	set .@check_mob_id, getarg(0, 0);
-	query_sql "SELECT 1 FROM motd_schedule WHERE mob_id = "+.@check_mob_id+" AND NOW() BETWEEN start_time AND end_time LIMIT 1", .@is_motd;
-	return .@is_motd;
+
+	// Use global variable first (fastest)
+	if ($@LastMOTDMobID == .@check_mob_id) return 1;
+
+	return 0;
 }
 
 // ============================================================
@@ -178,4 +367,28 @@ function	script	F_IsMOTD	{
 function	script	F_IsMOTDEnabled	{
 	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
 	return .@enabled;
+}
+
+// ============================================================
+// Helper function to get active instance ID for an event
+// ============================================================
+function	script	F_GetActiveInstance	{
+	set .@event_code$, getarg(0, "");
+	query_sql "SELECT id FROM event_instances WHERE event_code = '"+.@event_code$+"' AND status = 'active' ORDER BY id DESC LIMIT 1", .@instance_id;
+	return .@instance_id;
+}
+
+// ============================================================
+// Helper function to end an event and update its instance
+// Call this from event NPCs when they end
+// ============================================================
+function	script	F_EndEventInstance	{
+	set .@instance_id, getarg(0, 0);
+	if (.@instance_id <= 0) return;
+
+	// Update instance
+	query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE id = "+.@instance_id;
+
+	// Clear cache
+	query_sql "UPDATE event_current_state SET is_active = 0, instance_id = NULL WHERE instance_id = "+.@instance_id;
 }

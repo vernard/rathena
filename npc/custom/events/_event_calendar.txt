@@ -751,26 +751,28 @@ L_EditMOTDSchedule:
 	close;
 
 // ============================================================
-// Event History
+// Event History (from event_instances)
 // ============================================================
 L_History:
 	mes "[Event History]";
-	// Show active first, then completed (one-time events)
-	query_sql "SELECT id, event_code, DATE_FORMAT(COALESCE(actual_start, start_datetime), '%m/%d %H:%i'), DATE_FORMAT(COALESCE(actual_end, end_datetime), '%H:%i'), multiplier, status FROM event_schedule WHERE schedule_type = 'once' ORDER BY FIELD(status, 'active', 'scheduled', 'completed', 'cancelled'), id DESC LIMIT 10", .@ids, .@codes$, .@starts$, .@ends$, .@mults, .@status$;
+	// Query from event_instances for actual run history
+	query_sql "SELECT ei.id, ei.event_code, DATE_FORMAT(ei.actual_start, '%m/%d %H:%i'), DATE_FORMAT(ei.actual_end, '%H:%i'), ei.status, JSON_UNQUOTE(JSON_EXTRACT(ei.event_data, '$.mob_name')) FROM event_instances ei ORDER BY FIELD(ei.status, 'active', 'scheduled', 'completed', 'cancelled', 'failed'), ei.id DESC LIMIT 15", .@ids, .@codes$, .@starts$, .@ends$, .@status$, .@extra$;
 
 	if (getarraysize(.@ids) == 0) {
 		mes "No event history found.";
 	} else {
 		for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
-			// Format event name
+			// Format event name based on type
 			if (.@codes$[.@i] == "exp_boost") {
 				set .@name$, "EXP Boost";
-				if (.@mults[.@i] > 0) {
-					set .@mult$, callfunc("F_FormatExpMultiplier", .@mults[.@i]);
-					set .@name$, .@name$ + " " + .@mult$;
-				}
 			} else if (.@codes$[.@i] == "happy_hour") {
 				set .@name$, "Happy Hour";
+			} else if (.@codes$[.@i] == "motd") {
+				if (.@extra$[.@i] != "" && .@extra$[.@i] != "null") {
+					set .@name$, "MOTD: " + .@extra$[.@i];
+				} else {
+					set .@name$, "Monster of the Day";
+				}
 			} else {
 				set .@name$, .@codes$[.@i];
 			}
@@ -786,7 +788,10 @@ L_History:
 				set .@stat$, "^FF0000"+.@status$[.@i]+"^000000";
 			}
 
-			mes "["+.@ids[.@i]+"] "+.@starts$[.@i]+" - "+.@ends$[.@i]+" ["+.@stat$+"]";
+			// Format end time (show "-" if still running)
+			set .@end_display$, (.@ends$[.@i] != "" && .@ends$[.@i] != "NULL") ? .@ends$[.@i] : "...";
+
+			mes .@starts$[.@i]+" - "+.@end_display$+" ["+.@stat$+"]";
 			mes "  "+.@name$;
 		}
 	}

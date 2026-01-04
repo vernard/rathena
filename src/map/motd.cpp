@@ -19,17 +19,55 @@ static int32 motd_cached_mob_id = 0;
 static t_tick motd_cache_time = 0;
 static bool motd_cache_initialized = false;
 
+// Forward declaration
+static int32 motd_query_fallback(void);
+
 /**
  * Query the database for the current MOTD monster
+ * Uses event_current_state cache for fast lookups (indexed, single row)
  * @return Monster ID of current MOTD, or 0 if none/disabled
  */
 static int32 motd_query_current_monster(void) {
 	int32 mob_id = 0;
 	char* data;
 
-	// First check if MOTD is enabled
+	// Query from event_current_state cache (fast, indexed lookup)
+	// This cache is updated by the NPC scheduler when MOTD rotates
+	// is_active = 1 means: event_types.enabled = 1 AND there's a current monster
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
-		"SELECT `config_value` FROM `event_config` WHERE `config_key` = 'motd_enabled'"))
+		"SELECT JSON_UNQUOTE(JSON_EXTRACT(`cache_data`, '$.mob_id')) "
+		"FROM `event_current_state` ecs "
+		"JOIN `event_types` et ON ecs.`event_type_id` = et.`id` "
+		"WHERE et.`code` = 'motd' AND ecs.`is_active` = 1 "
+		"LIMIT 1"))
+	{
+		Sql_ShowDebug(mmysql_handle);
+		// Fall back to motd_schedule if event_current_state doesn't exist yet
+		return motd_query_fallback();
+	}
+
+	if (SQL_SUCCESS == Sql_NextRow(mmysql_handle)) {
+		Sql_GetData(mmysql_handle, 0, &data, nullptr);
+		if (data && strcmp(data, "null") != 0) {
+			mob_id = atoi(data);
+		}
+	}
+
+	Sql_FreeResult(mmysql_handle);
+	return mob_id;
+}
+
+/**
+ * Fallback query using motd_schedule (for backwards compatibility)
+ * Used when event_current_state table doesn't exist
+ */
+static int32 motd_query_fallback(void) {
+	int32 mob_id = 0;
+	char* data;
+
+	// Check if MOTD is enabled
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT `enabled` FROM `event_types` WHERE `code` = 'motd'"))
 	{
 		Sql_ShowDebug(mmysql_handle);
 		return 0;

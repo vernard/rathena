@@ -86,8 +86,8 @@ OnEventStart:
 		set .@mult$, .@whole + "x";
 	}
 
-	// Log to database
-	query_sql "INSERT INTO event_instances (event_type_id, event_code, actual_start, status, trigger_type) VALUES (0, 'exp_boost', NOW(), 'active', 'scheduled')";
+	// Note: event_instances is created by EventScheduler when it triggers this event
+	// $@ExpBoostInstanceId is set by scheduler before calling OnEventStart
 
 	// Format duration for display
 	set .@dur$, callfunc("F_FormatDuration", $@ExpBoostDuration);
@@ -116,10 +116,13 @@ OnEventEnd:
 	setbattleflag("base_exp_rate", $@EB_OrigBaseExp);
 	setbattleflag("job_exp_rate", $@EB_OrigJobExp, true);  // true = reload
 
-	// Mark the schedule entry as completed
+	// Mark the schedule entry as completed (for one-time events)
 	if ($@ExpBoostScheduleId > 0) {
 		query_sql "UPDATE event_schedule SET status = 'completed', actual_end = NOW() WHERE id = "+$@ExpBoostScheduleId;
 	}
+
+	// Update instance and cache via helper function
+	callfunc "F_EndEventInstance", $@ExpBoostInstanceId;
 
 	// Mark as inactive
 	set $@ExpBoostActive, 0;
@@ -128,9 +131,7 @@ OnEventEnd:
 	set $@ExpBoostStartTime, 0;
 	set $@ExpBoostEndTime, 0;
 	set $@ExpBoostScheduleId, 0;
-
-	// Update database
-	query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE event_code = 'exp_boost' AND status = 'active' ORDER BY id DESC LIMIT 1";
+	set $@ExpBoostInstanceId, 0;
 
 	// Announce
 	announce "===========================================", bc_all, 0x00BFFF;
