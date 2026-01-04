@@ -25,14 +25,29 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 		set .@has_active, 1;
 	}
 
-	// Check Monster of the Day
-	query_sql "SELECT mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@motd_name$, .@motd_mins;
-	if (.@motd_name$ != "") {
-		mes "^00FF00[Active] Monster of the Day^000000";
-		mes "   Featured: ^0000FF"+.@motd_name$+"^000000";
-		mes "   3x EXP & Hunt Points!";
-		mes "   Time left: ^00AA00"+.@motd_mins+" minutes^000000";
+	// Check EXP Boost
+	if ($@ExpBoostActive) {
+		set .@mult$, callfunc("F_FormatExpMultiplier", $@ExpBoostMultiplier);
+		set .@duration, callfunc("F_ExpBoostDuration");
+		mes "^00BFFF[Active] EXP Boost^000000";
+		mes "   "+.@mult$+" EXP rates!";
+		mes "   Running for: ^00AA00"+.@duration+" minutes^000000";
 		set .@has_active, 1;
+	}
+
+	// Check Monster of the Day
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@motd_enabled$;
+	if (.@motd_enabled$ == "0") {
+		mes "^888888[Disabled] Monster of the Day^000000";
+	} else {
+		query_sql "SELECT mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@motd_name$, .@motd_mins;
+		if (.@motd_name$ != "") {
+			mes "^00FF00[Active] Monster of the Day^000000";
+			mes "   Featured: ^0000FF"+.@motd_name$+"^000000";
+			mes "   3x EXP & Hunt Points!";
+			mes "   Time left: ^00AA00"+.@motd_mins+" minutes^000000";
+			set .@has_active, 1;
+		}
 	}
 
 	if (!.@has_active) {
@@ -45,14 +60,26 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 	// ========================================
 	mes "[^0055FFUpcoming Events^000000]";
 
-	// Get scheduled Happy Hours
-	query_sql "SELECT DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), start_hour, start_minute FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 ORDER BY day_of_week LIMIT 3", .@hh_days$, .@hh_hours, .@hh_mins;
+	// Get scheduled Happy Hours (with duration)
+	query_sql "SELECT DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), start_hour, start_minute, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 ORDER BY day_of_week LIMIT 3", .@hh_days$, .@hh_hours, .@hh_mins, .@hh_durations;
 
 	if (getarraysize(.@hh_days$) > 0) {
 		mes "^FFD700Happy Hour Schedule:^000000";
 		for (set .@i, 0; .@i < getarraysize(.@hh_days$); set .@i, .@i + 1) {
 			set .@time$, (.@hh_hours[.@i] < 10 ? "0" : "") + .@hh_hours[.@i] + ":" + (.@hh_mins[.@i] < 10 ? "0" : "") + .@hh_mins[.@i];
-			mes "   "+.@hh_days$[.@i]+" at "+.@time$;
+			// Convert duration to hours/minutes display
+			if (.@hh_durations[.@i] >= 60) {
+				set .@dur_hours, .@hh_durations[.@i] / 60;
+				set .@dur_mins, .@hh_durations[.@i] % 60;
+				if (.@dur_mins > 0) {
+					set .@dur$, .@dur_hours+"h "+.@dur_mins+"m";
+				} else {
+					set .@dur$, .@dur_hours+" hour" + (.@dur_hours > 1 ? "s" : "");
+				}
+			} else {
+				set .@dur$, .@hh_durations[.@i]+" min";
+			}
+			mes "   "+.@hh_days$[.@i]+" at "+.@time$+" ("+.@dur$+")";
 		}
 	} else {
 		mes "^888888No Happy Hour scheduled.^000000";
@@ -85,16 +112,82 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 
 L_EventDetails:
 	mes "[Event Details]";
-	mes "^FFD700Happy Hour^000000";
-	mes "2x EXP rates for all monsters!";
-	mes "Scheduled 1-2 times per week.";
+	mes "Which event would you like to learn about?";
 	next;
-	mes "^00FF00Monster of the Day^000000";
-	mes "3x EXP and Hunt Points for a";
-	mes "featured monster. Changes every";
-	mes "3 hours. Check the Monster Hunter";
-	mes "Board for current target!";
-	close;
+	switch(select("Happy Hour:Monster of the Day:Back")) {
+		case 1:
+			mes "[^FFD700Happy Hour^000000]";
+			mes " ";
+			mes "^0000FFWhat is it?^000000";
+			mes "A server-wide EXP boost event!";
+			mes "All players receive ^FF00002x Base EXP^000000";
+			mes "and ^FF00002x Job EXP^000000 from monsters.";
+			next;
+			mes "[^FFD700Happy Hour^000000]";
+			mes "^0000FFWhat about drops?^000000";
+			mes "Drop rates stay the same to keep";
+			mes "the economy balanced. This is a";
+			mes "leveling event, not a farming one!";
+			next;
+			mes "[^FFD700Happy Hour^000000]";
+			mes "^0000FFWhen does it happen?^000000";
+			// Get next scheduled Happy Hour
+			query_sql "SELECT DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), start_hour, start_minute, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 ORDER BY (day_of_week - WEEKDAY(CURDATE()) + 7) % 7 LIMIT 1", .@next_day$, .@next_hour, .@next_min, .@next_dur;
+			if (.@next_day$ != "") {
+				set .@time$, (.@next_hour < 10 ? "0" : "") + .@next_hour + ":" + (.@next_min < 10 ? "0" : "") + .@next_min;
+				if (.@next_dur >= 60) {
+					set .@dur$, (.@next_dur / 60) + " hour" + ((.@next_dur / 60) > 1 ? "s" : "");
+				} else {
+					set .@dur$, .@next_dur + " minutes";
+				}
+				mes "Next: ^00AA00"+.@next_day$+" at "+.@time$+"^000000";
+				mes "Duration: ^00AA00"+.@dur$+"^000000";
+			} else {
+				mes "No scheduled Happy Hours.";
+				mes "Check back later!";
+			}
+			next;
+			mes "[^FFD700Happy Hour^000000]";
+			mes "^0000FFTips:^000000";
+			mes "- Great for leveling new jobs";
+			mes "- Perfect for pushing past plateaus";
+			mes "- Stack with Monster of the Day!";
+			close;
+
+		case 2:
+			mes "[^00FF00Monster of the Day^000000]";
+			mes " ";
+			mes "^0000FFWhat is it?^000000";
+			mes "A rotating featured monster that";
+			mes "gives ^FF00003x Base/Job EXP^000000 and bonus";
+			mes "^FF0000Hunt Points^000000 when killed!";
+			next;
+			mes "[^00FF00Monster of the Day^000000]";
+			mes "^0000FFHow does it work?^000000";
+			mes "The featured monster changes";
+			mes "every ^00AA003 hours^000000. Different tiers";
+			mes "rotate throughout the day so";
+			mes "everyone can participate.";
+			next;
+			mes "[^00FF00Monster of the Day^000000]";
+			mes "^0000FFWhat are Hunt Points?^000000";
+			mes "A currency earned by hunting";
+			mes "MOTD targets. Spend them on";
+			mes "special rewards like costumes,";
+			mes "consumables, and rare items!";
+			next;
+			mes "[^00FF00Monster of the Day^000000]";
+			mes "^0000FFWhere do I find it?^000000";
+			mes "Check the ^0000FFMonster Hunter Board^000000";
+			mes "in Prontera for the current";
+			mes "target, location hints, and";
+			mes "your progress!";
+			close;
+
+		case 3:
+			close;
+	}
+	end;
 
 L_MyStats:
 	mes "[Your Event Stats]";
@@ -117,16 +210,17 @@ L_GMMenu:
 	mes "What would you like to manage?";
 	next;
 
-	switch(select("Happy Hour:Monster of the Day:Regenerate MOTD Schedule:Event History:Back")) {
+	switch(select("Happy Hour:EXP Boost:Monster of the Day:Regenerate MOTD Schedule:Event History:Back")) {
 		case 1: goto L_HappyHour;
-		case 2: goto L_MOTD;
-		case 3:
+		case 2: goto L_ExpBoost;
+		case 3: goto L_MOTD;
+		case 4:
 			donpcevent "EventScheduler::OnGenerateMOTDSchedule";
 			callsub S_InvalidateCache;
 			mes "MOTD schedule regenerated!";
 			close;
-		case 4: goto L_History;
-		case 5: close;
+		case 5: goto L_History;
+		case 6: close;
 	}
 	end;
 
@@ -244,22 +338,112 @@ L_HappyHour:
 	end;
 
 // ============================================================
+// EXP Boost Management
+// ============================================================
+L_ExpBoost:
+	mes "[EXP Boost Management]";
+
+	if ($@ExpBoostActive) {
+		set .@mult$, callfunc("F_FormatExpMultiplier", $@ExpBoostMultiplier);
+		set .@duration, callfunc("F_ExpBoostDuration");
+		mes "^00AA00Status: ACTIVE^000000";
+		mes "Multiplier: "+.@mult$;
+		mes "Running for: "+.@duration+" minutes";
+		next;
+
+		if (select("Stop EXP Boost:Back") == 1) {
+			donpcevent "ExpBoost::OnEventEnd";
+			mes "[Events Manager]";
+			mes "EXP Boost has been stopped.";
+			mes "Rates restored to normal.";
+			close;
+		}
+		goto L_ExpBoost;
+	}
+
+	mes "^FF0000Status: INACTIVE^000000";
+	mes " ";
+	mes "EXP Boost multiplies server rates";
+	mes "by a custom amount (1.5x to 5x).";
+	mes "Stacks with Happy Hour!";
+	next;
+
+	switch(select("Start EXP Boost:Back")) {
+		case 1:
+			mes "[Start EXP Boost]";
+			mes "Select multiplier:";
+			next;
+			set .@choice, select("1.5x:2x:3x:4x:5x:Custom");
+			switch(.@choice) {
+				case 1: set $@ExpBoostMultiplier, 150; break;
+				case 2: set $@ExpBoostMultiplier, 200; break;
+				case 3: set $@ExpBoostMultiplier, 300; break;
+				case 4: set $@ExpBoostMultiplier, 400; break;
+				case 5: set $@ExpBoostMultiplier, 500; break;
+				case 6:
+					mes "[Custom Multiplier]";
+					mes "Enter multiplier as percentage:";
+					mes "(150 = 1.5x, 200 = 2x, 300 = 3x)";
+					input .@custom;
+					if (.@custom < 150 || .@custom > 500) {
+						mes "Invalid. Must be 150-500.";
+						close;
+					}
+					set $@ExpBoostMultiplier, .@custom;
+					break;
+			}
+			donpcevent "ExpBoost::OnEventStart";
+			set .@mult$, callfunc("F_FormatExpMultiplier", $@ExpBoostMultiplier);
+			mes "[Events Manager]";
+			mes "EXP Boost started at "+.@mult$+"!";
+			close;
+
+		case 2:
+			goto L_GMMenu;
+	}
+	end;
+
+// ============================================================
 // Monster of the Day Management
 // ============================================================
 L_MOTD:
 	mes "[MOTD Settings]";
 
 	// Get current config
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@motd_enabled$;
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
 
-	mes "Current Settings:";
+	if (.@motd_enabled$ == "0") {
+		mes "Status: ^FF0000DISABLED^000000";
+	} else {
+		mes "Status: ^00AA00ENABLED^000000";
+	}
 	mes "Selection Mode: ^0000FF"+.@mode$+"^000000";
 	mes "Min Monster Level: ^0000FF"+.@min_level$+"^000000";
 	next;
 
-	switch(select("Change Selection Mode:View Today's Schedule:Back")) {
+	switch(select("Toggle MOTD On/Off:Change Selection Mode:View Today's Schedule:Back")) {
 		case 1:
+			if (.@motd_enabled$ == "0") {
+				query_sql "UPDATE event_config SET config_value = '1' WHERE config_key = 'motd_enabled'";
+				callsub S_InvalidateCache;
+				mes "[Events Manager]";
+				mes "Monster of the Day has been ^00AA00ENABLED^000000.";
+				mes "The next rotation will be announced.";
+			} else {
+				query_sql "UPDATE event_config SET config_value = '0' WHERE config_key = 'motd_enabled'";
+				callsub S_InvalidateCache;
+				// Clear the active MOTD immediately
+				set $@LastMOTDMobID, 0;
+				set $@CurrentMOTDName$, "";
+				mes "[Events Manager]";
+				mes "Monster of the Day has been ^FF0000DISABLED^000000.";
+				mes "No bonuses will be given until re-enabled.";
+			}
+			close;
+
+		case 2:
 			mes "Select mode:";
 			next;
 			set .@new_mode, select("Random:Tier Rotation");
@@ -272,7 +456,7 @@ L_MOTD:
 			mes "Mode updated!";
 			close;
 
-		case 2:
+		case 3:
 			mes "[Today's MOTD Schedule]";
 			query_sql "SELECT mob_name, tier, DATE_FORMAT(start_time, '%H:%i'), DATE_FORMAT(end_time, '%H:%i') FROM motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@names$, .@tiers$, .@starts$, .@ends$;
 
@@ -285,7 +469,7 @@ L_MOTD:
 			}
 			close;
 
-		case 3:
+		case 4:
 			goto L_GMMenu;
 	}
 	end;

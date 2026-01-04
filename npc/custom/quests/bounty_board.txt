@@ -124,6 +124,12 @@ function	script	F_CooldownTimeLeft	{
 			mes "^00AA00You have an active bounty here.^000000";
 			mes "Target: ^0055FF" + getmonsterinfo(Bounty_MobID, MOB_NAME) + "^000000";
 			mes "Progress: ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
+
+			// Use stored MOTD status from when bounty was accepted (locked in at accept time)
+			if (Bounty_MOTD_Bonus) {
+				mes "^FF8800* Monster of the Day: 3x EXP & Points! *^000000";
+			}
+
 			// Check cooldown/discovery status
 			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, .CooldownSeconds);
 			if (.@cooldown_pct >= 300) {
@@ -131,6 +137,7 @@ function	script	F_CooldownTimeLeft	{
 			} else if (.@cooldown_pct < 100) {
 				mes "^FF8800(Cooldown: " + .@cooldown_pct + "% rewards)^000000";
 			}
+
 			// Calculate estimated EXP
 			.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
 			.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
@@ -140,6 +147,7 @@ function	script	F_CooldownTimeLeft	{
 			if (.@quest_rate < 1) .@quest_rate = 100;
 			.@est_exp = .@est_exp * (.@quest_rate / 100);
 			.@est_exp = .@est_exp * .@cooldown_pct / 100;  // Apply discovery/cooldown multiplier
+			if (Bounty_MOTD_Bonus) .@est_exp = .@est_exp * 3;  // Apply MOTD bonus (locked at accept)
 			.@next_exp = (NextBaseExp > 100) ? NextBaseExp : 100;
 			.@est_pct = .@est_exp / (.@next_exp / 100);
 			if (NextBaseExp > 0)
@@ -170,6 +178,9 @@ function	script	F_CooldownTimeLeft	{
 			.@mob_name$ = getmonsterinfo(.@mob_id, MOB_NAME);
 			.@mob_lv = getmonsterinfo(.@mob_id, MOB_LV);
 
+			// Check if this monster is Monster of the Day (uses F_IsMOTD which respects motd_enabled)
+			.@is_motd = callfunc("F_IsMOTD", .@mob_id);
+
 			// Calculate rewards for this monster (50 kills, no tier bonus)
 			.@kills = .Tiers[0];
 			.@mult = .TierMult[0];
@@ -196,12 +207,23 @@ function	script	F_CooldownTimeLeft	{
 			.@display_points = .@points * .@cooldown_pct / 100;
 			if (.@display_points < 1) .@display_points = 1;
 
+			// Apply MOTD 3x bonus to EXP and points display
+			if (.@is_motd) {
+				.@display_exp = .@display_exp * 3;
+				.@display_points = .@display_points * 3;
+			}
+
 			// Calculate % of player's level
 			.@pct = .@display_exp * 100 / .@next_exp;
 
 			// Build display line
 			.@line$ = "^0055FF[" + (.@i+1) + "]^000000 " + .@mob_name$ + " (Lv " + .@mob_lv + ")";
 			.@line$ = .@line$ + " - ~" + .@pct + "% lvl, " + callfunc("F_ShortNum", .@display_zeny) + "z";
+
+			// Show MOTD indicator first (most important)
+			if (.@is_motd) {
+				.@line$ = .@line$ + " ^FF8800[MOTD 3x]^000000";
+			}
 
 			// Show discovery bonus or cooldown warning
 			if (.@cooldown_pct >= 300) {
@@ -274,8 +296,8 @@ function	script	F_CooldownTimeLeft	{
 		Bounty_Kills = 0;
 
 		// Check if this mob is Monster of the Day (3x bonus)
-		query_sql("SELECT 1 FROM motd_schedule WHERE mob_id = " + .@selected_mob + " AND NOW() BETWEEN start_time AND end_time LIMIT 1", .@is_motd);
-		Bounty_MOTD_Bonus = .@is_motd;
+		// Uses F_IsMOTD which respects the motd_enabled config
+		Bounty_MOTD_Bonus = callfunc("F_IsMOTD", .@selected_mob);
 
 		mes "[Bounty Board]";
 		mes "Bounty accepted!";

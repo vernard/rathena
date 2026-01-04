@@ -11,6 +11,18 @@
 
 prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 	mes "[Monster Hunter Board]";
+
+	// Check if MOTD is enabled
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
+	if (.@enabled$ == "0") {
+		mes "^888888Monster of the Day^000000";
+		mes "^888888is currently disabled.^000000";
+		mes " ";
+		mes "Check back later for";
+		mes "featured hunts!";
+		close;
+	}
+
 	mes "^0055FFToday's Featured Hunts^000000";
 	mes "Featured monsters grant";
 	mes "^FF00003x EXP^000000 and ^FF00003x Hunt Points^000000!";
@@ -28,12 +40,28 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 		}
 
 		mes "^FF0000>> NOW FEATURED <<^000000";
-		mes "^0000FF"+.@cur_name$+"^000000 ("+.@cur_id+")";
+		mes "^0000FF"+.@cur_name$+"^000000";
 		mes "Tier: "+.@cur_tier$;
 		mes "Time left: ^00AA00"+.@time$+"^000000";
 		if (.@cur_loc$ != "") {
 			mes "Location: ^777777"+.@cur_loc$+"^000000";
 		}
+		mes " ";
+		mes "^FF8800Bounty Rewards (3x):^000000";
+		// Calculate sample rewards for this monster
+		.@mob_lv = getmonsterinfo(.@cur_id, MOB_LV);
+		.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
+		if (.@exp_scale < 1) .@exp_scale = 1;
+		.@base_exp = ((100 + .@mob_lv * 5) * 50 * 100 * .@exp_scale) / 100;  // 50 kills
+		.@quest_rate = getbattleflag("quest_exp_rate");
+		if (.@quest_rate < 1) .@quest_rate = 100;
+		.@base_exp = .@base_exp * (.@quest_rate / 100) * 3;  // Apply 3x MOTD
+		.@zeny = ((20 + .@mob_lv) * 50 * 100) / 5;
+		.@points = ((.@mob_lv / 10 + 1) * 100 * 50 / 25) / 100 * 3;  // Apply 3x MOTD
+		if (.@points < 1) .@points = 1;
+		.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
+		.@pct = .@base_exp * 100 / .@next_exp;
+		mes "~"+.@pct+"% EXP, "+.@points+" Hunt Pts";
 		next;
 	} else {
 		mes "^888888No monster currently featured.^000000";

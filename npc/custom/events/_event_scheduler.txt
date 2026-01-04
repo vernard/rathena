@@ -49,6 +49,17 @@ S_CheckScheduledEvents:
 // Check MOTD rotation (announce new monster)
 // ============================================================
 S_CheckMOTDRotation:
+	// Check if MOTD is enabled
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
+	if (.@enabled$ == "0") {
+		// MOTD disabled - clear the active mob ID to stop bonuses
+		if ($@LastMOTDMobID > 0) {
+			set $@LastMOTDMobID, 0;
+			set $@CurrentMOTDName$, "";
+		}
+		return;
+	}
+
 	// Get current MOTD
 	query_sql "SELECT mob_id, mob_name FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id, .@mob_name$;
 
@@ -120,6 +131,10 @@ OnGenerateMOTDSchedule:
 // Called by other NPCs to check if a mob is current MOTD
 // ============================================================
 function	script	F_GetCurrentMOTD	{
+	// Check if MOTD is enabled
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
+	if (.@enabled$ == "0") return 0;
+
 	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id, .@mob_name$, .@mins_left;
 
 	// Return mob_id (0 if none active)
@@ -130,9 +145,21 @@ function	script	F_GetCurrentMOTD	{
 // Helper function to check if a specific mob is current MOTD
 // ============================================================
 function	script	F_IsMOTD	{
+	// Check if MOTD is enabled
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
+	if (.@enabled$ == "0") return 0;
+
 	set .@check_mob_id, getarg(0, 0);
 
 	query_sql "SELECT 1 FROM motd_schedule WHERE mob_id = "+.@check_mob_id+" AND NOW() BETWEEN start_time AND end_time LIMIT 1", .@is_motd;
 
 	return .@is_motd;
+}
+
+// ============================================================
+// Helper function to check if MOTD system is enabled
+// ============================================================
+function	script	F_IsMOTDEnabled	{
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
+	return (.@enabled$ != "0");
 }
