@@ -31,6 +31,7 @@ prontera,152,187,5	script	Monster Hunter Board	4_BOARD3,{
 
 		mes "^FF0000>> NOW FEATURED <<^000000";
 		mes "^0000FF"+.@cur_name$+"^000000 ["+.@cur_tier$+"]";
+		mes "^888888ID: "+.@cur_id+"^000000";
 		mes "Time remaining: ^00AA00"+.@time$+"^000000";
 
 		if (.@has_bounty) {
@@ -64,9 +65,9 @@ prontera,152,187,5	script	Monster Hunter Board	4_BOARD3,{
 			}
 
 			if (.@has_bounty) {
-				mes "> "+.@up_names$[.@i]+" ["+.@up_tiers$[.@i]+"] - "+.@until$+" ^00AA00✓^000000";
+				mes "> "+.@up_names$[.@i]+" ^888888("+.@up_ids[.@i]+")^000000 - "+.@until$+" ^00AA00✓^000000";
 			} else {
-				mes "> "+.@up_names$[.@i]+" ["+.@up_tiers$[.@i]+"] - "+.@until$;
+				mes "> "+.@up_names$[.@i]+" ^888888("+.@up_ids[.@i]+")^000000 - "+.@until$;
 			}
 		}
 	}
