@@ -25,7 +25,7 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 		set .@has_active, 1;
 	}
 
-	// Check EXP Boost
+	// Check EXP Boost (check DB if not loaded yet)
 	if ($@ExpBoostActive) {
 		set .@mult$, callfunc("F_FormatExpMultiplier", $@ExpBoostMultiplier);
 		set .@remaining, callfunc("F_ExpBoostRemaining");
@@ -34,17 +34,24 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 		if (.@remaining > 0) {
 			set .@remaining$, callfunc("F_FormatDuration", .@remaining);
 			mes "   Time left: ^00AA00"+.@remaining$+"^000000";
-		} else {
-			set .@duration, callfunc("F_ExpBoostDuration");
-			set .@duration$, callfunc("F_FormatDuration", .@duration);
-			mes "   Running for: ^00AA00"+.@duration$+"^000000";
 		}
 		set .@has_active, 1;
+	} else {
+		// Check database for active boost not yet loaded by scheduler
+		query_sql "SELECT multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM event_schedule WHERE event_code = 'exp_boost' AND schedule_type = 'once' AND status IN ('scheduled', 'active') AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@eb_mult, .@eb_remaining;
+		if (.@eb_mult > 0 && .@eb_remaining > 0) {
+			set .@mult$, callfunc("F_FormatExpMultiplier", .@eb_mult);
+			set .@remaining$, callfunc("F_FormatDuration", .@eb_remaining);
+			mes "^00BFFF[Active] EXP Boost^000000 ^888888(loading...)^000000";
+			mes "   "+.@mult$+" EXP rates!";
+			mes "   Time left: ^00AA00"+.@remaining$+"^000000";
+			set .@has_active, 1;
+		}
 	}
 
-	// Check Monster of the Day
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@motd_enabled$;
-	if (.@motd_enabled$ == "0") {
+	// Check Monster of the Day (enabled status from event_types)
+	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@motd_enabled;
+	if (!.@motd_enabled) {
 		mes "^888888[Disabled] Monster of the Day^000000";
 	} else {
 		query_sql "SELECT mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@motd_name$, .@motd_mins;
@@ -217,17 +224,12 @@ L_GMMenu:
 	mes "What would you like to manage?";
 	next;
 
-	switch(select("Happy Hour:EXP Boost:Monster of the Day:Regenerate MOTD Schedule:Event History:Back")) {
+	switch(select("Happy Hour:EXP Boost:Monster of the Day:Event History:Back")) {
 		case 1: goto L_HappyHour;
 		case 2: goto L_ExpBoost;
 		case 3: goto L_MOTD;
-		case 4:
-			donpcevent "EventScheduler::OnGenerateMOTDSchedule";
-			callsub S_InvalidateCache;
-			mes "MOTD schedule regenerated!";
-			close;
-		case 5: goto L_History;
-		case 6: close;
+		case 4: goto L_History;
+		case 5: close;
 	}
 	end;
 
@@ -350,7 +352,7 @@ L_HappyHour:
 L_ExpBoost:
 	mes "[EXP Boost Management]";
 
-	// Show current status
+	// Show current status (check DB if not loaded yet)
 	if ($@ExpBoostActive) {
 		set .@mult$, callfunc("F_FormatExpMultiplier", $@ExpBoostMultiplier);
 		set .@remaining, callfunc("F_ExpBoostRemaining");
@@ -372,8 +374,34 @@ L_ExpBoost:
 		}
 	}
 
+	// Check database for active boost not yet loaded by scheduler
+	query_sql "SELECT id, multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM event_schedule WHERE event_code = 'exp_boost' AND schedule_type = 'once' AND status IN ('scheduled', 'active') AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@active_id, .@active_mult, .@active_remaining;
+	if (.@active_id > 0 && .@active_remaining > 0) {
+		set .@mult$, callfunc("F_FormatExpMultiplier", .@active_mult);
+		set .@remaining$, callfunc("F_FormatDuration", .@active_remaining);
+		mes "^00AA00Status: ACTIVE^000000 ^888888(loading...)^000000";
+		mes "Multiplier: "+.@mult$;
+		mes "Time left: "+.@remaining$;
+		next;
+
+		switch(select("Stop EXP Boost:Back")) {
+			case 1:
+				// Mark as completed in database
+				query_sql "UPDATE event_schedule SET status = 'completed', actual_end = NOW() WHERE id = "+.@active_id;
+				// If scheduler already loaded it, stop it
+				if ($@ExpBoostActive) {
+					donpcevent "ExpBoost::OnEventEnd";
+				}
+				mes "[Events Manager]";
+				mes "EXP Boost has been stopped.";
+				close;
+			case 2:
+				goto L_GMMenu;
+		}
+	}
+
 	// Show pending scheduled boosts
-	query_sql "SELECT id, DATE_FORMAT(start_datetime, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, start_datetime, end_datetime), multiplier FROM exp_boost_schedule WHERE enabled = 1 AND start_datetime > NOW() ORDER BY start_datetime LIMIT 3", .@pend_ids, .@pend_starts$, .@pend_durs, .@pend_mults;
+	query_sql "SELECT id, DATE_FORMAT(start_datetime, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, start_datetime, end_datetime), multiplier FROM event_schedule WHERE event_code = 'exp_boost' AND schedule_type = 'once' AND status = 'scheduled' AND start_datetime > NOW() ORDER BY start_datetime LIMIT 3", .@pend_ids, .@pend_starts$, .@pend_durs, .@pend_mults;
 
 	mes "^FF0000Status: INACTIVE^000000";
 	if (getarraysize(.@pend_ids) > 0) {
@@ -466,12 +494,12 @@ L_ScheduleExpBoost:
 			break;
 	}
 
-	// Insert into schedule table
+	// Insert into unified event_schedule table
 	if (.@start_now) {
-		query_sql "INSERT INTO exp_boost_schedule (start_datetime, end_datetime, multiplier) VALUES (NOW(), DATE_ADD(NOW(), INTERVAL "+.@duration+" MINUTE), "+.@mult+")";
+		query_sql "INSERT INTO event_schedule (event_code, schedule_type, start_datetime, end_datetime, duration_minutes, multiplier, status) VALUES ('exp_boost', 'once', NOW(), DATE_ADD(NOW(), INTERVAL "+.@duration+" MINUTE), "+.@duration+", "+.@mult+", 'active')";
 		query_sql "SELECT LAST_INSERT_ID()", .@new_id;
 
-		// Start immediately (scheduler will handle announcement)
+		// Start immediately
 		set $@ExpBoostMultiplier, .@mult;
 		set $@ExpBoostDuration, .@duration;
 		set $@ExpBoostScheduleId, .@new_id;
@@ -484,7 +512,7 @@ L_ScheduleExpBoost:
 		mes "Multiplier: "+.@mult$;
 		mes "Duration: "+.@dur$;
 	} else {
-		query_sql "INSERT INTO exp_boost_schedule (start_datetime, end_datetime, multiplier) VALUES ('"+.@start_dt$+"', DATE_ADD('"+.@start_dt$+"', INTERVAL "+.@duration+" MINUTE), "+.@mult+")";
+		query_sql "INSERT INTO event_schedule (event_code, schedule_type, start_datetime, end_datetime, duration_minutes, multiplier, status) VALUES ('exp_boost', 'once', '"+.@start_dt$+"', DATE_ADD('"+.@start_dt$+"', INTERVAL "+.@duration+" MINUTE), "+.@duration+", "+.@mult+", 'scheduled')";
 
 		set .@mult$, callfunc("F_FormatExpMultiplier", .@mult);
 		set .@dur$, callfunc("F_FormatDuration", .@duration);
@@ -501,7 +529,7 @@ L_ScheduleExpBoost:
 // ============================================================
 L_CancelExpBoost:
 	mes "[Cancel Scheduled Boost]";
-	query_sql "SELECT id, DATE_FORMAT(start_datetime, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, start_datetime, end_datetime), multiplier FROM exp_boost_schedule WHERE enabled = 1 AND start_datetime > NOW() ORDER BY start_datetime", .@ids, .@starts$, .@durs, .@mults;
+	query_sql "SELECT id, DATE_FORMAT(start_datetime, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, start_datetime, end_datetime), multiplier FROM event_schedule WHERE event_code = 'exp_boost' AND schedule_type = 'once' AND status = 'scheduled' AND start_datetime > NOW() ORDER BY start_datetime", .@ids, .@starts$, .@durs, .@mults;
 
 	if (getarraysize(.@ids) == 0) {
 		mes "No pending boosts to cancel.";
@@ -520,7 +548,7 @@ L_CancelExpBoost:
 	input .@cancel_id;
 	if (.@cancel_id == 0) goto L_ExpBoost;
 
-	query_sql "DELETE FROM exp_boost_schedule WHERE id = "+.@cancel_id+" AND start_datetime > NOW()";
+	query_sql "UPDATE event_schedule SET status = 'cancelled' WHERE id = "+.@cancel_id+" AND status = 'scheduled' AND start_datetime > NOW()";
 	mes "Schedule cancelled!";
 	close;
 
@@ -530,15 +558,16 @@ L_CancelExpBoost:
 L_MOTD:
 	mes "[MOTD Settings]";
 
-	// Get current config
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@motd_enabled$;
+	// Get enabled status from centralized event_types table
+	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@motd_enabled;
+	// Get other config
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
 
 	// Get current MOTD
 	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@cur_mob_id, .@cur_mob_name$, .@cur_mins;
 
-	if (.@motd_enabled$ == "0") {
+	if (!.@motd_enabled) {
 		mes "Status: ^FF0000DISABLED^000000";
 	} else {
 		mes "Status: ^00AA00ENABLED^000000";
@@ -549,18 +578,17 @@ L_MOTD:
 	mes "Mode: ^0000FF"+.@mode$+"^000000";
 	next;
 
-	switch(select("Toggle MOTD On/Off:Change Current MOTD:Edit Today's Schedule:Change Selection Mode:Back")) {
+	switch(select("Toggle MOTD On/Off:Change Current MOTD:Edit Today's Schedule:Regenerate Schedule:Change Selection Mode:Back")) {
 		case 1:
-			if (.@motd_enabled$ == "0") {
-				query_sql "UPDATE event_config SET config_value = '1' WHERE config_key = 'motd_enabled'";
+			if (!.@motd_enabled) {
+				query_sql "UPDATE event_types SET enabled = 1 WHERE code = 'motd'";
 				callsub S_InvalidateCache;
 				mes "[Events Manager]";
 				mes "Monster of the Day has been ^00AA00ENABLED^000000.";
 				mes "The next rotation will be announced.";
 			} else {
-				query_sql "UPDATE event_config SET config_value = '0' WHERE config_key = 'motd_enabled'";
+				query_sql "UPDATE event_types SET enabled = 0 WHERE code = 'motd'";
 				callsub S_InvalidateCache;
-				// Clear the active MOTD immediately
 				set $@LastMOTDMobID, 0;
 				set $@CurrentMOTDName$, "";
 				mes "[Events Manager]";
@@ -576,6 +604,13 @@ L_MOTD:
 			goto L_EditMOTDSchedule;
 
 		case 4:
+			donpcevent "EventScheduler::OnGenerateMOTDSchedule";
+			callsub S_InvalidateCache;
+			mes "[Events Manager]";
+			mes "MOTD schedule regenerated for today!";
+			close;
+
+		case 5:
 			mes "Select mode:";
 			next;
 			set .@new_mode, select("Random:Tier Rotation");
@@ -588,7 +623,7 @@ L_MOTD:
 			mes "Mode updated!";
 			close;
 
-		case 5:
+		case 6:
 			goto L_GMMenu;
 	}
 	end;
@@ -648,37 +683,28 @@ L_ChangeMOTD:
 // ============================================================
 L_EditMOTDSchedule:
 	mes "[Today's MOTD Schedule]";
-	query_sql "SELECT id, mob_name, tier, DATE_FORMAT(start_time, '%H:%i'), DATE_FORMAT(end_time, '%H:%i'), NOW() BETWEEN start_time AND end_time FROM motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@ids, .@names$, .@tiers$, .@starts$, .@ends$, .@is_current;
+	query_sql "SELECT id, mob_name, tier, DATE_FORMAT(start_time, '%H'), DATE_FORMAT(end_time, '%H'), NOW() BETWEEN start_time AND end_time FROM motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@ids, .@names$, .@tiers$, .@start_hrs$, .@end_hrs$, .@is_current;
 
 	if (getarraysize(.@ids) == 0) {
 		mes "No schedule for today.";
-		mes "Use 'Regenerate MOTD Schedule'";
-		mes "from the main GM menu.";
+		mes "Use 'Regenerate Schedule' option.";
 		close;
 	}
 
+	// Display schedule with slot numbers
 	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+		set .@slot_label$, "["+(.@i+1)+"] "+.@start_hrs$[.@i]+"h-"+.@end_hrs$[.@i]+"h "+.@names$[.@i];
 		if (.@is_current[.@i]) {
-			mes "^00FF00► "+.@starts$[.@i]+"-"+.@ends$[.@i]+": "+.@names$[.@i]+" ["+.@tiers$[.@i]+"]^000000";
+			mes "^00FF00► "+.@slot_label$+"^000000";
 		} else {
-			mes .@starts$[.@i]+"-"+.@ends$[.@i]+": "+.@names$[.@i]+" ["+.@tiers$[.@i]+"]";
+			mes .@slot_label$;
 		}
 	}
 	next;
 
-	mes "Select a time slot to change:";
-	next;
-
-	// Build menu from time slots
-	set .@menu$, "";
-	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
-		set .@menu$, .@menu$ + .@starts$[.@i] + "-" + .@ends$[.@i] + " (" + .@names$[.@i] + ")";
-		if (.@i < getarraysize(.@ids) - 1) set .@menu$, .@menu$ + ":";
-	}
-	set .@menu$, .@menu$ + ":Back";
-
-	set .@slot_choice, select(.@menu$);
-	if (.@slot_choice > getarraysize(.@ids)) {
+	mes "Enter slot number to edit (0 = back):";
+	input .@slot_choice;
+	if (.@slot_choice == 0 || .@slot_choice > getarraysize(.@ids)) {
 		goto L_MOTD;
 	}
 
@@ -686,7 +712,7 @@ L_EditMOTDSchedule:
 	set .@edit_is_current, .@is_current[.@slot_choice - 1];
 
 	// Enter monster ID
-	mes "[Change Slot "+.@starts$[.@slot_choice - 1]+"-"+.@ends$[.@slot_choice - 1]+"]";
+	mes "[Change Slot "+.@start_hrs$[.@slot_choice - 1]+"h-"+.@end_hrs$[.@slot_choice - 1]+"h]";
 	mes "Enter Monster ID:";
 	input .@mob_id;
 
@@ -729,14 +755,39 @@ L_EditMOTDSchedule:
 // ============================================================
 L_History:
 	mes "[Event History]";
-	query_sql "SELECT event_code, DATE_FORMAT(actual_start, '%Y-%m-%d %H:%i'), DATE_FORMAT(actual_end, '%H:%i'), status FROM event_instances ORDER BY id DESC LIMIT 10", .@codes$, .@starts$, .@ends$, .@status$;
+	// Show active first, then completed (one-time events)
+	query_sql "SELECT id, event_code, DATE_FORMAT(COALESCE(actual_start, start_datetime), '%m/%d %H:%i'), DATE_FORMAT(COALESCE(actual_end, end_datetime), '%H:%i'), multiplier, status FROM event_schedule WHERE schedule_type = 'once' ORDER BY FIELD(status, 'active', 'scheduled', 'completed', 'cancelled'), id DESC LIMIT 10", .@ids, .@codes$, .@starts$, .@ends$, .@mults, .@status$;
 
-	if (getarraysize(.@codes$) == 0) {
+	if (getarraysize(.@ids) == 0) {
 		mes "No event history found.";
 	} else {
-		for (set .@i, 0; .@i < getarraysize(.@codes$); set .@i, .@i + 1) {
-			mes .@starts$[.@i]+" - "+.@ends$[.@i];
-			mes "  "+.@codes$[.@i]+" ["+.@status$[.@i]+"]";
+		for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+			// Format event name
+			if (.@codes$[.@i] == "exp_boost") {
+				set .@name$, "EXP Boost";
+				if (.@mults[.@i] > 0) {
+					set .@mult$, callfunc("F_FormatExpMultiplier", .@mults[.@i]);
+					set .@name$, .@name$ + " " + .@mult$;
+				}
+			} else if (.@codes$[.@i] == "happy_hour") {
+				set .@name$, "Happy Hour";
+			} else {
+				set .@name$, .@codes$[.@i];
+			}
+
+			// Status color
+			if (.@status$[.@i] == "active") {
+				set .@stat$, "^00AA00ACTIVE^000000";
+			} else if (.@status$[.@i] == "scheduled") {
+				set .@stat$, "^0055FFpending^000000";
+			} else if (.@status$[.@i] == "completed") {
+				set .@stat$, "^888888done^000000";
+			} else {
+				set .@stat$, "^FF0000"+.@status$[.@i]+"^000000";
+			}
+
+			mes "["+.@ids[.@i]+"] "+.@starts$[.@i]+" - "+.@ends$[.@i]+" ["+.@stat$+"]";
+			mes "  "+.@name$;
 		}
 	}
 	close;

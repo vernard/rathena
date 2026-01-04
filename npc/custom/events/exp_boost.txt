@@ -3,9 +3,9 @@
 //= GM-configurable server-wide EXP multiplier
 //===== Description: =========================================
 //= Server-wide EXP boost with configurable multiplier.
-//= - Triggered manually by GMs via Events Manager
+//= - Triggered by GMs or automatically via scheduler
 //= - Multiplier is configurable (1.5x to 5x)
-//= - Stays active until manually stopped
+//= - Always has a duration (auto-ends when time expires)
 //= - Stacks with other events (Happy Hour, MOTD)
 //= - Uses setbattleflag for true server-wide effect
 //============================================================
@@ -17,22 +17,35 @@ OnInit:
 	// Initialize state
 	set $@ExpBoostActive, 0;
 	set $@ExpBoostMultiplier, 0;
+	set $@ExpBoostDuration, 0;
 	set $@ExpBoostStartTime, 0;
+	set $@ExpBoostEndTime, 0;
+	end;
+
+// Timer to check if boost should end (runs every 60 seconds when active)
+OnTimer60000:
+	stopnpctimer;
+	if ($@ExpBoostActive && $@ExpBoostEndTime > 0 && gettimetick(2) >= $@ExpBoostEndTime) {
+		donpcevent strnpcinfo(0)+"::OnEventEnd";
+	} else if ($@ExpBoostActive) {
+		// Continue timer
+		setnpctimer 0;
+		initnpctimer;
+	}
 	end;
 
 // ============================================================
-// Event Start - Called by Events Manager
+// Event Start - Called by Events Manager or Scheduler
 // Expects $@ExpBoostMultiplier to be set (e.g., 200 = 2x, 300 = 3x)
+// Expects $@ExpBoostDuration in minutes
 // ============================================================
 OnEventStart:
 	if ($@ExpBoostActive) {
-		debugmes "[ExpBoost] Already active, ignoring start request";
 		end;
 	}
 
 	// Validate multiplier (minimum 150 = 1.5x, maximum 500 = 5x)
 	if ($@ExpBoostMultiplier < 150 || $@ExpBoostMultiplier > 500) {
-		debugmes "[ExpBoost] Invalid multiplier: "+$@ExpBoostMultiplier+", using 200 (2x)";
 		set $@ExpBoostMultiplier, 200;
 	}
 
@@ -53,6 +66,17 @@ OnEventStart:
 	set $@ExpBoostActive, 1;
 	set $@ExpBoostStartTime, gettimetick(2);
 
+	// Set end time and start NPC timer
+	if ($@ExpBoostDuration > 0) {
+		set $@ExpBoostEndTime, gettimetick(2) + ($@ExpBoostDuration * 60);
+		// NPC timer to auto-end (doesn't require player context)
+		stopnpctimer;
+		setnpctimer 0;
+		initnpctimer;
+	} else {
+		set $@ExpBoostEndTime, 0;
+	}
+
 	// Format multiplier for display (e.g., 200 -> "2x", 150 -> "1.5x")
 	set .@whole, $@ExpBoostMultiplier / 100;
 	set .@decimal, ($@ExpBoostMultiplier % 100) / 10;
@@ -63,34 +87,47 @@ OnEventStart:
 	}
 
 	// Log to database
-	query_sql "INSERT INTO event_instances (event_type_id, event_code, actual_start, status, trigger_type) VALUES (0, 'exp_boost', NOW(), 'active', 'manual')";
+	query_sql "INSERT INTO event_instances (event_type_id, event_code, actual_start, status, trigger_type) VALUES (0, 'exp_boost', NOW(), 'active', 'scheduled')";
+
+	// Format duration for display
+	set .@dur$, callfunc("F_FormatDuration", $@ExpBoostDuration);
 
 	// Announce
 	announce "===========================================", bc_all, 0x00BFFF;
 	announce "      EXP BOOST ACTIVATED!", bc_all, 0x00BFFF;
-	announce "   "+.@mult$+" EXP rates are now active!", bc_all, 0x00BFFF;
+	announce "   "+.@mult$+" EXP rates for "+.@dur$+"!", bc_all, 0x00BFFF;
 	announce "===========================================", bc_all, 0x00BFFF;
 
-	debugmes "[ExpBoost] Started - Multiplier: "+.@mult$+" ("+$@ExpBoostMultiplier+"%)";
+	debugmes "[ExpBoost] Started - "+.@mult$+" for "+.@dur$;
 	end;
 
 // ============================================================
-// Event End - Called by Events Manager
+// Event End - Called by Events Manager or auto-timer
 // ============================================================
 OnEventEnd:
 	if (!$@ExpBoostActive) {
-		debugmes "[ExpBoost] Not active, ignoring end request";
 		end;
 	}
+
+	// Stop the NPC timer
+	stopnpctimer;
 
 	// Restore original rates
 	setbattleflag("base_exp_rate", $@EB_OrigBaseExp);
 	setbattleflag("job_exp_rate", $@EB_OrigJobExp, true);  // true = reload
 
+	// Mark the schedule entry as completed
+	if ($@ExpBoostScheduleId > 0) {
+		query_sql "UPDATE event_schedule SET status = 'completed', actual_end = NOW() WHERE id = "+$@ExpBoostScheduleId;
+	}
+
 	// Mark as inactive
 	set $@ExpBoostActive, 0;
 	set $@ExpBoostMultiplier, 0;
+	set $@ExpBoostDuration, 0;
 	set $@ExpBoostStartTime, 0;
+	set $@ExpBoostEndTime, 0;
+	set $@ExpBoostScheduleId, 0;
 
 	// Update database
 	query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE event_code = 'exp_boost' AND status = 'active' ORDER BY id DESC LIMIT 1";
@@ -122,11 +159,21 @@ function	script	F_GetExpBoostMultiplier	{
 }
 
 // ============================================================
-// Helper function to get EXP Boost duration (minutes since start)
+// Helper function to get EXP Boost elapsed time (minutes since start)
 // ============================================================
 function	script	F_ExpBoostDuration	{
 	if (!$@ExpBoostActive) return 0;
 	return (gettimetick(2) - $@ExpBoostStartTime) / 60;
+}
+
+// ============================================================
+// Helper function to get EXP Boost remaining time (minutes until end)
+// ============================================================
+function	script	F_ExpBoostRemaining	{
+	if (!$@ExpBoostActive || $@ExpBoostEndTime == 0) return 0;
+	set .@remaining, ($@ExpBoostEndTime - gettimetick(2)) / 60;
+	if (.@remaining < 0) return 0;
+	return .@remaining;
 }
 
 // ============================================================
@@ -140,4 +187,32 @@ function	script	F_FormatExpMultiplier	{
 		return .@whole + "." + .@decimal + "x";
 	}
 	return .@whole + "x";
+}
+
+// ============================================================
+// Helper function to format duration for display
+// Converts minutes to human-readable format
+// ============================================================
+function	script	F_FormatDuration	{
+	set .@mins, getarg(0, 0);
+
+	if (.@mins >= 1440) {
+		// Days
+		set .@days, .@mins / 1440;
+		set .@remaining_hours, (.@mins % 1440) / 60;
+		if (.@remaining_hours > 0) {
+			return .@days + " day" + (.@days > 1 ? "s" : "") + " " + .@remaining_hours + "h";
+		}
+		return .@days + " day" + (.@days > 1 ? "s" : "");
+	} else if (.@mins >= 60) {
+		// Hours
+		set .@hours, .@mins / 60;
+		set .@remaining_mins, .@mins % 60;
+		if (.@remaining_mins > 0) {
+			return .@hours + " hour" + (.@hours > 1 ? "s" : "") + " " + .@remaining_mins + "m";
+		}
+		return .@hours + " hour" + (.@hours > 1 ? "s" : "");
+	}
+	// Minutes only
+	return .@mins + " minutes";
 }

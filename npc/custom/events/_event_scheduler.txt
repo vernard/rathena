@@ -35,43 +35,43 @@ OnTimer60000:
 	end;
 
 // ============================================================
-// Check for scheduled events (Happy Hour, EXP Boost)
+// Check for scheduled events (Happy Hour, EXP Boost, etc.)
+// Uses unified event_schedule table
 // ============================================================
 S_CheckScheduledEvents:
-	// Check if Happy Hour should start
-	query_sql "SELECT id, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 AND schedule_type = 'fixed' AND day_of_week = WEEKDAY(NOW()) AND start_hour = HOUR(NOW()) AND start_minute = MINUTE(NOW())", .@hh_id, .@hh_duration;
+	// Check weekly Happy Hour (every week on specific day/time)
+	query_sql "SELECT id, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 AND schedule_type = 'weekly' AND day_of_week = WEEKDAY(NOW()) AND start_hour = HOUR(NOW()) AND start_minute = MINUTE(NOW()) AND status = 'scheduled'", .@hh_id, .@hh_duration;
 
 	if (.@hh_id > 0 && !$@HappyHourActive) {
-		// Start Happy Hour
 		set $@HappyHourDuration, .@hh_duration;
+		set $@HappyHourScheduleId, .@hh_id;
+		query_sql "UPDATE event_schedule SET status = 'active', actual_start = NOW() WHERE id = "+.@hh_id;
 		donpcevent "HappyHour::OnEventStart";
 	}
 
-	// Check if scheduled EXP Boost should start
-	// Uses exp_boost_schedule table for one-time datetime-based schedules
-	debugmes "[Scheduler] Checking EXP Boost - $@ExpBoostActive = "+$@ExpBoostActive;
+	// Check one-time EXP Boost (specific start/end datetime)
 	if (!$@ExpBoostActive) {
-		query_sql "SELECT id, multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM exp_boost_schedule WHERE enabled = 1 AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@eb_id, .@eb_mult, .@eb_remaining;
-		debugmes "[Scheduler] Found boost: id="+.@eb_id+", mult="+.@eb_mult+", remaining="+.@eb_remaining;
+		query_sql "SELECT id, multiplier, TIMESTAMPDIFF(MINUTE, NOW(), end_datetime) FROM event_schedule WHERE event_code = 'exp_boost' AND enabled = 1 AND schedule_type = 'once' AND status IN ('scheduled', 'active') AND NOW() BETWEEN start_datetime AND end_datetime LIMIT 1", .@eb_id, .@eb_mult, .@eb_remaining;
 
 		if (.@eb_id > 0 && .@eb_remaining > 0) {
-			// Start EXP Boost with scheduled multiplier and remaining duration
-			debugmes "[Scheduler] Starting EXP Boost via donpcevent";
 			set $@ExpBoostMultiplier, .@eb_mult;
 			set $@ExpBoostDuration, .@eb_remaining;
 			set $@ExpBoostScheduleId, .@eb_id;
+			query_sql "UPDATE event_schedule SET status = 'active', actual_start = NOW() WHERE id = "+.@eb_id+" AND status = 'scheduled'";
 			donpcevent "ExpBoost::OnEventStart";
 		}
 	}
+
+	// TODO: Add biweekly and monthly checks here when needed
 	return;
 
 // ============================================================
 // Check MOTD rotation (announce new monster)
 // ============================================================
 S_CheckMOTDRotation:
-	// Check if MOTD is enabled
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
-	if (.@enabled$ == "0") {
+	// Check if MOTD is enabled (centralized in event_types)
+	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
+	if (!.@enabled) {
 		// MOTD disabled - clear the active mob ID to stop bonuses
 		if ($@LastMOTDMobID > 0) {
 			set $@LastMOTDMobID, 0;
@@ -151,13 +151,11 @@ OnGenerateMOTDSchedule:
 // Called by other NPCs to check if a mob is current MOTD
 // ============================================================
 function	script	F_GetCurrentMOTD	{
-	// Check if MOTD is enabled
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
-	if (.@enabled$ == "0") return 0;
+	// Check if MOTD is enabled (centralized in event_types)
+	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
+	if (!.@enabled) return 0;
 
-	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id, .@mob_name$, .@mins_left;
-
-	// Return mob_id (0 if none active)
+	query_sql "SELECT mob_id FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id;
 	return .@mob_id;
 }
 
@@ -165,14 +163,12 @@ function	script	F_GetCurrentMOTD	{
 // Helper function to check if a specific mob is current MOTD
 // ============================================================
 function	script	F_IsMOTD	{
-	// Check if MOTD is enabled
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
-	if (.@enabled$ == "0") return 0;
+	// Check if MOTD is enabled (centralized in event_types)
+	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
+	if (!.@enabled) return 0;
 
 	set .@check_mob_id, getarg(0, 0);
-
 	query_sql "SELECT 1 FROM motd_schedule WHERE mob_id = "+.@check_mob_id+" AND NOW() BETWEEN start_time AND end_time LIMIT 1", .@is_motd;
-
 	return .@is_motd;
 }
 
@@ -180,6 +176,6 @@ function	script	F_IsMOTD	{
 // Helper function to check if MOTD system is enabled
 // ============================================================
 function	script	F_IsMOTDEnabled	{
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
-	return (.@enabled$ != "0");
+	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
+	return .@enabled;
 }
