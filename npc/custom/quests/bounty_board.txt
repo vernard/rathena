@@ -625,9 +625,103 @@ function	script	F_CooldownTimeLeft	{
 	end;
 
 // Called by Monster Hunter Guild to build suggestion list
-// TEMPORARILY DISABLED - causes infinity loop due to too many script operations
+// Shows individual monsters sorted by EXP (with discovery/cooldown applied)
 OnBuildSuggestions:
+	if (!playerattached()) goto L_BuildSuggestEnd;
 	@suggest_count = 0;
+	.@plv = BaseLevel;
+	if (.@plv < 1) goto L_BuildSuggestEnd;
+
+	// Build LOCAL map+monster arrays based on player level
+	// Can't access NPC arrays via doevent, so we hardcode the high-value targets
+	.@cd_seconds = 259200;
+	.@collect = 0;
+
+	if (.@plv >= 70) {
+		// End-game monsters (sorted roughly by level/value)
+		// Format: mob_id, level, map, location name
+		setarray .@m_id[0],   1867, 1864, 1831, 1833, 1837, 1219, 1098, 1869, 1865, 1777, 1775, 1778;
+		setarray .@m_lv[0],     81,   77,   91,   85,   76,   79,   75,   60,   75,   60,   60,   55;
+		setarray .@m_map$[0], "abbey02", "abbey01", "thor_v01", "thor_v01", "thor_v01", "gl_cas02", "in_sphinx4", "abbey03", "abbey02", "ice_dun02", "ice_dun02", "ice_dun03";
+		setarray .@m_loc$[0], "Abbey F2", "Abbey F1", "Thor F1", "Thor F1", "Thor F1", "GH Castle F2", "Sphinx F4", "Abbey F3", "Abbey F2", "Ice Cave F2", "Ice Cave F2", "Ice Cave F3";
+		.@total = 12;
+	} else if (.@plv >= 50) {
+		// Mid-high monsters
+		setarray .@m_id[0],   1163, 1132, 1207, 1206, 1194, 1149, 1154, 1193, 1195, 1170, 1180;
+		setarray .@m_lv[0],     52,   63,   61,   61,   59,   52,   61,   53,   58,   40,   53;
+		setarray .@m_map$[0], "gl_cas01", "gl_knt01", "gl_sew03", "gl_sew04", "gl_dun01", "in_sphinx4", "in_sphinx5", "c_tower3", "c_tower1", "pay_dun03", "pay_dun04";
+		setarray .@m_loc$[0], "GH Castle F1", "GH Chivalry F1", "GH Culvert F3", "GH Culvert F4", "GH Cave F1", "Sphinx F4", "Sphinx F5", "Clock Tower F3", "Clock Tower F1", "Payon Cave F4", "Payon Cave F5";
+		.@total = 11;
+	} else if (.@plv >= 30) {
+		// Mid-level monsters
+		setarray .@m_id[0],   1023, 1152, 1153, 1026, 1188, 1035, 1077, 1066, 1067, 1068;
+		setarray .@m_lv[0],     24,   36,   35,   30,   32,   28,   26,   23,   25,   23;
+		setarray .@m_map$[0], "gef_fild02", "orcsdun02", "orcsdun01", "pay_dun02", "pay_dun02", "gef_dun00", "gef_dun00", "iz_dun01", "iz_dun01", "iz_dun02";
+		setarray .@m_loc$[0], "Geffen Field", "Orc Dungeon F2", "Orc Dungeon F1", "Payon Cave F3", "Payon Cave F3", "Geffen Dungeon F1", "Geffen Dungeon F1", "Byalan F2", "Byalan F2", "Byalan F3";
+		.@total = 10;
+	} else {
+		// Beginner monsters
+		setarray .@m_id[0],   1002, 1113, 1063, 1007, 1014, 1048, 1051, 1076, 1015, 1160;
+		setarray .@m_lv[0],      1,    3,    1,    2,    5,    1,    6,   15,   14,   20;
+		setarray .@m_map$[0], "prt_fild08", "prt_fild05", "prt_fild08", "gef_fild00", "pay_fild01", "prt_sewb1", "prt_sewb1", "pay_dun00", "pay_dun00", "anthell01";
+		setarray .@m_loc$[0], "Prontera Field", "Prontera Field", "Prontera Field", "Geffen Field", "Payon Forest", "Prontera Culvert F1", "Prontera Culvert F1", "Payon Cave F1", "Payon Cave F1", "Ant Hell F1";
+		.@total = 10;
+	}
+
+	.@next_exp = (NextBaseExp > 100) ? NextBaseExp : 100;
+	.@quest_rate = getbattleflag("quest_exp_rate");
+	if (.@quest_rate < 1) .@quest_rate = 100;
+
+	// Calculate EXP with cooldowns for each monster
+	for (.@j = 0; .@j < .@total; .@j++) {
+		.@cd_pct = callfunc("F_BountyCooldown", getcharid(0), .@m_id[.@j], .@cd_seconds);
+
+		.@exp_scale = (.@m_lv[.@j] > 10) ? ((.@m_lv[.@j] - 10) * (.@m_lv[.@j] - 10) / 98) : 1;
+		if (.@exp_scale < 1) .@exp_scale = 1;
+		.@base_exp = ((100 + .@m_lv[.@j] * 5) * 50 * 100 * .@exp_scale) / 100;
+		.@base_exp = .@base_exp * .@cd_pct / 100;
+		.@display_exp = .@base_exp * (.@quest_rate / 100);
+		.@exp_pct = .@display_exp / (.@next_exp / 100);
+		.@zeny = ((20 + .@m_lv[.@j]) * 50 * 100 * .@cd_pct / 100) / 5;
+
+		.@c_mob[.@j] = .@m_id[.@j];
+		.@c_lv[.@j] = .@m_lv[.@j];
+		.@c_map$[.@j] = .@m_map$[.@j];
+		.@c_loc$[.@j] = .@m_loc$[.@j];
+		.@c_exp[.@j] = .@exp_pct;
+		.@c_zeny[.@j] = .@zeny;
+		.@c_cd[.@j] = .@cd_pct;
+	}
+
+	// Sort by EXP descending
+	for (.@i = 0; .@i < .@total - 1; .@i++) {
+		.@best = .@i;
+		for (.@k = .@i + 1; .@k < .@total; .@k++) {
+			if (.@c_exp[.@k] > .@c_exp[.@best])
+				.@best = .@k;
+		}
+		if (.@best != .@i) {
+			.@tmp = .@c_mob[.@i]; .@c_mob[.@i] = .@c_mob[.@best]; .@c_mob[.@best] = .@tmp;
+			.@tmp = .@c_lv[.@i]; .@c_lv[.@i] = .@c_lv[.@best]; .@c_lv[.@best] = .@tmp;
+			.@tmp = .@c_exp[.@i]; .@c_exp[.@i] = .@c_exp[.@best]; .@c_exp[.@best] = .@tmp;
+			.@tmp = .@c_zeny[.@i]; .@c_zeny[.@i] = .@c_zeny[.@best]; .@c_zeny[.@best] = .@tmp;
+			.@tmp = .@c_cd[.@i]; .@c_cd[.@i] = .@c_cd[.@best]; .@c_cd[.@best] = .@tmp;
+			.@tmp$ = .@c_map$[.@i]; .@c_map$[.@i] = .@c_map$[.@best]; .@c_map$[.@best] = .@tmp$;
+			.@tmp$ = .@c_loc$[.@i]; .@c_loc$[.@i] = .@c_loc$[.@best]; .@c_loc$[.@best] = .@tmp$;
+		}
+	}
+
+	// Copy to output arrays
+	for (.@j = 0; .@j < .@total && @suggest_count < 10; .@j++) {
+		@suggest_mob[@suggest_count] = .@c_mob[.@j];
+		@suggest_lv[@suggest_count] = .@c_lv[.@j];
+		@suggest_map$[@suggest_count] = .@c_map$[.@j];
+		@suggest_loc$[@suggest_count] = .@c_loc$[.@j];
+		@suggest_exp[@suggest_count] = .@c_exp[.@j];
+		@suggest_zeny[@suggest_count] = .@c_zeny[.@j];
+		@suggest_cd[@suggest_count] = .@c_cd[.@j];
+		@suggest_count++;
+	}
 
 L_BuildSuggestEnd:
 	end;
