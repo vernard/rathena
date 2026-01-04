@@ -1,0 +1,44 @@
+//===== rAthena Script =======================================
+//= MOTD Kill Bonus
+//= Grants bonus EXP when killing Monster of the Day
+//===== Description: =========================================
+//= Uses OnNPCKillEvent to give 2x additional EXP when killing
+//= the current MOTD monster, resulting in 3x total EXP.
+//=
+//= Reads current server EXP rate via getbattleflag() so the
+//= bonus scales correctly during rate events (e.g., Happy Hour).
+//=
+//= Limitations:
+//= - Only triggers for the character dealing the killing blow
+//= - Bonus EXP does not share with party members
+//= - For full party share support, C++ modification needed
+//============================================================
+
+-	script	MOTD_KillBonus	FAKE_NPC,{
+	end;
+
+OnNPCKillEvent:
+	// Check if MOTD is enabled and killed monster is current MOTD
+	// $@LastMOTDMobID is set by EventScheduler when MOTD rotates
+	if (callfunc("F_IsMOTDEnabled") && killedrid == $@LastMOTDMobID && $@LastMOTDMobID > 0) {
+		// Get monster's base EXP values
+		.@base_exp = getmonsterinfo(killedrid, MOB_BASEEXP);
+		.@job_exp = getmonsterinfo(killedrid, MOB_JOBEXP);
+
+		// Get current server EXP rates (100 = 1x, 1500 = 15x, etc.)
+		.@base_rate = getbattleflag("base_exp_rate");
+		.@job_rate = getbattleflag("job_exp_rate");
+
+		// Calculate bonus: 2x additional EXP at current server rate = 3x total
+		// Formula: base_exp * (server_rate / 100) * 2
+		// Example at 15x: 100 base * 15 * 2 = 3000 bonus (+ 1500 normal = 4500 total = 45x)
+		.@base_bonus = .@base_exp * .@base_rate / 100 * 2;
+		.@job_bonus = .@job_exp * .@job_rate / 100 * 2;
+
+		getexp .@base_bonus, .@job_bonus;
+
+		// Debug message (disable in production)
+		// dispbottom "[MOTD] Bonus EXP: +" + .@base_bonus + " Base, +" + .@job_bonus + " Job", 0x00FF00;
+	}
+	end;
+}
