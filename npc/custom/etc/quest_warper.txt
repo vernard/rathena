@@ -1900,7 +1900,7 @@ prt_maze02,102,69,4	script	Warpra Helper#28	112,{ callfunc "QWS_Dungeon_Warpra",
 // New dungeon helpers (placed on deeper floors to reward exploration)
 beach_dun2,154,35,3	script	Warpra Helper#35	112,{ callfunc "QWS_Dungeon_Warpra",35,"Beach Dungeon"; close; }
 ice_dun02,151,150,3	script	Warpra Helper#36	112,{ callfunc "QWS_Dungeon_Warpra",36,"Ice Dungeon"; close; }
-thor_v02,85,195,3	script	Warpra Helper#37	112,{ callfunc "QWS_Dungeon_Warpra",37,"Thor Volcano"; close; }
+thor_v02,81,207,3	script	Warpra Helper#37	112,{ callfunc "QWS_Dungeon_Warpra",37,"Thor Volcano"; close; }
 mosk_dun02,165,40,3	script	Warpra Helper#38	112,{ callfunc "QWS_Dungeon_Warpra",38,"Moscovia Dungeon"; close; }
 ra_san03,125,275,3	script	Warpra Helper#39	112,{ callfunc "QWS_Dungeon_Warpra",39,"Rachel Sanctuary"; close; }
 abbey02,149,20,3	script	Warpra Helper#40	112,{ callfunc "QWS_Dungeon_Warpra",40,"Abbey"; close; }
