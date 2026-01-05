@@ -3,126 +3,230 @@
 //===== Description: ============================================
 //= Pay 1.5M zeny per character to access Rachel Temple quest.
 //= Once the server collects 500M total, entry becomes free.
-//= Original quest progression is preserved - we just add a fee gate.
+//= Overrides Nemma to check payment before showing quest dialog.
 //==============================================================
 
-// Set the donation goal as reached so original Nemma is in quest mode
-// The per-character fee check happens at the Temple Entrance
--	script	RachelQuestInit	-1,{
+// Disable original Nemma - we replace her with our version
+-	script	RachelSanctuaryInit	-1,{
 OnInit:
-    // Enable quest mode for original Nemma (donation phase complete)
+    // Set donation goal as reached so quest mode is active
     if ($rachel_donate < 10000) {
         $rachel_donate = 10000;
     }
+    // Disable original Nemma
+    disablenpc "Nemma#ra_temple";
     end;
 }
 
-// Fee Collector NPC - placed near temple entrance
-ra_temple,123,174,5	script	Temple Priestess	919,{
-    // Check if player already paid or goal reached
+// Our Nemma override - checks payment first, then runs original quest logic
+ra_temple,116,174,3	script	Nemma#custom	920,{
+    // Check payment status
     .@goal_reached = ($rachel_sanctuary_total >= 500000000);
     .@player_paid = (ra_sanctuary_paid == 1);
+    .@can_proceed = (.@goal_reached || .@player_paid);
 
-    if (.@goal_reached) {
-        mes "[Temple Priestess]";
-        mes "Welcome to the Temple!";
-        mes "Thanks to the generosity of";
-        mes "many travelers, the temple";
-        mes "is now open to everyone.";
-        next;
-        mes "[Temple Priestess]";
-        mes "Please speak with Priestess";
-        mes "Nemma if you wish to explore";
-        mes "the sacred grounds.";
-        if (!.@player_paid) {
-            ra_sanctuary_paid = 1; // Mark as "paid" (free entry)
-        }
-        close;
+    cutin "ra_nemma02",2;
+
+    // Quest already complete - just welcome them
+    if (MISC_QUEST & 8192) {
+        cutin "ra_nemma01",2;
+        mes "[Priestess Nemma]";
+        mes "Welcome to our temple!";
+        goto L_End;
     }
 
-    if (.@player_paid) {
-        mes "[Temple Priestess]";
-        mes "Welcome back!";
-        mes "Priestess Nemma awaits";
-        mes "you inside the temple.";
-        close;
-    }
-
-    // New visitor - collect fee
-    mes "[Temple Priestess]";
-    mes "Greetings, traveler.";
-    mes "Welcome to the Temple";
-    mes "of Cheshrumnir.";
-    next;
-    mes "[Temple Priestess]";
-    mes "To help maintain the temple";
-    mes "and support our services,";
-    mes "we ask for a contribution of";
-    mes "^0000FF1,500,000 zeny^000000 from those";
-    mes "who wish to explore within.";
-    next;
-
-    // Show progress
-    .@remaining = 500000000 - $rachel_sanctuary_total;
-    if (.@remaining > 0) {
-        mes "[Temple Priestess]";
-        mes "Once we collect ^FF0000500,000,000^000000";
-        mes "zeny in total, the temple will";
-        mes "open freely to all travelers!";
+    // Not paid yet - collect fee first
+    if (!.@can_proceed) {
+        cutin "ra_nemma03",2;
+        mes "[Priestess Nemma]";
+        mes "Good day, adventurer.";
+        mes "Welcome to the Temple";
+        mes "of Cheshrumnir.";
         next;
-        mes "[Temple Priestess]";
-        mes "Current: ^0000FF" + F_InsertComma($rachel_sanctuary_total) + "^000000 z";
-        mes "Goal: ^FF0000500,000,000^000000 z";
-        next;
-    }
-
-    mes "[Temple Priestess]";
-    mes "Would you like to make";
-    mes "a contribution and gain";
-    mes "access to the temple?";
-    next;
-
-    switch(select("Yes, I'll pay 1,500,000 zeny:No thanks")) {
-    case 1:
-        if (Zeny < 1500000) {
-            mes "[Temple Priestess]";
-            mes "I'm sorry, but you don't";
-            mes "have enough zeny...";
-            close;
-        }
-
-        Zeny = Zeny - 1500000;
-        $rachel_sanctuary_total = $rachel_sanctuary_total + 1500000;
-        ra_sanctuary_paid = 1;
-
-        mes "[Temple Priestess]";
-        mes "Thank you for your";
-        mes "generous contribution!";
+        mes "[Priestess Nemma]";
+        mes "To help maintain the temple";
+        mes "and support our sacred work,";
+        mes "we ask for a contribution of";
+        mes "^0000FF1,500,000 zeny^000000 from those";
+        mes "who wish to explore within.";
         next;
 
-        // Check if goal reached
-        if ($rachel_sanctuary_total >= 500000000) {
-            mes "[Temple Priestess]";
-            mes "^FF0000Amazing!^000000 Your contribution";
-            mes "has reached our goal!";
-            mes "The temple is now ^0000FFfree^000000";
-            mes "for all travelers!";
-            announce "Rachel Temple is now FREE for all adventurers!", bc_all, 0x00FF00;
+        // Show progress toward free entry
+        if ($rachel_sanctuary_total < 500000000) {
+            mes "[Priestess Nemma]";
+            mes "Once we collect ^FF0000500,000,000^000000";
+            mes "zeny in total, the temple will";
+            mes "open freely to all travelers!";
+            next;
+            mes "[Priestess Nemma]";
+            mes "Current: ^0000FF" + F_InsertComma($rachel_sanctuary_total) + "^000000 z";
+            mes "Goal: ^FF0000500,000,000^000000 z";
             next;
         }
 
-        mes "[Temple Priestess]";
-        mes "Please speak with Priestess";
-        mes "Nemma. She will guide you";
-        mes "through the temple.";
-        close;
+        cutin "ra_nemma01",2;
+        mes "[Priestess Nemma]";
+        mes "Would you like to make";
+        mes "a contribution and gain";
+        mes "access to the temple?";
+        next;
 
-    case 2:
-        mes "[Temple Priestess]";
-        mes "I understand.";
-        mes "May Freya watch over you.";
-        close;
+        switch(select("Yes, I'll pay 1,500,000 zeny:No thanks")) {
+        case 1:
+            if (Zeny < 1500000) {
+                cutin "ra_nemma02",2;
+                mes "[Priestess Nemma]";
+                mes "I'm sorry, but you don't";
+                mes "seem to have enough zeny...";
+                mes "Please come back when you";
+                mes "can make a contribution.";
+                goto L_End;
+            }
+
+            Zeny -= 1500000;
+            $rachel_sanctuary_total += 1500000;
+            ra_sanctuary_paid = 1;
+
+            cutin "ra_nemma04",2;
+            mes "[Priestess Nemma]";
+            mes "Thank you for your";
+            mes "generous contribution!";
+            mes "May Freya bless you~";
+            next;
+
+            // Check if goal reached
+            if ($rachel_sanctuary_total >= 500000000) {
+                mes "[Priestess Nemma]";
+                mes "^FF0000Amazing!^000000 Your contribution";
+                mes "has reached our goal!";
+                mes "The temple is now ^0000FFfree^000000";
+                mes "for all travelers!";
+                announce "Rachel Temple is now FREE for all adventurers!", bc_all, 0x00FF00;
+                next;
+            }
+
+            mes "[Priestess Nemma]";
+            mes "Now then, let me tell you";
+            mes "about the temple...";
+            next;
+            // Fall through to quest dialog
+            goto L_QuestStart;
+
+        case 2:
+            cutin "ra_nemma01",2;
+            mes "[Priestess Nemma]";
+            mes "I understand.";
+            mes "May Freya watch over you";
+            mes "on your journeys~";
+            goto L_End;
+        }
     }
+
+    // Player has paid - show quest dialog
+L_QuestStart:
+    if (ra_tem_q < 1) {
+        mes "[Priestess Nemma]";
+        mes "Hello, there!";
+        mes "...............................";
+        mes "Um, for some reason, the";
+        mes "temple gate hasn't opened yet.";
+        mes "But it should be open now. Well";
+        mes "this happens sometimes so...";
+        next;
+        mes "[Priestess Nemma]";
+        mes "See, there's this auto locking";
+        mes "system that was added to the";
+        mes "gate when this temple was";
+        mes "built, but now it's more of";
+        mes "an annoyance than security.";
+        next;
+        mes "[Priestess Nemma]";
+        mes "Every time someone messes";
+        mes "with the lock, or if it breaks,";
+        mes "we have to wait until it auto";
+        mes "resets itself before it works";
+        mes "again. No one can fix it";
+        mes "really quickly, you know...";
+        next;
+        mes "[Priestess Nemma]";
+        mes "^333333*Sniff*^000000 What should I do?";
+        mes "The auto reset never takes";
+        mes "this long, and I really need";
+        mes "to go inside. ^333333*Sob*^000000 P-Panno!";
+        mes "Panno, I neeeed heeeeelp~!";
+        ra_tem_q = 1;
+        goto L_End;
+    }
+    else if (ra_tem_q >= 1 && ra_tem_q < 10) {
+        mes "[Priestess Nemma]";
+        mes "If the gate's locked, then";
+        mes "I've just got to find that";
+        mes "secret entrance. Some kids";
+        mes "supposedly use it to enter";
+        mes "and play pranks in the temple,";
+        mes "but I don't know who they are...";
+        next;
+        mes "[Priestess Nemma]";
+        mes "Panno would know";
+        mes "what to do... I think.";
+        mes "Ooh, Panno, help me!";
+        goto L_End;
+    }
+    else if (ra_tem_q == 10) {
+        cutin "ra_nemma04",2;
+        mes "[Priestess Nemma]";
+        mes "Oh, "+strcharinfo(0)+"!";
+        mes "The gate just opened and";
+        mes "I was able to get inside";
+        mes "the temple! ^333333*Whew*^000000 I was";
+        mes "getting really worried";
+        mes "about it for awhile.";
+        next;
+        mes "[Priestess Nemma]";
+        mes "This is the first time that the";
+        mes "gate locked up since Panno";
+        mes "was assigned to her post in";
+        mes "the temple. I thought maybe";
+        mes "something happened and";
+        mes "she got in trouble, you know?";
+        next;
+        cutin "ra_nemma02",2;
+        mes "[Priestess Nemma]";
+        mes "Wait, wait...";
+        mes "I'm outside. What if";
+        mes "the gate locks up again?";
+        mes "Oooh, what should I do?!";
+        goto L_End;
+    }
+    else if (ra_tem_q == 11) {
+        emotion ET_DELIGHT;
+        cutin "ra_nemma03",2;
+        mes "[Priestess Nemma]";
+        mes "Hey, "+strcharinfo(0)+"~!";
+        mes "We reached our target!";
+        mes "Isn't that great? We're no";
+        mes "longer asking for donations,";
+        mes "but you can still redeem your";
+        mes "Lottery Tickets inside, okay?";
+        goto L_End;
+    }
+    else {
+        // Quest in progress beyond our override
+        // Enable original and let player talk to it
+        enablenpc "Nemma#ra_temple";
+        mes "[Priestess Nemma]";
+        mes "Please speak with me again.";
+        close2;
+        // Re-disable after short delay
+        sleep2 100;
+        disablenpc "Nemma#ra_temple";
+        end;
+    }
+
+L_End:
+    close2;
+    cutin "",255;
+    end;
 }
 
 // Override Temple Entrance to check payment
@@ -144,7 +248,7 @@ OnTouch:
         mes "seems to be restricted.^000000";
         next;
         mes "^3355FFPerhaps you should speak";
-        mes "with the Temple Priestess";
+        mes "with Priestess Nemma";
         mes "standing nearby.^000000";
         close;
     }
@@ -155,7 +259,7 @@ OnTouch:
         mes "entrance is locked.^000000";
         next;
         select("Kick Door.:Smash Door with Weapon.");
-        emotion ET_HUK, getnpcid(0, "Nemma#ra_temple");
+        emotion ET_HUK, getnpcid(0, "Nemma#custom");
         mes "[Priestess Nemma]";
         mes "Please don't do that!";
         close;
