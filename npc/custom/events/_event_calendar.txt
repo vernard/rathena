@@ -694,9 +694,10 @@ L_MOTD:
 	mes "Mode: ^0000FF"+.@mode$+"^000000";
 	mes "Duration: ^0000FF"+.@duration$+" hours^000000";
 	mes "Upcoming shown: ^0000FF"+.@upcoming$+"^000000";
+	mes "Min Level: ^0000FF"+.@min_level$+"^000000";
 	next;
 
-	switch(select("Toggle MOTD On/Off:Change Current MOTD:Edit Today's Schedule:Regenerate Schedule:Change Selection Mode:Set Duration:Set Upcoming Count:Back")) {
+	switch(select("Toggle MOTD On/Off:Change Current MOTD:Edit Today's Schedule:Regenerate Schedule:Change Selection Mode:Set Duration:Set Upcoming Count:Set Min Level:Back")) {
 		case 1:
 			if (!.@motd_enabled) {
 				query_sql "UPDATE event_types SET enabled = 1 WHERE code = 'motd'";
@@ -773,6 +774,33 @@ L_MOTD:
 			close;
 
 		case 8:
+			mes "[Set Min Level]";
+			mes "Minimum monster level for MOTD pool.";
+			mes "Current: ^0000FF"+.@min_level$+"^000000";
+			mes " ";
+			mes "Select minimum level:";
+			next;
+			set .@new_level, select("10:25:50:75:Custom");
+			if (.@new_level == 5) {
+				mes "Enter minimum level (1-99):";
+				input .@custom_level;
+				if (.@custom_level < 1) set .@custom_level, 1;
+				if (.@custom_level > 99) set .@custom_level, 99;
+				query_sql "UPDATE event_config SET config_value = '"+.@custom_level+"' WHERE config_key = 'motd_min_level'";
+				callsub S_InvalidateCache;
+				mes "[Events Manager]";
+				mes "Minimum level set to "+.@custom_level+".";
+			} else {
+				setarray .@level_vals[0], 10, 25, 50, 75;
+				query_sql "UPDATE event_config SET config_value = '"+.@level_vals[.@new_level-1]+"' WHERE config_key = 'motd_min_level'";
+				callsub S_InvalidateCache;
+				mes "[Events Manager]";
+				mes "Minimum level set to "+.@level_vals[.@new_level-1]+".";
+			}
+			mes "^FF8800Regenerate schedule for this to take effect.^000000";
+			close;
+
+		case 9:
 			goto L_GMMenu;
 	}
 	end;
