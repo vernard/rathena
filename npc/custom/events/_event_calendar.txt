@@ -325,17 +325,35 @@ L_HH_Add:
 
 	// Format day name and time for confirmation
 	setarray .@daynames$[0], "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday";
+
+	// Format start time in 12-hour AM/PM
 	set .@ampm$, (.@hour >= 12) ? "PM" : "AM";
 	set .@hour12, (.@hour > 12) ? .@hour - 12 : ((.@hour == 0) ? 12 : .@hour);
 	set .@time$, .@hour12 + ":" + ((.@minute < 10) ? "0" : "") + .@minute + " " + .@ampm$;
 
+	// Calculate end time
+	.@end_total_mins = .@hour * 60 + .@minute + .@duration;
+	.@end_hour = .@end_total_mins / 60;
+	if (.@end_hour >= 24) set .@end_hour, .@end_hour - 24;  // Wrap around midnight
+	.@end_min = .@end_total_mins % 60;
+	set .@end_ampm$, (.@end_hour >= 12) ? "PM" : "AM";
+	set .@end_hour12, (.@end_hour > 12) ? .@end_hour - 12 : ((.@end_hour == 0) ? 12 : .@end_hour);
+	set .@end_time$, .@end_hour12 + ":" + ((.@end_min < 10) ? "0" : "") + .@end_min + " " + .@end_ampm$;
+
+	// Get the actual date for next occurrence
+	query_sql "SELECT DATE_FORMAT(DATE_ADD(CURDATE(), INTERVAL (("+.@day+" - WEEKDAY(CURDATE()) + 7) % 7) DAY), '%b %d')", .@next_date$;
+
 	mes "[Confirm Schedule]";
-	mes "^0055FF" + .@daynames$[.@day] + " at " + .@time$ + "^000000";
+	mes "^0055FF" + .@daynames$[.@day] + ", " + .@next_date$ + "^000000";
+	mes "Time: ^0055FF" + .@time$ + " - " + .@end_time$ + "^000000";
 	mes "Duration: ^0055FF" + .@dur$ + "^000000";
+	mes " ";
+	mes "^888888(Repeats weekly)^000000";
 	next;
 	if (select("Confirm:Cancel") == 2) {
 		mes "Schedule cancelled.";
-		close;
+		next;
+		goto L_HappyHour;
 	}
 
 	// Get event_type_id for happy_hour
@@ -361,13 +379,15 @@ L_HH_Add:
 		mes "[Events Manager]";
 		mes "Schedule added and ^00AA00Happy Hour started^000000!";
 		mes "Time remaining: "+.@remaining+" minutes";
-		close;
+		next;
+		goto L_HappyHour;
 	}
 
 	callsub S_InvalidateCache;
 	mes "[Events Manager]";
 	mes "Schedule added!";
-	close;
+	next;
+	goto L_HappyHour;
 
 L_HH_Toggle:
 	query_sql "SELECT es.id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour, es.enabled FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' ORDER BY es.day_of_week", .@ids, .@days$, .@hours, .@enabled;
@@ -385,8 +405,33 @@ L_HH_Toggle:
 	input .@toggle_id;
 	query_sql "UPDATE event_schedule SET enabled = NOT enabled WHERE id = "+.@toggle_id+" AND event_code = 'happy_hour'";
 	callsub S_InvalidateCache;
+
+	// Check if toggled ON and we're currently in the active window
+	query_sql "SELECT es.enabled, es.day_of_week, es.start_hour, es.start_minute, es.duration_minutes FROM event_schedule es WHERE es.id = "+.@toggle_id, .@now_enabled, .@day, .@hour, .@minute, .@duration;
+
+	if (.@now_enabled && !$@HappyHourActive) {
+		// Check if we're in the window right now
+		query_sql "SELECT WEEKDAY(NOW()), HOUR(NOW()) * 60 + MINUTE(NOW())", .@today_dow, .@cur_mins;
+		.@start_mins = .@hour * 60 + .@minute;
+		.@end_mins = .@start_mins + .@duration;
+
+		if (.@today_dow == .@day && .@cur_mins >= .@start_mins && .@cur_mins < .@end_mins) {
+			// We're in the window! Trigger Happy Hour
+			.@remaining = .@end_mins - .@cur_mins;
+			set $@HappyHourDuration, .@remaining;
+			set $@HappyHourScheduleId, .@toggle_id;
+			donpcevent "HappyHour::OnEventStart";
+			mes "[Events Manager]";
+			mes "Schedule enabled and ^00AA00Happy Hour started^000000!";
+			mes "Time remaining: "+.@remaining+" minutes";
+			next;
+			goto L_HappyHour;
+		}
+	}
+
 	mes "Toggled!";
-	close;
+	next;
+	goto L_HappyHour;
 
 L_HH_Remove:
 	query_sql "SELECT es.id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' ORDER BY es.day_of_week", .@ids, .@days$, .@hours;
@@ -404,7 +449,8 @@ L_HH_Remove:
 	query_sql "DELETE FROM event_schedule WHERE id = "+.@remove_id+" AND event_code = 'happy_hour'";
 	callsub S_InvalidateCache;
 	mes "Removed!";
-	close;
+	next;
+	goto L_HappyHour;
 
 // ============================================================
 // EXP Boost Management (Simplified)

@@ -126,14 +126,8 @@ OnEventEnd:
 // Manual Stop (for GM use)
 // ============================================================
 OnManualStop:
-	if (!$@HappyHourActive) {
-		end;
-	}
-
-	// Clear the scheduled end timer
-	deltimer strnpcinfo(0)+"::OnEventEnd";
-
-	// End the event
+	// Always call OnEventEnd to announce (even if NPC state desynced)
+	// OnEventEnd will handle stopping the NPC timer via stopnpctimer
 	donpcevent strnpcinfo(0)+"::OnEventEnd";
 	end;
 }
