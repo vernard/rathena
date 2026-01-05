@@ -4,6 +4,7 @@
 #include "motd.hpp"
 
 #include <stdlib.h>
+#include <cstring>
 
 #include "../common/showmsg.hpp"
 #include "../common/sql.hpp"

@@ -13,7 +13,7 @@
 //= - Leftover zeny rolls over to next pool
 //============================================================
 
-prontera,152,193,4	script	Event Patron	4_F_EDEN,{
+prontera,152,193,4	script	Event Patron	4_F_JOB_HUNTER,{
 	mes "[Event Patron]";
 	mes "Welcome! I coordinate";
 	mes "player-sponsored EXP events.";
