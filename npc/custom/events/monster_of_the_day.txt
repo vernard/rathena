@@ -163,6 +163,17 @@ L_Reshuffle:
 	// Get today's reshuffle count
 	query_sql "SELECT reshuffle_count FROM event_motd_reshuffle WHERE reshuffle_date = CURDATE()", .@count;
 
+	// Cap at 14 reshuffles to prevent integer overflow (14th reshuffle = ~819M zeny)
+	if (.@count >= 14) {
+		mes "[Monster Hunter Board]";
+		mes "^FF0000Maximum reshuffles reached!^000000";
+		mes " ";
+		mes "The monster has been reshuffled";
+		mes "14 times today. Please wait";
+		mes "until tomorrow to reshuffle again.";
+		close;
+	}
+
 	// Calculate cost: base * (multiplier/100)^count
 	.@cost = .@base_cost;
 	for (.@i = 0; .@i < .@count; .@i++) {
