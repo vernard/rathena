@@ -38,8 +38,8 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 		set .@has_active, 1;
 	} else {
 		// Check database for active boost not yet loaded by scheduler
-		// Must be enabled in both event_schedule AND event_types
-		query_sql "SELECT es.multiplier, TIMESTAMPDIFF(MINUTE, NOW(), es.end_datetime) FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE es.event_code = 'exp_boost' AND es.enabled = 1 AND et.enabled = 1 AND es.schedule_type = 'once' AND es.status IN ('scheduled', 'active') AND NOW() BETWEEN es.start_datetime AND es.end_datetime LIMIT 1", .@eb_mult, .@eb_remaining;
+		// One-time events are now stored in event_instances
+		query_sql "SELECT CAST(JSON_EXTRACT(ei.event_data, '$.multiplier') AS UNSIGNED), TIMESTAMPDIFF(MINUTE, NOW(), ei.scheduled_end) FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND et.enabled = 1 AND ei.trigger_type = 'one_time' AND ei.status IN ('scheduled', 'active') AND NOW() BETWEEN COALESCE(ei.scheduled_start, ei.actual_start) AND ei.scheduled_end LIMIT 1", .@eb_mult, .@eb_remaining;
 		if (.@eb_mult > 0 && .@eb_remaining > 0) {
 			set .@mult$, callfunc("F_FormatExpMultiplier", .@eb_mult);
 			set .@remaining$, callfunc("F_FormatDuration", .@eb_remaining);
@@ -55,7 +55,7 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 	if (!.@motd_enabled) {
 		mes "^888888[Disabled] Monster of the Day^000000";
 	} else {
-		query_sql "SELECT mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@motd_name$, .@motd_mins;
+		query_sql "SELECT mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@motd_name$, .@motd_mins;
 		if (.@motd_name$ != "") {
 			mes "^00FF00[Active] Monster of the Day^000000";
 			mes "   Featured: ^0000FF"+.@motd_name$+"^000000";
@@ -75,8 +75,8 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 	// ========================================
 	mes "[^0055FFUpcoming Events^000000]";
 
-	// Get scheduled Happy Hours (with duration)
-	query_sql "SELECT DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), start_hour, start_minute, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 ORDER BY day_of_week LIMIT 3", .@hh_days$, .@hh_hours, .@hh_mins, .@hh_durations;
+	// Get scheduled Happy Hours (with duration) - using JOIN with event_types
+	query_sql "SELECT DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour, es.start_minute, es.duration_minutes FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' AND es.enabled = 1 ORDER BY es.day_of_week LIMIT 3", .@hh_days$, .@hh_hours, .@hh_mins, .@hh_durations;
 
 	if (getarraysize(.@hh_days$) > 0) {
 		mes "^FFD700Happy Hour Schedule:^000000";
@@ -146,8 +146,8 @@ L_EventDetails:
 			next;
 			mes "[^FFD700Happy Hour^000000]";
 			mes "^0000FFWhen does it happen?^000000";
-			// Get next scheduled Happy Hour
-			query_sql "SELECT DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), start_hour, start_minute, duration_minutes FROM event_schedule WHERE event_code = 'happy_hour' AND enabled = 1 ORDER BY (day_of_week - WEEKDAY(CURDATE()) + 7) % 7 LIMIT 1", .@next_day$, .@next_hour, .@next_min, .@next_dur;
+			// Get next scheduled Happy Hour - using JOIN with event_types
+			query_sql "SELECT DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour, es.start_minute, es.duration_minutes FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' AND es.enabled = 1 ORDER BY (es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7 LIMIT 1", .@next_day$, .@next_hour, .@next_min, .@next_dur;
 			if (.@next_day$ != "") {
 				set .@time$, (.@next_hour < 10 ? "0" : "") + .@next_hour + ":" + (.@next_min < 10 ? "0" : "") + .@next_min;
 				if (.@next_dur >= 60) {
@@ -212,7 +212,7 @@ L_MyStats:
 	mes "Total Earned: "+.@total;
 	mes " ";
 	// Get MOTD completions
-	query_sql "SELECT COUNT(*) FROM motd_completions WHERE char_id = "+getcharid(0), .@motd_count;
+	query_sql "SELECT COUNT(*) FROM event_motd_completions WHERE char_id = "+getcharid(0), .@motd_count;
 	mes "MOTD Hunts Completed: "+.@motd_count;
 	close;
 
@@ -287,7 +287,7 @@ L_HappyHour:
 
 		case 2:
 			mes "[Happy Hour Schedule]";
-			query_sql "SELECT id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), start_hour, start_minute, duration_minutes, enabled FROM event_schedule WHERE event_code = 'happy_hour' ORDER BY day_of_week", .@ids, .@days$, .@hours, .@mins, .@durations, .@enabled;
+			query_sql "SELECT es.id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour, es.start_minute, es.duration_minutes, es.enabled FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' ORDER BY es.day_of_week", .@ids, .@days$, .@hours, .@mins, .@durations, .@enabled;
 
 			if (getarraysize(.@ids) == 0) {
 				mes "No scheduled Happy Hours.";
@@ -314,7 +314,9 @@ L_HappyHour:
 					input .@duration;
 					if (.@duration < 10 || .@duration > 480) { mes "Invalid duration."; close; }
 
-					query_sql "INSERT INTO event_schedule (event_code, schedule_type, day_of_week, start_hour, start_minute, duration_minutes, enabled) VALUES ('happy_hour', 'fixed', "+.@day+", "+.@hour+", "+.@minute+", "+.@duration+", 1)";
+					// Get event_type_id for happy_hour
+					query_sql "SELECT id FROM event_types WHERE code = 'happy_hour'", .@type_id;
+					query_sql "INSERT INTO event_schedule (event_type_id, event_code, schedule_type, day_of_week, start_hour, start_minute, duration_minutes, enabled) VALUES ("+.@type_id+", 'happy_hour', 'weekly', "+.@day+", "+.@hour+", "+.@minute+", "+.@duration+", 1)";
 					callsub S_InvalidateCache;
 					mes "Schedule added!";
 					close;
@@ -376,8 +378,8 @@ L_ExpBoost:
 	}
 
 	// Check database for active boost not yet loaded by scheduler
-	// Must be enabled to show as "loading" (disabled boosts won't be picked up)
-	query_sql "SELECT es.id, es.multiplier, TIMESTAMPDIFF(MINUTE, NOW(), es.end_datetime) FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE es.event_code = 'exp_boost' AND es.enabled = 1 AND et.enabled = 1 AND es.schedule_type = 'once' AND es.status IN ('scheduled', 'active') AND NOW() BETWEEN es.start_datetime AND es.end_datetime LIMIT 1", .@active_id, .@active_mult, .@active_remaining;
+	// One-time events are now stored in event_instances
+	query_sql "SELECT ei.id, CAST(JSON_EXTRACT(ei.event_data, '$.multiplier') AS UNSIGNED), TIMESTAMPDIFF(MINUTE, NOW(), ei.scheduled_end) FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND et.enabled = 1 AND ei.trigger_type = 'one_time' AND ei.status IN ('scheduled', 'active') AND NOW() BETWEEN COALESCE(ei.scheduled_start, ei.actual_start) AND ei.scheduled_end LIMIT 1", .@active_id, .@active_mult, .@active_remaining;
 	if (.@active_id > 0 && .@active_remaining > 0) {
 		set .@mult$, callfunc("F_FormatExpMultiplier", .@active_mult);
 		set .@remaining$, callfunc("F_FormatDuration", .@active_remaining);
@@ -388,8 +390,8 @@ L_ExpBoost:
 
 		switch(select("Stop EXP Boost:Back")) {
 			case 1:
-				// Mark as completed in database
-				query_sql "UPDATE event_schedule SET status = 'completed', actual_end = NOW() WHERE id = "+.@active_id;
+				// Mark as completed in event_instances
+				query_sql "UPDATE event_instances SET status = 'completed', actual_end = NOW() WHERE id = "+.@active_id;
 				// If scheduler already loaded it, stop it
 				if ($@ExpBoostActive) {
 					donpcevent "ExpBoost::OnEventEnd";
@@ -402,8 +404,8 @@ L_ExpBoost:
 		}
 	}
 
-	// Show pending scheduled boosts
-	query_sql "SELECT id, DATE_FORMAT(start_datetime, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, start_datetime, end_datetime), multiplier FROM event_schedule WHERE event_code = 'exp_boost' AND schedule_type = 'once' AND status = 'scheduled' AND start_datetime > NOW() ORDER BY start_datetime LIMIT 3", .@pend_ids, .@pend_starts$, .@pend_durs, .@pend_mults;
+	// Show pending scheduled boosts (now from event_instances)
+	query_sql "SELECT ei.id, DATE_FORMAT(ei.scheduled_start, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, ei.scheduled_start, ei.scheduled_end), CAST(JSON_EXTRACT(ei.event_data, '$.multiplier') AS UNSIGNED) FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND ei.trigger_type = 'one_time' AND ei.status = 'scheduled' AND ei.scheduled_start > NOW() ORDER BY ei.scheduled_start LIMIT 3", .@pend_ids, .@pend_starts$, .@pend_durs, .@pend_mults;
 
 	mes "^FF0000Status: INACTIVE^000000";
 	if (getarraysize(.@pend_ids) > 0) {
@@ -496,15 +498,18 @@ L_ScheduleExpBoost:
 			break;
 	}
 
-	// Insert into unified event_schedule table
+	// Insert one-time events directly into event_instances (not event_schedule)
+	query_sql "SELECT id FROM event_types WHERE code = 'exp_boost'", .@type_id;
+
 	if (.@start_now) {
-		query_sql "INSERT INTO event_schedule (event_code, schedule_type, start_datetime, end_datetime, duration_minutes, multiplier, status) VALUES ('exp_boost', 'once', NOW(), DATE_ADD(NOW(), INTERVAL "+.@duration+" MINUTE), "+.@duration+", "+.@mult+", 'active')";
+		// Create instance with actual_start = NOW (already active)
+		query_sql "INSERT INTO event_instances (event_type_id, event_code, scheduled_start, scheduled_end, actual_start, status, trigger_type, triggered_by, event_data) VALUES ("+.@type_id+", 'exp_boost', NOW(), DATE_ADD(NOW(), INTERVAL "+.@duration+" MINUTE), NOW(), 'active', 'one_time', "+getcharid(3)+", JSON_OBJECT('multiplier', "+.@mult+"))";
 		query_sql "SELECT LAST_INSERT_ID()", .@new_id;
 
 		// Start immediately
 		set $@ExpBoostMultiplier, .@mult;
 		set $@ExpBoostDuration, .@duration;
-		set $@ExpBoostScheduleId, .@new_id;
+		set $@ExpBoostInstanceId, .@new_id;
 		donpcevent "ExpBoost::OnEventStart";
 
 		set .@mult$, callfunc("F_FormatExpMultiplier", .@mult);
@@ -514,7 +519,8 @@ L_ScheduleExpBoost:
 		mes "Multiplier: "+.@mult$;
 		mes "Duration: "+.@dur$;
 	} else {
-		query_sql "INSERT INTO event_schedule (event_code, schedule_type, start_datetime, end_datetime, duration_minutes, multiplier, status) VALUES ('exp_boost', 'once', '"+.@start_dt$+"', DATE_ADD('"+.@start_dt$+"', INTERVAL "+.@duration+" MINUTE), "+.@duration+", "+.@mult+", 'scheduled')";
+		// Create instance with scheduled_start (pending)
+		query_sql "INSERT INTO event_instances (event_type_id, event_code, scheduled_start, scheduled_end, status, trigger_type, triggered_by, event_data) VALUES ("+.@type_id+", 'exp_boost', '"+.@start_dt$+"', DATE_ADD('"+.@start_dt$+"', INTERVAL "+.@duration+" MINUTE), 'scheduled', 'one_time', "+getcharid(3)+", JSON_OBJECT('multiplier', "+.@mult+"))";
 
 		set .@mult$, callfunc("F_FormatExpMultiplier", .@mult);
 		set .@dur$, callfunc("F_FormatDuration", .@duration);
@@ -531,7 +537,8 @@ L_ScheduleExpBoost:
 // ============================================================
 L_CancelExpBoost:
 	mes "[Cancel Scheduled Boost]";
-	query_sql "SELECT id, DATE_FORMAT(start_datetime, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, start_datetime, end_datetime), multiplier FROM event_schedule WHERE event_code = 'exp_boost' AND schedule_type = 'once' AND status = 'scheduled' AND start_datetime > NOW() ORDER BY start_datetime", .@ids, .@starts$, .@durs, .@mults;
+	// Query from event_instances for pending one-time boosts
+	query_sql "SELECT ei.id, DATE_FORMAT(ei.scheduled_start, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, ei.scheduled_start, ei.scheduled_end), CAST(JSON_EXTRACT(ei.event_data, '$.multiplier') AS UNSIGNED) FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND ei.trigger_type = 'one_time' AND ei.status = 'scheduled' AND ei.scheduled_start > NOW() ORDER BY ei.scheduled_start", .@ids, .@starts$, .@durs, .@mults;
 
 	if (getarraysize(.@ids) == 0) {
 		mes "No pending boosts to cancel.";
@@ -550,7 +557,8 @@ L_CancelExpBoost:
 	input .@cancel_id;
 	if (.@cancel_id == 0) goto L_ExpBoost;
 
-	query_sql "UPDATE event_schedule SET status = 'cancelled' WHERE id = "+.@cancel_id+" AND status = 'scheduled' AND start_datetime > NOW()";
+	// Update in event_instances
+	query_sql "UPDATE event_instances SET status = 'cancelled' WHERE id = "+.@cancel_id+" AND status = 'scheduled' AND scheduled_start > NOW()";
 	mes "Schedule cancelled!";
 	close;
 
@@ -567,7 +575,7 @@ L_MOTD:
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
 
 	// Get current MOTD
-	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@cur_mob_id, .@cur_mob_name$, .@cur_mins;
+	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@cur_mob_id, .@cur_mob_name$, .@cur_mins;
 
 	if (!.@motd_enabled) {
 		mes "Status: ^FF0000DISABLED^000000";
@@ -637,7 +645,7 @@ L_ChangeMOTD:
 	mes "[Change Current MOTD]";
 
 	// Check if there's an active slot
-	query_sql "SELECT id FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@slot_id;
+	query_sql "SELECT id FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@slot_id;
 	if (.@slot_id == 0) {
 		mes "No active MOTD time slot.";
 		mes "Generate a schedule first.";
@@ -656,13 +664,13 @@ L_ChangeMOTD:
 	}
 
 	// Check if in MOTD pool, get tier
-	query_sql "SELECT tier FROM motd_monsters WHERE mob_id = "+.@mob_id, .@tier$;
+	query_sql "SELECT tier FROM event_motd_monsters WHERE mob_id = "+.@mob_id, .@tier$;
 	if (.@tier$ == "") {
 		set .@tier$, "custom";  // Not in pool, mark as custom
 	}
 
 	// Update the current schedule slot
-	query_sql "UPDATE motd_schedule SET mob_id = "+.@mob_id+", mob_name = '"+escape_sql(.@mob_name$)+"', tier = '"+.@tier$+"' WHERE id = "+.@slot_id;
+	query_sql "UPDATE event_motd_schedule SET mob_id = "+.@mob_id+", mob_name = '"+escape_sql(.@mob_name$)+"', tier = '"+.@tier$+"' WHERE id = "+.@slot_id;
 
 	// Update global variables
 	set $@LastMOTDMobID, .@mob_id;
@@ -672,7 +680,7 @@ L_ChangeMOTD:
 	callsub S_InvalidateCache;
 
 	// Announce the change
-	query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE id = "+.@slot_id, .@mins_left;
+	query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE id = "+.@slot_id, .@mins_left;
 	announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 
 	mes "[Events Manager]";
@@ -685,7 +693,7 @@ L_ChangeMOTD:
 // ============================================================
 L_EditMOTDSchedule:
 	mes "[Today's MOTD Schedule]";
-	query_sql "SELECT id, mob_name, tier, DATE_FORMAT(start_time, '%H'), DATE_FORMAT(end_time, '%H'), NOW() BETWEEN start_time AND end_time FROM motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@ids, .@names$, .@tiers$, .@start_hrs$, .@end_hrs$, .@is_current;
+	query_sql "SELECT id, mob_name, tier, DATE_FORMAT(start_time, '%H'), DATE_FORMAT(end_time, '%H'), NOW() BETWEEN start_time AND end_time FROM event_motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@ids, .@names$, .@tiers$, .@start_hrs$, .@end_hrs$, .@is_current;
 
 	if (getarraysize(.@ids) == 0) {
 		mes "No schedule for today.";
@@ -726,20 +734,20 @@ L_EditMOTDSchedule:
 	}
 
 	// Check if in MOTD pool, get tier
-	query_sql "SELECT tier FROM motd_monsters WHERE mob_id = "+.@mob_id, .@tier$;
+	query_sql "SELECT tier FROM event_motd_monsters WHERE mob_id = "+.@mob_id, .@tier$;
 	if (.@tier$ == "") {
 		set .@tier$, "custom";
 	}
 
 	// Update the schedule slot
-	query_sql "UPDATE motd_schedule SET mob_id = "+.@mob_id+", mob_name = '"+escape_sql(.@mob_name$)+"', tier = '"+.@tier$+"' WHERE id = "+.@edit_slot_id;
+	query_sql "UPDATE event_motd_schedule SET mob_id = "+.@mob_id+", mob_name = '"+escape_sql(.@mob_name$)+"', tier = '"+.@tier$+"' WHERE id = "+.@edit_slot_id;
 
 	// If this is the current slot, update globals and announce
 	if (.@edit_is_current) {
 		set $@LastMOTDMobID, .@mob_id;
 		set $@CurrentMOTDName$, .@mob_name$;
 
-		query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM motd_schedule WHERE id = "+.@edit_slot_id, .@mins_left;
+		query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE id = "+.@edit_slot_id, .@mins_left;
 		announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 	}
 
@@ -757,8 +765,8 @@ L_EditMOTDSchedule:
 // ============================================================
 L_History:
 	mes "[Event History]";
-	// Query from event_instances for actual run history
-	query_sql "SELECT ei.id, ei.event_code, DATE_FORMAT(ei.actual_start, '%m/%d %H:%i'), DATE_FORMAT(ei.actual_end, '%H:%i'), ei.status, JSON_UNQUOTE(JSON_EXTRACT(ei.event_data, '$.mob_name')) FROM event_instances ei ORDER BY FIELD(ei.status, 'active', 'scheduled', 'completed', 'cancelled', 'failed'), ei.id DESC LIMIT 15", .@ids, .@codes$, .@starts$, .@ends$, .@status$, .@extra$;
+	// Query from event_instances using JOIN with event_types
+	query_sql "SELECT ei.id, et.code, DATE_FORMAT(COALESCE(ei.actual_start, ei.scheduled_start), '%m/%d %H:%i'), DATE_FORMAT(ei.actual_end, '%H:%i'), ei.status, JSON_UNQUOTE(JSON_EXTRACT(ei.event_data, '$.mob_name')) FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id ORDER BY FIELD(ei.status, 'active', 'scheduled', 'completed', 'cancelled', 'failed'), ei.id DESC LIMIT 15", .@ids, .@codes$, .@starts$, .@ends$, .@status$, .@extra$;
 
 	if (getarraysize(.@ids) == 0) {
 		mes "No event history found.";

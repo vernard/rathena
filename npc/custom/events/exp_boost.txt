@@ -116,12 +116,8 @@ OnEventEnd:
 	setbattleflag("base_exp_rate", $@EB_OrigBaseExp);
 	setbattleflag("job_exp_rate", $@EB_OrigJobExp, true);  // true = reload
 
-	// Mark the schedule entry as completed (for one-time events)
-	if ($@ExpBoostScheduleId > 0) {
-		query_sql "UPDATE event_schedule SET status = 'completed', actual_end = NOW() WHERE id = "+$@ExpBoostScheduleId;
-	}
-
 	// Update instance and cache via helper function
+	// One-time events are now fully tracked in event_instances
 	callfunc "F_EndEventInstance", $@ExpBoostInstanceId;
 
 	// Mark as inactive
@@ -130,7 +126,6 @@ OnEventEnd:
 	set $@ExpBoostDuration, 0;
 	set $@ExpBoostStartTime, 0;
 	set $@ExpBoostEndTime, 0;
-	set $@ExpBoostScheduleId, 0;
 	set $@ExpBoostInstanceId, 0;
 
 	// Announce

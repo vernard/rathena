@@ -194,7 +194,7 @@ S_MOTD:
 
 		case 4:
 			mes "[Today's MOTD Schedule]";
-			query_sql "SELECT mob_name, tier, DATE_FORMAT(start_time, '%H:%i'), DATE_FORMAT(end_time, '%H:%i') FROM motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@names$, .@tiers$, .@starts$, .@ends$;
+			query_sql "SELECT mob_name, tier, DATE_FORMAT(start_time, '%H:%i'), DATE_FORMAT(end_time, '%H:%i') FROM event_motd_schedule WHERE DATE(start_time) = CURDATE() ORDER BY start_time", .@names$, .@tiers$, .@starts$, .@ends$;
 
 			if (getarraysize(.@names$) == 0) {
 				mes "No schedule for today.";

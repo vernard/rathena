@@ -1,11 +1,12 @@
 //===== rAthena Script =======================================
-//= Event Scheduler v2
+//= Event Scheduler v3
 //= Unified scheduler for all automated events
 //===== Description: =========================================
 //= Timer-based event scheduler that:
 //= - Uses next_run based scheduling (efficient)
-//= - Supports: interval, daily, weekly, biweekly, monthly, once
-//= - Creates event_instances for history
+//= - Supports: interval, daily, weekly, biweekly, monthly
+//= - One-time events are stored directly in event_instances
+//= - Uses event_type_id + JOINs (not event_code)
 //= - Updates event_current_state cache for hot-path queries
 //= - Manages MOTD rotation with event_instances
 //============================================================
@@ -89,32 +90,28 @@ S_InitializeNextRun:
 
 // ============================================================
 // Restore active events after server restart
-// Also picks up 'once' events that are within their time window
+// One-time events are now stored in event_instances directly
 // ============================================================
 S_RestoreActiveEvents:
-	// Check for EXP Boost (one-time event within its time window)
-	// Handles both 'active' (was running) and 'scheduled' (should have started)
+	// Check for EXP Boost (one-time event in event_instances)
+	// Status can be 'scheduled' (not yet started) or 'active' (was running)
 	if (!$@ExpBoostActive) {
-		query_sql "SELECT es.id, es.multiplier, TIMESTAMPDIFF(MINUTE, NOW(), es.end_datetime), es.status FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE es.event_code = 'exp_boost' AND es.enabled = 1 AND et.enabled = 1 AND es.schedule_type = 'once' AND es.status IN ('scheduled', 'active') AND NOW() BETWEEN es.start_datetime AND es.end_datetime LIMIT 1", .@eb_id, .@eb_mult, .@eb_remaining, .@eb_status$;
+		// Query event_instances for one-time EXP boost within its time window
+		query_sql "SELECT ei.id, CAST(JSON_EXTRACT(ei.event_data, '$.multiplier') AS UNSIGNED), TIMESTAMPDIFF(MINUTE, NOW(), ei.scheduled_end), ei.status FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND et.enabled = 1 AND ei.trigger_type = 'one_time' AND ei.status IN ('scheduled', 'active') AND NOW() BETWEEN COALESCE(ei.scheduled_start, ei.actual_start) AND ei.scheduled_end LIMIT 1", .@ei_id, .@eb_mult, .@eb_remaining, .@eb_status$;
 
-		if (.@eb_id > 0 && .@eb_remaining > 0) {
-			// Create instance if this was 'scheduled' (not yet started)
+		if (.@ei_id > 0 && .@eb_remaining > 0) {
+			// If status was 'scheduled', mark as active now (server just started during its window)
 			if (.@eb_status$ == "scheduled") {
-				query_sql "SELECT id FROM event_types WHERE code = 'exp_boost'", .@type_id;
-				query_sql "INSERT INTO event_instances (event_type_id, event_code, schedule_id, actual_start, status, trigger_type) VALUES ("+.@type_id+", 'exp_boost', "+.@eb_id+", NOW(), 'active', 'scheduled')";
-				query_sql "SELECT LAST_INSERT_ID()", .@instance_id;
-				set $@ExpBoostInstanceId, .@instance_id;
-
-				// Update schedule to active
-				query_sql "UPDATE event_schedule SET status = 'active', actual_start = NOW() WHERE id = "+.@eb_id;
+				query_sql "SELECT event_type_id FROM event_instances WHERE id = "+.@ei_id, .@type_id;
+				query_sql "UPDATE event_instances SET actual_start = NOW(), status = 'active' WHERE id = "+.@ei_id;
 
 				// Update cache
-				query_sql "UPDATE event_current_state SET instance_id = "+.@instance_id+", is_active = 1, cache_data = JSON_OBJECT('schedule_id', "+.@eb_id+", 'multiplier', "+.@eb_mult+") WHERE event_type_id = "+.@type_id;
+				query_sql "UPDATE event_current_state SET instance_id = "+.@ei_id+", is_active = 1, cache_data = JSON_OBJECT('multiplier', "+.@eb_mult+") WHERE event_type_id = "+.@type_id;
 			}
 
+			set $@ExpBoostInstanceId, .@ei_id;
 			set $@ExpBoostMultiplier, .@eb_mult;
 			set $@ExpBoostDuration, .@eb_remaining;
-			set $@ExpBoostScheduleId, .@eb_id;
 			donpcevent "ExpBoost::OnEventStart";
 			debugmes "[EventScheduler] Restored EXP Boost (was "+.@eb_status$+")";
 		}
@@ -127,15 +124,16 @@ S_RestoreActiveEvents:
 // ============================================================
 // Main scheduler: check for events ready to trigger
 // Uses next_run for efficient lookup
+// Also checks event_instances for pending one-time events
 // ============================================================
 S_CheckScheduledEvents:
-	// Find all schedules ready to trigger (next_run <= NOW)
-	// Excludes already active events and disabled schedules
-	query_sql "SELECT es.id, es.event_type_id, es.event_code, es.schedule_type, es.interval_minutes, es.duration_minutes, es.day_of_week, es.start_hour, es.start_minute, es.week_interval, es.multiplier, et.code FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE es.enabled = 1 AND et.enabled = 1 AND es.next_run IS NOT NULL AND es.next_run <= NOW() AND es.status IN ('scheduled', '') ORDER BY es.next_run LIMIT 10", .@ids, .@type_ids, .@codes$, .@sched_types$, .@intervals, .@durations, .@dow, .@hours, .@mins, .@week_int, .@mults, .@et_codes$;
+	// Part 1: Check recurring schedules (next_run based)
+	// Uses JOIN to get event code from event_types (not event_schedule.event_code)
+	query_sql "SELECT es.id, es.event_type_id, et.code, es.schedule_type, es.interval_minutes, es.duration_minutes, es.day_of_week, es.start_hour, es.start_minute, es.week_interval, COALESCE(JSON_EXTRACT(es.event_params, '$.multiplier'), 100) FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE es.enabled = 1 AND et.enabled = 1 AND es.next_run IS NOT NULL AND es.next_run <= NOW() AND es.schedule_type != 'once' ORDER BY es.next_run LIMIT 10", .@ids, .@type_ids, .@et_codes$, .@sched_types$, .@intervals, .@durations, .@dow, .@hours, .@mins, .@week_int, .@mults;
 
 	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
 		set .@schedule_id, .@ids[.@i];
-		set .@event_code$, .@codes$[.@i];
+		set .@event_code$, .@et_codes$[.@i];
 		set .@schedule_type$, .@sched_types$[.@i];
 		set .@duration, .@durations[.@i];
 
@@ -148,17 +146,17 @@ S_CheckScheduledEvents:
 			continue;
 		}
 
-		debugmes "[EventScheduler] Triggering event: "+.@event_code$+" (schedule "+.@schedule_id+")";
+		debugmes "[EventScheduler] Triggering recurring event: "+.@event_code$+" (schedule "+.@schedule_id+")";
 
-		// Create event instance
+		// Create event instance (event_code kept for backwards compat, will be removed later)
 		query_sql "INSERT INTO event_instances (event_type_id, event_code, schedule_id, actual_start, status, trigger_type) VALUES ("+.@type_ids[.@i]+", '"+.@event_code$+"', "+.@schedule_id+", NOW(), 'active', 'scheduled')";
 		query_sql "SELECT LAST_INSERT_ID()", .@instance_id;
 
 		// Update event_current_state cache
 		query_sql "UPDATE event_current_state SET instance_id = "+.@instance_id+", is_active = 1, cache_data = JSON_OBJECT('schedule_id', "+.@schedule_id+", 'duration', "+.@duration+") WHERE event_type_id = "+.@type_ids[.@i];
 
-		// Update schedule status and last_run
-		query_sql "UPDATE event_schedule SET status = 'active', last_run = NOW() WHERE id = "+.@schedule_id;
+		// Update schedule last_run (status stays as-is for recurring schedules)
+		query_sql "UPDATE event_schedule SET last_run = NOW() WHERE id = "+.@schedule_id;
 
 		// Trigger the event NPC
 		if (.@event_code$ == "happy_hour") {
@@ -166,13 +164,6 @@ S_CheckScheduledEvents:
 			set $@HappyHourScheduleId, .@schedule_id;
 			set $@HappyHourInstanceId, .@instance_id;
 			donpcevent "HappyHour::OnEventStart";
-		}
-		else if (.@event_code$ == "exp_boost") {
-			set $@ExpBoostMultiplier, .@mults[.@i];
-			set $@ExpBoostDuration, .@duration;
-			set $@ExpBoostScheduleId, .@schedule_id;
-			set $@ExpBoostInstanceId, .@instance_id;
-			donpcevent "ExpBoost::OnEventStart";
 		}
 		else if (.@event_code$ == "motd") {
 			// MOTD is handled separately by S_CheckMOTDRotation
@@ -185,6 +176,42 @@ S_CheckScheduledEvents:
 
 		// Calculate and set next_run
 		callsub S_CalculateNextRun, .@schedule_id, .@schedule_type$, .@intervals[.@i], .@dow[.@i], .@hours[.@i], .@mins[.@i], .@week_int[.@i];
+	}
+
+	// Part 2: Check one-time events in event_instances (scheduled_start based)
+	query_sql "SELECT ei.id, ei.event_type_id, et.code, TIMESTAMPDIFF(MINUTE, NOW(), ei.scheduled_end), CAST(JSON_EXTRACT(ei.event_data, '$.multiplier') AS UNSIGNED) FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE ei.status = 'scheduled' AND ei.trigger_type = 'one_time' AND et.enabled = 1 AND ei.scheduled_start IS NOT NULL AND ei.scheduled_start <= NOW() ORDER BY ei.scheduled_start LIMIT 5", .@ot_ids, .@ot_type_ids, .@ot_codes$, .@ot_durations, .@ot_mults;
+
+	for (set .@j, 0; .@j < getarraysize(.@ot_ids); set .@j, .@j + 1) {
+		set .@instance_id, .@ot_ids[.@j];
+		set .@event_code$, .@ot_codes$[.@j];
+		set .@duration, .@ot_durations[.@j];
+
+		// Check if this event type is already active (prevent overlap)
+		query_sql "SELECT 1 FROM event_instances WHERE event_type_id = "+.@ot_type_ids[.@j]+" AND status = 'active' AND id != "+.@instance_id+" LIMIT 1", .@already_active;
+		if (.@already_active) {
+			debugmes "[EventScheduler] Skipping one-time "+.@event_code$+" - another instance active";
+			continue;
+		}
+
+		debugmes "[EventScheduler] Triggering one-time event: "+.@event_code$+" (instance "+.@instance_id+")";
+
+		// Update instance to active
+		query_sql "UPDATE event_instances SET actual_start = NOW(), status = 'active' WHERE id = "+.@instance_id;
+
+		// Update event_current_state cache
+		query_sql "UPDATE event_current_state SET instance_id = "+.@instance_id+", is_active = 1, cache_data = JSON_OBJECT('multiplier', "+.@ot_mults[.@j]+", 'duration', "+.@duration+") WHERE event_type_id = "+.@ot_type_ids[.@j];
+
+		// Trigger the event NPC
+		if (.@event_code$ == "exp_boost") {
+			set $@ExpBoostMultiplier, .@ot_mults[.@j];
+			set $@ExpBoostDuration, .@duration;
+			set $@ExpBoostInstanceId, .@instance_id;
+			donpcevent "ExpBoost::OnEventStart";
+		}
+		else {
+			// Generic one-time event
+			donpcevent .@event_code$+"::OnEventStart";
+		}
 	}
 	return;
 
@@ -249,8 +276,8 @@ S_CheckMOTDRotation:
 		return;
 	}
 
-	// Get current MOTD from motd_schedule
-	query_sql "SELECT mob_id, mob_name, tier, TIMESTAMPDIFF(MINUTE, NOW(), end_time), end_time FROM motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id, .@mob_name$, .@tier$, .@mins_left, .@end_time$;
+	// Get current MOTD from event_motd_schedule
+	query_sql "SELECT mob_id, mob_name, tier, TIMESTAMPDIFF(MINUTE, NOW(), end_time), end_time FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@mob_id, .@mob_name$, .@tier$, .@mins_left, .@end_time$;
 
 	// Check if this is a new rotation (different from last announced)
 	if (.@mob_id > 0 && .@mob_id != $@LastMOTDMobID) {
@@ -272,7 +299,7 @@ S_CheckMOTDRotation:
 		set $@CurrentMOTDName$, .@mob_name$;
 
 		// Check if this monster has a bounty
-		query_sql "SELECT has_bounty FROM motd_monsters WHERE mob_id = "+.@mob_id, .@has_bounty;
+		query_sql "SELECT has_bounty FROM event_motd_monsters WHERE mob_id = "+.@mob_id, .@has_bounty;
 
 		if (.@has_bounty) {
 			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP, Drops & Hunt Points for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
@@ -304,7 +331,7 @@ OnGenerateMOTDSchedule:
 	if (.@min_level$ == "") set .@min_level, 50; else set .@min_level, atoi(.@min_level$);
 
 	// Clear today's schedule
-	query_sql "DELETE FROM motd_schedule WHERE DATE(start_time) = CURDATE()";
+	query_sql "DELETE FROM event_motd_schedule WHERE DATE(start_time) = CURDATE()";
 
 	// Generate 8 slots (every 3 hours)
 	set .@tier_index, 0;
@@ -319,15 +346,15 @@ OnGenerateMOTDSchedule:
 			set .@tier_index, .@tier_index + 1;
 
 			// Select random monster from this tier
-			query_sql "SELECT mob_id, mob_name FROM motd_monsters WHERE tier = '"+.@tier$+"' AND enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$;
+			query_sql "SELECT mob_id, mob_name FROM event_motd_monsters WHERE tier = '"+.@tier$+"' AND enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$;
 		} else {
 			// Random mode - pick any monster
-			query_sql "SELECT mob_id, mob_name, tier FROM motd_monsters WHERE enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$, .@tier$;
+			query_sql "SELECT mob_id, mob_name, tier FROM event_motd_monsters WHERE enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$, .@tier$;
 		}
 
 		if (.@mob_id > 0) {
 			// Insert into schedule
-			query_sql "INSERT INTO motd_schedule (mob_id, mob_name, start_time, end_time, tier) VALUES ("+.@mob_id+", '"+escape_sql(.@mob_name$)+"', DATE_ADD(CURDATE(), INTERVAL "+.@hour+" HOUR), DATE_ADD(CURDATE(), INTERVAL "+(.@hour+3)+" HOUR), '"+.@tier$+"')";
+			query_sql "INSERT INTO event_motd_schedule (mob_id, mob_name, start_time, end_time, tier) VALUES ("+.@mob_id+", '"+escape_sql(.@mob_name$)+"', DATE_ADD(CURDATE(), INTERVAL "+.@hour+" HOUR), DATE_ADD(CURDATE(), INTERVAL "+(.@hour+3)+" HOUR), '"+.@tier$+"')";
 		}
 	}
 
@@ -387,10 +414,11 @@ function	script	F_IsMOTDEnabled	{
 
 // ============================================================
 // Helper function to get active instance ID for an event
+// Uses JOIN with event_types instead of event_code column
 // ============================================================
 function	script	F_GetActiveInstance	{
 	set .@event_code$, getarg(0, "");
-	query_sql "SELECT id FROM event_instances WHERE event_code = '"+.@event_code$+"' AND status = 'active' ORDER BY id DESC LIMIT 1", .@instance_id;
+	query_sql "SELECT ei.id FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = '"+.@event_code$+"' AND ei.status = 'active' ORDER BY ei.id DESC LIMIT 1", .@instance_id;
 	return .@instance_id;
 }
 

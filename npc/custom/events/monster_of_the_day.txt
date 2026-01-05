@@ -29,8 +29,8 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 	mes "and ^FF00003x Hunt Points^000000!";
 	next;
 
-	// Get current MOTD with location from motd_monsters
-	query_sql "SELECT ms.mob_id, ms.mob_name, ms.tier, TIMESTAMPDIFF(MINUTE, NOW(), ms.end_time), COALESCE(mm.map_display, '') FROM motd_schedule ms LEFT JOIN motd_monsters mm ON ms.mob_id = mm.mob_id WHERE NOW() BETWEEN ms.start_time AND ms.end_time LIMIT 1", .@cur_id, .@cur_name$, .@cur_tier$, .@cur_mins, .@cur_loc$;
+	// Get current MOTD with location from event_motd_monsters
+	query_sql "SELECT ms.mob_id, ms.mob_name, ms.tier, TIMESTAMPDIFF(MINUTE, NOW(), ms.end_time), COALESCE(mm.map_display, '') FROM event_motd_schedule ms LEFT JOIN event_motd_monsters mm ON ms.mob_id = mm.mob_id WHERE NOW() BETWEEN ms.start_time AND ms.end_time LIMIT 1", .@cur_id, .@cur_name$, .@cur_tier$, .@cur_mins, .@cur_loc$;
 
 	if (.@cur_id > 0) {
 		// Format time remaining
@@ -72,7 +72,7 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 
 	// Get upcoming monsters with locations
 	mes "[Upcoming Monsters]";
-	query_sql "SELECT ms.mob_id, ms.mob_name, TIMESTAMPDIFF(MINUTE, NOW(), ms.start_time), COALESCE(mm.map_display, '') FROM motd_schedule ms LEFT JOIN motd_monsters mm ON ms.mob_id = mm.mob_id WHERE ms.start_time > NOW() ORDER BY ms.start_time LIMIT 5", .@up_ids, .@up_names$, .@up_mins, .@up_locs$;
+	query_sql "SELECT ms.mob_id, ms.mob_name, TIMESTAMPDIFF(MINUTE, NOW(), ms.start_time), COALESCE(mm.map_display, '') FROM event_motd_schedule ms LEFT JOIN event_motd_monsters mm ON ms.mob_id = mm.mob_id WHERE ms.start_time > NOW() ORDER BY ms.start_time LIMIT 5", .@up_ids, .@up_names$, .@up_mins, .@up_locs$;
 
 	if (getarraysize(.@up_ids) == 0) {
 		mes "^888888No upcoming monsters scheduled.^000000";
@@ -113,8 +113,8 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 OnSeedMonsters:
 	// Monster pool is now seeded via migration 043_seed_motd_from_bounty_board.sql
 	// This ensures only bounty board monsters (level 50+) are used
-	// To refresh: delete from motd_monsters, then re-run the migration
-	query_sql "SELECT COUNT(*) FROM motd_monsters", .@count;
+	// To refresh: delete from event_motd_monsters, then re-run the migration
+	query_sql "SELECT COUNT(*) FROM event_motd_monsters", .@count;
 	announce "[MOTD] Pool has "+.@count+" monsters (from bounty board).", bc_self;
 	debugmes "[MOTDSeeder] Pool has "+.@count+" monsters (seeded via migration)";
 	end;
