@@ -573,6 +573,11 @@ L_MOTD:
 	// Get other config
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_duration_hours'", .@duration$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_upcoming_count'", .@upcoming$;
+
+	if (.@duration$ == "") set .@duration$, "3";
+	if (.@upcoming$ == "") set .@upcoming$, "10";
 
 	// Get current MOTD
 	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@cur_mob_id, .@cur_mob_name$, .@cur_mins;
@@ -586,9 +591,11 @@ L_MOTD:
 		mes "Current: ^0000FF"+.@cur_mob_name$+"^000000 ("+.@cur_mins+"m left)";
 	}
 	mes "Mode: ^0000FF"+.@mode$+"^000000";
+	mes "Duration: ^0000FF"+.@duration$+" hours^000000";
+	mes "Upcoming shown: ^0000FF"+.@upcoming$+"^000000";
 	next;
 
-	switch(select("Toggle MOTD On/Off:Change Current MOTD:Edit Today's Schedule:Regenerate Schedule:Change Selection Mode:Back")) {
+	switch(select("Toggle MOTD On/Off:Change Current MOTD:Edit Today's Schedule:Regenerate Schedule:Change Selection Mode:Set Duration:Set Upcoming Count:Back")) {
 		case 1:
 			if (!.@motd_enabled) {
 				query_sql "UPDATE event_types SET enabled = 1 WHERE code = 'motd'";
@@ -634,6 +641,37 @@ L_MOTD:
 			close;
 
 		case 6:
+			mes "[Set MOTD Duration]";
+			mes "Each MOTD lasts this many hours.";
+			mes "Current: ^0000FF"+.@duration$+" hours^000000";
+			mes " ";
+			mes "Select new duration:";
+			next;
+			set .@new_duration, select("1 hour:2 hours:3 hours:4 hours:6 hours");
+			setarray .@dur_vals[0], 1, 2, 3, 4, 6;
+			query_sql "UPDATE event_config SET config_value = '"+.@dur_vals[.@new_duration-1]+"' WHERE config_key = 'motd_duration_hours'";
+			callsub S_InvalidateCache;
+			mes "[Events Manager]";
+			mes "Duration set to "+.@dur_vals[.@new_duration-1]+" hours.";
+			mes "^FF8800Regenerate schedule for this to take effect.^000000";
+			close;
+
+		case 7:
+			mes "[Set Upcoming Count]";
+			mes "How many upcoming monsters to show.";
+			mes "Current: ^0000FF"+.@upcoming$+"^000000";
+			mes " ";
+			mes "Select count:";
+			next;
+			set .@new_count, select("5:10:15:20");
+			setarray .@count_vals[0], 5, 10, 15, 20;
+			query_sql "UPDATE event_config SET config_value = '"+.@count_vals[.@new_count-1]+"' WHERE config_key = 'motd_upcoming_count'";
+			callsub S_InvalidateCache;
+			mes "[Events Manager]";
+			mes "Upcoming count set to "+.@count_vals[.@new_count-1]+".";
+			close;
+
+		case 8:
 			goto L_GMMenu;
 	}
 	end;

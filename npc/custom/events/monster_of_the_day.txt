@@ -33,6 +33,9 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 	query_sql "SELECT ms.mob_id, ms.mob_name, ms.tier, TIMESTAMPDIFF(MINUTE, NOW(), ms.end_time), COALESCE(mm.map_display, '') FROM event_motd_schedule ms LEFT JOIN event_motd_monsters mm ON ms.mob_id = mm.mob_id WHERE NOW() BETWEEN ms.start_time AND ms.end_time LIMIT 1", .@cur_id, .@cur_name$, .@cur_tier$, .@cur_mins, .@cur_loc$;
 
 	if (.@cur_id > 0) {
+		// Get monster level for display
+		.@mob_lv = getmonsterinfo(.@cur_id, MOB_LV);
+
 		// Format time remaining
 		if (.@cur_mins >= 60) {
 			set .@time$, (.@cur_mins / 60)+"h "+(.@cur_mins % 60)+"m";
@@ -41,16 +44,15 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 		}
 
 		mes "^FF0000>> NOW FEATURED <<^000000";
-		mes "^0000FF"+.@cur_name$+"^000000";
-		mes "Tier: "+.@cur_tier$;
+		mes "^0000FF"+.@cur_name$+" ["+.@cur_id+"]^000000";
+		mes "Level: "+.@mob_lv+" | Tier: "+.@cur_tier$;
 		mes "Time left: ^00AA00"+.@time$+"^000000";
 		if (.@cur_loc$ != "") {
 			mes "Location: ^777777"+.@cur_loc$+"^000000";
 		}
 		mes " ";
 		mes "^FF8800Bounty Rewards (3x):^000000";
-		// Calculate sample rewards for this monster
-		.@mob_lv = getmonsterinfo(.@cur_id, MOB_LV);
+		// Calculate sample rewards for this monster (reuse .@mob_lv from above)
 		.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
 		if (.@exp_scale < 1) .@exp_scale = 1;
 		.@base_exp = ((100 + .@mob_lv * 5) * 50 * 100 * .@exp_scale) / 100;  // 50 kills
@@ -70,9 +72,14 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 		next;
 	}
 
-	// Get upcoming monsters with locations
+	// Get upcoming monsters with locations (count from config)
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_upcoming_count'", .@upcoming_count$;
+	if (.@upcoming_count$ == "") set .@upcoming_count, 10; else set .@upcoming_count, atoi(.@upcoming_count$);
+	if (.@upcoming_count < 5) set .@upcoming_count, 5;
+	if (.@upcoming_count > 20) set .@upcoming_count, 20;
+
 	mes "[Upcoming Monsters]";
-	query_sql "SELECT ms.mob_id, ms.mob_name, TIMESTAMPDIFF(MINUTE, NOW(), ms.start_time), COALESCE(mm.map_display, '') FROM event_motd_schedule ms LEFT JOIN event_motd_monsters mm ON ms.mob_id = mm.mob_id WHERE ms.start_time > NOW() ORDER BY ms.start_time LIMIT 5", .@up_ids, .@up_names$, .@up_mins, .@up_locs$;
+	query_sql "SELECT ms.mob_id, ms.mob_name, TIMESTAMPDIFF(MINUTE, NOW(), ms.start_time), COALESCE(mm.map_display, '') FROM event_motd_schedule ms LEFT JOIN event_motd_monsters mm ON ms.mob_id = mm.mob_id WHERE ms.start_time > NOW() ORDER BY ms.start_time LIMIT " + .@upcoming_count, .@up_ids, .@up_names$, .@up_mins, .@up_locs$;
 
 	if (getarraysize(.@up_ids) == 0) {
 		mes "^888888No upcoming monsters scheduled.^000000";
@@ -85,7 +92,9 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 				set .@until$, .@up_mins[.@i]+"m";
 			}
 
-			mes "^0055FF"+.@up_names$[.@i]+"^000000 ("+.@up_ids[.@i]+") - in "+.@until$;
+			// Get level for display
+			.@up_lv = getmonsterinfo(.@up_ids[.@i], MOB_LV);
+			mes "^0055FF"+.@up_names$[.@i]+"^000000 ["+.@up_ids[.@i]+"] Lv"+.@up_lv+" - in "+.@until$;
 			if (.@up_locs$[.@i] != "") {
 				mes "  ^777777@ "+.@up_locs$[.@i]+"^000000";
 			}

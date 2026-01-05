@@ -281,10 +281,8 @@ S_CheckMOTDRotation:
 
 	// Check if this is a new rotation (different from last announced)
 	if (.@mob_id > 0 && .@mob_id != $@LastMOTDMobID) {
-		// Complete previous MOTD instance if exists
-		if ($@CurrentMOTDInstanceId > 0) {
-			query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE id = "+$@CurrentMOTDInstanceId;
-		}
+		// Complete ALL previous active MOTD instances (handles server restarts)
+		query_sql "UPDATE event_instances SET actual_end = NOW(), status = 'completed' WHERE event_code = 'motd' AND status = 'active'";
 
 		// Create new MOTD instance with event_data
 		query_sql "INSERT INTO event_instances (event_type_id, event_code, actual_start, status, trigger_type, event_data) VALUES ("+.@motd_type_id+", 'motd', NOW(), 'active', 'scheduled', JSON_OBJECT('mob_id', "+.@mob_id+", 'mob_name', '"+escape_sql(.@mob_name$)+"', 'tier', '"+.@tier$+"'))";
@@ -326,39 +324,48 @@ OnGenerateMOTDSchedule:
 	// Get configuration
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_level$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_duration_hours'", .@duration_str$;
 
 	if (.@mode$ == "") set .@mode$, "random";
 	if (.@min_level$ == "") set .@min_level, 50; else set .@min_level, atoi(.@min_level$);
+	if (.@duration_str$ == "") set .@duration, 3; else set .@duration, atoi(.@duration_str$);
+	// Clamp duration to 1-6 hours
+	if (.@duration < 1) set .@duration, 1;
+	if (.@duration > 6) set .@duration, 6;
 
-	// Clear today's schedule
-	query_sql "DELETE FROM event_motd_schedule WHERE DATE(start_time) = CURDATE()";
+	// Clear today's and tomorrow's schedule
+	query_sql "DELETE FROM event_motd_schedule WHERE DATE(start_time) IN (CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 DAY))";
 
-	// Generate 8 slots (every 3 hours)
+	// Generate slots based on duration (24 / duration = number of slots per day)
+	set .@slots_per_day, 24 / .@duration;
 	set .@tier_index, 0;
 	setarray .@tiers$[0], "medium", "hard";
 
-	for (set .@i, 0; .@i < 8; set .@i, .@i + 1) {
-		set .@hour, .@i * 3;
+	// Generate 2 days worth of schedule (today + tomorrow)
+	for (set .@day, 0; .@day < 2; set .@day, .@day + 1) {
+		for (set .@i, 0; .@i < .@slots_per_day; set .@i, .@i + 1) {
+			set .@hour, .@i * .@duration;
 
-		if (.@mode$ == "tier_rotation") {
-			// Alternate between medium and hard
-			set .@tier$, .@tiers$[.@tier_index % 2];
-			set .@tier_index, .@tier_index + 1;
+			if (.@mode$ == "tier_rotation") {
+				// Alternate between medium and hard
+				set .@tier$, .@tiers$[.@tier_index % 2];
+				set .@tier_index, .@tier_index + 1;
 
-			// Select random monster from this tier
-			query_sql "SELECT mob_id, mob_name FROM event_motd_monsters WHERE tier = '"+.@tier$+"' AND enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$;
-		} else {
-			// Random mode - pick any monster
-			query_sql "SELECT mob_id, mob_name, tier FROM event_motd_monsters WHERE enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$, .@tier$;
-		}
+				// Select random monster from this tier
+				query_sql "SELECT mob_id, mob_name FROM event_motd_monsters WHERE tier = '"+.@tier$+"' AND enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$;
+			} else {
+				// Random mode - pick any monster
+				query_sql "SELECT mob_id, mob_name, tier FROM event_motd_monsters WHERE enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$, .@tier$;
+			}
 
-		if (.@mob_id > 0) {
-			// Insert into schedule
-			query_sql "INSERT INTO event_motd_schedule (mob_id, mob_name, start_time, end_time, tier) VALUES ("+.@mob_id+", '"+escape_sql(.@mob_name$)+"', DATE_ADD(CURDATE(), INTERVAL "+.@hour+" HOUR), DATE_ADD(CURDATE(), INTERVAL "+(.@hour+3)+" HOUR), '"+.@tier$+"')";
+			if (.@mob_id > 0) {
+				// Insert into schedule (day offset added to CURDATE)
+				query_sql "INSERT INTO event_motd_schedule (mob_id, mob_name, start_time, end_time, tier) VALUES ("+.@mob_id+", '"+escape_sql(.@mob_name$)+"', DATE_ADD(DATE_ADD(CURDATE(), INTERVAL "+.@day+" DAY), INTERVAL "+.@hour+" HOUR), DATE_ADD(DATE_ADD(CURDATE(), INTERVAL "+.@day+" DAY), INTERVAL "+(.@hour+.@duration)+" HOUR), '"+.@tier$+"')";
+			}
 		}
 	}
 
-	debugmes "[EventScheduler] Generated MOTD schedule for today";
+	debugmes "[EventScheduler] Generated MOTD schedule for today and tomorrow";
 
 	// Immediately check for MOTD rotation (in case we just generated for current slot)
 	callsub S_CheckMOTDRotation;

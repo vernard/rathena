@@ -122,7 +122,7 @@ function	script	F_CooldownTimeLeft	{
 	if (Bounty_Map$ != "") {
 		if (Bounty_Map$ == .@map$) {
 			mes "^00AA00You have an active bounty here.^000000";
-			mes "Target: ^0055FF" + getmonsterinfo(Bounty_MobID, MOB_NAME) + "^000000";
+			mes "Target: ^0055FF" + getmonsterinfo(Bounty_MobID, MOB_NAME) + " [" + Bounty_MobID + "]^000000";
 			mes "Progress: ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
 
 			// Check cooldown/discovery status (only matters if not MOTD)
@@ -449,7 +449,7 @@ function	script	F_CooldownTimeLeft	{
 		}
 		mes " ";
 		mes "^777777Location:^000000 ^0055FF" + getd(".MapName_" + Bounty_Map$) + "^000000";
-		mes "^777777Target:^000000 ^0055FF" + .@mob_name$ + "^000000";
+		mes "^777777Target:^000000 ^0055FF" + .@mob_name$ + " [" + Bounty_MobID + "]^000000";
 		mes "^777777Progress:^000000 ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
 
 		// Check cooldown/discovery status (only matters if not MOTD)
@@ -1726,7 +1726,7 @@ prontera,164,172,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 		} else {
 			mes "^FFAA00Active Bounty:^000000";
 		}
-		mes "  " + .@mob_name$ + " (" + Bounty_Kills + "/" + Bounty_Target + ")";
+		mes "  " + .@mob_name$ + " [" + Bounty_MobID + "] (" + Bounty_Kills + "/" + Bounty_Target + ")";
 		// Check cooldown/discovery status
 		.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 		if (.@cooldown_pct >= 300) {
