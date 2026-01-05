@@ -1,0 +1,174 @@
+//===== Custom Script ==========================================
+//= Rachel Sanctuary - Entry Fee System
+//===== Description: ============================================
+//= Pay 1.5M zeny per character to access Rachel Temple quest.
+//= Once the server collects 500M total, entry becomes free.
+//= Original quest progression is preserved - we just add a fee gate.
+//==============================================================
+
+// Set the donation goal as reached so original Nemma is in quest mode
+// The per-character fee check happens at the Temple Entrance
+-	script	RachelQuestInit	-1,{
+OnInit:
+    // Enable quest mode for original Nemma (donation phase complete)
+    if ($rachel_donate < 10000) {
+        $rachel_donate = 10000;
+    }
+    end;
+}
+
+// Fee Collector NPC - placed near temple entrance
+ra_temple,123,174,5	script	Temple Priestess	919,{
+    // Check if player already paid or goal reached
+    .@goal_reached = ($rachel_sanctuary_total >= 500000000);
+    .@player_paid = (ra_sanctuary_paid == 1);
+
+    if (.@goal_reached) {
+        mes "[Temple Priestess]";
+        mes "Welcome to the Temple!";
+        mes "Thanks to the generosity of";
+        mes "many travelers, the temple";
+        mes "is now open to everyone.";
+        next;
+        mes "[Temple Priestess]";
+        mes "Please speak with Priestess";
+        mes "Nemma if you wish to explore";
+        mes "the sacred grounds.";
+        if (!.@player_paid) {
+            ra_sanctuary_paid = 1; // Mark as "paid" (free entry)
+        }
+        close;
+    }
+
+    if (.@player_paid) {
+        mes "[Temple Priestess]";
+        mes "Welcome back!";
+        mes "Priestess Nemma awaits";
+        mes "you inside the temple.";
+        close;
+    }
+
+    // New visitor - collect fee
+    mes "[Temple Priestess]";
+    mes "Greetings, traveler.";
+    mes "Welcome to the Temple";
+    mes "of Cheshrumnir.";
+    next;
+    mes "[Temple Priestess]";
+    mes "To help maintain the temple";
+    mes "and support our services,";
+    mes "we ask for a contribution of";
+    mes "^0000FF1,500,000 zeny^000000 from those";
+    mes "who wish to explore within.";
+    next;
+
+    // Show progress
+    .@remaining = 500000000 - $rachel_sanctuary_total;
+    if (.@remaining > 0) {
+        mes "[Temple Priestess]";
+        mes "Once we collect ^FF0000500,000,000^000000";
+        mes "zeny in total, the temple will";
+        mes "open freely to all travelers!";
+        next;
+        mes "[Temple Priestess]";
+        mes "Current: ^0000FF" + F_InsertComma($rachel_sanctuary_total) + "^000000 z";
+        mes "Goal: ^FF0000500,000,000^000000 z";
+        next;
+    }
+
+    mes "[Temple Priestess]";
+    mes "Would you like to make";
+    mes "a contribution and gain";
+    mes "access to the temple?";
+    next;
+
+    switch(select("Yes, I'll pay 1,500,000 zeny:No thanks")) {
+    case 1:
+        if (Zeny < 1500000) {
+            mes "[Temple Priestess]";
+            mes "I'm sorry, but you don't";
+            mes "have enough zeny...";
+            close;
+        }
+
+        Zeny = Zeny - 1500000;
+        $rachel_sanctuary_total = $rachel_sanctuary_total + 1500000;
+        ra_sanctuary_paid = 1;
+
+        mes "[Temple Priestess]";
+        mes "Thank you for your";
+        mes "generous contribution!";
+        next;
+
+        // Check if goal reached
+        if ($rachel_sanctuary_total >= 500000000) {
+            mes "[Temple Priestess]";
+            mes "^FF0000Amazing!^000000 Your contribution";
+            mes "has reached our goal!";
+            mes "The temple is now ^0000FFfree^000000";
+            mes "for all travelers!";
+            announce "Rachel Temple is now FREE for all adventurers!", bc_all, 0x00FF00;
+            next;
+        }
+
+        mes "[Temple Priestess]";
+        mes "Please speak with Priestess";
+        mes "Nemma. She will guide you";
+        mes "through the temple.";
+        close;
+
+    case 2:
+        mes "[Temple Priestess]";
+        mes "I understand.";
+        mes "May Freya watch over you.";
+        close;
+    }
+}
+
+// Override Temple Entrance to check payment
+ra_temple,119,180,0	script	Temple Entrance#custom	45,1,1,{
+OnTouch:
+    .@goal_reached = ($rachel_sanctuary_total >= 500000000);
+    .@player_paid = (ra_sanctuary_paid == 1);
+    .@can_enter = (.@goal_reached || .@player_paid);
+
+    // Already completed quest - just warp in
+    if (MISC_QUEST & 8192) {
+        warp "ra_temin",169,23;
+        end;
+    }
+
+    // Check payment first
+    if (!.@can_enter) {
+        mes "^3355FFThe temple entrance";
+        mes "seems to be restricted.^000000";
+        next;
+        mes "^3355FFPerhaps you should speak";
+        mes "with the Temple Priestess";
+        mes "standing nearby.^000000";
+        close;
+    }
+
+    // Paid but quest not progressed enough
+    if (ra_tem_q < 10) {
+        mes "^3355FFThe temple's";
+        mes "entrance is locked.^000000";
+        next;
+        select("Kick Door.:Smash Door with Weapon.");
+        emotion ET_HUK, getnpcid(0, "Nemma#ra_temple");
+        mes "[Priestess Nemma]";
+        mes "Please don't do that!";
+        close;
+    }
+
+    // Quest progressed - allow entry
+    warp "ra_temin",169,23;
+    end;
+}
+
+// Disable original Temple Entrance (we override it)
+-	script	TempleEntranceDisabler	-1,{
+OnInit:
+    disablenpc "Temple Entrance#ra_tem";
+    end;
+}
