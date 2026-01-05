@@ -36,15 +36,15 @@ function	script	F_BountyCooldown	{
 	.@cooldown_seconds = getarg(2);
 
 	// Query cooldown data including first_clear flag
-	query_sql("SELECT `hunt_count`, `first_clear`, TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + .@char_id + " AND `mob_id` = " + .@mob_id, .@hunt_count, .@first_clear, .@elapsed);
+	.@rows = query_sql("SELECT `hunt_count`, `first_clear`, TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + .@char_id + " AND `mob_id` = " + .@mob_id, .@hunt_count, .@first_clear, .@elapsed);
 
 	// No record = first time ever hunting this monster!
-	if (!.@hunt_count && !.@first_clear) {
+	if (.@rows == 0 || (!.@hunt_count && !.@first_clear)) {
 		return 300;  // Discovery bonus: triple rewards!
 	}
 
 	// Check if cooldown expired (3 days passed)
-	if (.@elapsed >= .@cooldown_seconds) {
+	if (.@cooldown_seconds > 0 && .@elapsed >= .@cooldown_seconds) {
 		return 100;  // Cooldown expired, full rewards
 	}
 
@@ -122,8 +122,8 @@ function	script	F_BuildSuggestions	{
 	}
 
 	.@next_exp = (NextBaseExp > 100) ? NextBaseExp : 100;
-	.@quest_rate = getbattleflag("quest_exp_rate");
-	if (.@quest_rate < 1) .@quest_rate = 100;
+	.@exp_rate = getbattleflag("base_exp_rate");
+	if (.@exp_rate < 1) .@exp_rate = 100;
 
 	// Calculate EXP with cooldowns for each monster
 	for (.@j = 0; .@j < .@total; .@j++) {
@@ -133,8 +133,8 @@ function	script	F_BuildSuggestions	{
 		if (.@exp_scale < 1) .@exp_scale = 1;
 		.@base_exp = ((100 + .@m_lv[.@j] * 5) * 50 * 100 * .@exp_scale) / 100;
 		.@base_exp = .@base_exp * .@cd_pct / 100;
-		.@display_exp = .@base_exp * (.@quest_rate / 100);
-		.@exp_pct = .@display_exp / (.@next_exp / 100);
+		.@base_exp = .@base_exp * .@exp_rate / 100;
+		.@exp_pct = .@base_exp / (.@next_exp / 100);
 		.@zeny = ((20 + .@m_lv[.@j]) * 50 * 100 * .@cd_pct / 100) / 5;
 
 		.@c_mob[.@j] = .@m_id[.@j];
@@ -227,12 +227,13 @@ function	script	F_BuildSuggestions	{
 			mes "Progress: ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
 
 			// Check cooldown/discovery status (only matters if not MOTD)
-			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, .CooldownSeconds);
+			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 			callsub S_ShowRewardStatus;
 
 			// Calculate estimated EXP using shared subroutines
 			.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
 			.@kills = Bounty_Target;
+			.@mult = .TierMult[0];
 			callsub S_CalculateEffectiveMult;
 			callsub S_CalculateEstExp;
 			if (NextBaseExp > 0)
@@ -284,10 +285,6 @@ function	script	F_BuildSuggestions	{
 			// Get cooldown status
 			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), .@mob_id, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 
-			// Apply quest_rate to display values
-			.@quest_rate = getbattleflag("quest_exp_rate");
-			if (.@quest_rate < 1) .@quest_rate = 100;
-
 			// MOTD = flat 3x, ignores discovery AND cooldown entirely
 			if (.@is_motd) {
 				.@effective_mult = 300;  // Always 3x for MOTD
@@ -296,7 +293,9 @@ function	script	F_BuildSuggestions	{
 				.@effective_mult = .@cooldown_pct;
 			}
 
-			.@display_exp = .@base_exp * (.@quest_rate / 100) * .@effective_mult / 100;
+			.@exp_rate = getbattleflag("base_exp_rate");
+			if (.@exp_rate < 1) .@exp_rate = 100;
+			.@display_exp = .@base_exp * .@effective_mult / 100 * .@exp_rate / 100;
 			.@display_zeny = .@zeny * .@effective_mult / 100;
 			.@display_points = .@points * .@effective_mult / 100;
 			if (.@display_points < 1) .@display_points = 1;
@@ -350,9 +349,9 @@ function	script	F_BuildSuggestions	{
 		}
 
 		// Show cooldown warning before accepting
-		.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), .@selected_mob, .CooldownSeconds);
+		.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), .@selected_mob, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 		if (.@cooldown_pct < 100) {
-			.@time_left$ = callfunc("F_CooldownTimeLeft", getcharid(0), .@selected_mob, .CooldownSeconds);
+			.@time_left$ = callfunc("F_CooldownTimeLeft", getcharid(0), .@selected_mob, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 			mes "[Bounty Board]";
 			mes "^FF8800Warning: Bounty Cooldown Active^000000";
 			mes " ";
@@ -412,42 +411,20 @@ function	script	F_BuildSuggestions	{
 
 		// Auto-claim if bounty is complete
 		if (Bounty_Kills >= Bounty_Target) {
-			// Calculate final rewards
+			// Calculate final rewards using shared subroutines
 			.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
-			.@mult = .TierMult[0];  // Single tier now
+			.@mult = .TierMult[0];
 			.@kills = Bounty_Target;
-
-			// EXP scaling: 1x at level 10, ~50x at level 80 (quadratic)
-			.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
-			if (.@exp_scale < 1) .@exp_scale = 1;
-
-			.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
-			.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
-			.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
-			.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
-			if (.@points < 1) .@points = 1;
+			callsub S_CalculateBaseRewards;
 
 			// Get cooldown penalty (calculated BEFORE we update the table)
-			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, .CooldownSeconds);
-
-			// Calculate effective multiplier (MOTD or cooldown)
+			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 			callsub S_CalculateEffectiveMult;
+			callsub S_ApplyMultipliers;
 
-			// Apply multiplier to rewards
-			.@base_exp = .@base_exp * .@effective_mult / 100;
-			.@job_exp = .@job_exp * .@effective_mult / 100;
-			.@zeny = .@zeny * .@effective_mult / 100;
-			.@points = .@points * .@effective_mult / 100;
-
-			// Minimum rewards after all penalties
-			if (.@points < 1) .@points = 1;
-
-			// Calculate % of player's level for display (include quest_rate since getexp applies it)
-			.@quest_rate = getbattleflag("quest_exp_rate");
-			if (.@quest_rate < 1) .@quest_rate = 100;
-			.@display_exp = .@base_exp * (.@quest_rate / 100);
+			// Calculate % of player's level for display
 			.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
-			.@pct = .@display_exp / (.@next_exp / 100);
+			.@pct = .@base_exp / (.@next_exp / 100);
 
 			mes "[Bounty Board]";
 			mes "^00FF00Bounty Complete!^000000";
@@ -476,9 +453,9 @@ function	script	F_BuildSuggestions	{
 			mes "Total bounties completed: ^0055FF" + #HUNT_TOTAL + "^000000";
 			mes " ";
 			// Show next cooldown status
-			.@next_cooldown = callfunc("F_BountyCooldown", getcharid(0), .@completed_mob, .CooldownSeconds);
+			.@next_cooldown = callfunc("F_BountyCooldown", getcharid(0), .@completed_mob, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 			if (.@next_cooldown < 100) {
-				.@time_left$ = callfunc("F_CooldownTimeLeft", getcharid(0), .@completed_mob, .CooldownSeconds);
+				.@time_left$ = callfunc("F_CooldownTimeLeft", getcharid(0), .@completed_mob, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 				mes "^FF8800Note: " + .@mob_name$ + " now at " + .@next_cooldown + "% rewards^000000";
 				mes "^777777Full rewards in " + .@time_left$ + "^000000";
 				mes " ";
@@ -494,7 +471,7 @@ function	script	F_BuildSuggestions	{
 			mes "^FF8800" + .@remaining + " more to go!^000000";
 
 			// Check cooldown/discovery status (only matters if not MOTD)
-			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, .CooldownSeconds);
+			.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 
 			// Show reward status (MOTD/Discovery/Cooldown)
 			callsub S_ShowRewardStatus;
@@ -502,6 +479,7 @@ function	script	F_BuildSuggestions	{
 			// Calculate estimated EXP using shared subroutines
 			.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
 			.@kills = Bounty_Target;
+			.@mult = .TierMult[0];
 			callsub S_CalculateEffectiveMult;
 			callsub S_CalculateEstExp;
 			if (NextBaseExp > 0)
@@ -554,12 +532,13 @@ function	script	F_BuildSuggestions	{
 		mes "^777777Progress:^000000 ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
 
 		// Check cooldown/discovery status (only matters if not MOTD)
-		.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, .CooldownSeconds);
+		.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
 		callsub S_ShowRewardStatus;
 
 		// Calculate estimated EXP using shared subroutines
 		.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
 		.@kills = Bounty_Target;
+		.@mult = .TierMult[0];
 		callsub S_CalculateEffectiveMult;
 		callsub S_CalculateEstExp;
 		if (NextBaseExp > 0)
@@ -577,37 +556,17 @@ function	script	F_BuildSuggestions	{
 		if (Bounty_Kills >= Bounty_Target) {
 			switch(select(" ~ ^00FF00Claim Rewards^000000: ~ ^777777Close^000000")) {
 			case 1:
-				// Calculate base rewards
+				// Calculate rewards using shared subroutines
 				.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
-				.@mult = .TierMult[Bounty_Tier - 1];
+				.@mult = .TierMult[0];
 				.@kills = Bounty_Target;
-
-				// EXP scaling: 1x at level 10, ~50x at level 80 (quadratic)
-				.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
-				if (.@exp_scale < 1) .@exp_scale = 1;
-
-				.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
-				.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
-				.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
-				.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
-				if (.@points < 1) .@points = 1;
-
-				// Calculate effective multiplier (MOTD or cooldown)
+				callsub S_CalculateBaseRewards;
 				callsub S_CalculateEffectiveMult;
-
-				// Apply multiplier to rewards
-				.@base_exp = .@base_exp * .@effective_mult / 100;
-				.@job_exp = .@job_exp * .@effective_mult / 100;
-				.@zeny = .@zeny * .@effective_mult / 100;
-				.@points = .@points * .@effective_mult / 100;
-				if (.@points < 1) .@points = 1;
+				callsub S_ApplyMultipliers;
 
 				// Calculate % of level for display
-				.@quest_rate = getbattleflag("quest_exp_rate");
-				if (.@quest_rate < 1) .@quest_rate = 100;
-				.@display_exp = .@base_exp * (.@quest_rate / 100);
 				.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
-				.@pct = .@display_exp / (.@next_exp / 100);
+				.@pct = .@base_exp / (.@next_exp / 100);
 
 				mes "[Bounty Board]";
 				mes "^00FF00Bounty Complete!^000000";
@@ -1171,6 +1130,8 @@ S_ClearBounty:
 // S_ShowRewardStatus - Shows MOTD/Discovery/Cooldown status message
 // Requires: .@cooldown_pct must be set before calling
 S_ShowRewardStatus:
+	// Safeguard: cooldown_pct should never be 0 or negative
+	if (.@cooldown_pct < 25) .@cooldown_pct = 100;
 	if (Bounty_MOTD_Bonus) {
 		mes "^FF8800* Monster of the Day: 3x EXP & Points! *^000000";
 	} else if (.@cooldown_pct >= 300) {
@@ -1184,6 +1145,8 @@ S_ShowRewardStatus:
 // Requires: .@cooldown_pct must be set before calling
 // Sets: .@effective_mult (100-300)
 S_CalculateEffectiveMult:
+	// Safeguard: cooldown_pct should never be 0 or negative
+	if (.@cooldown_pct < 25) .@cooldown_pct = 100;
 	if (Bounty_MOTD_Bonus) {
 		.@effective_mult = 300;
 	} else {
@@ -1191,16 +1154,52 @@ S_CalculateEffectiveMult:
 	}
 	return;
 
-// S_CalculateEstExp - Calculates estimated EXP percentage for display
-// Requires: .@mob_lv, .@kills, .@effective_mult must be set before calling
-// Sets: .@est_pct (percentage of level)
-S_CalculateEstExp:
+// S_CalculateBaseRewards - Calculates base rewards before multipliers
+// Requires: .@mob_lv, .@kills, .@mult must be set before calling
+// Sets: .@base_exp, .@job_exp, .@zeny, .@points
+S_CalculateBaseRewards:
+	// EXP scaling: 1x at level 10, ~50x at level 80 (quadratic)
 	.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
 	if (.@exp_scale < 1) .@exp_scale = 1;
-	.@est_exp = ((100 + .@mob_lv * 5) * .@kills * 100 * .@exp_scale) / 100;
-	.@quest_rate = getbattleflag("quest_exp_rate");
-	if (.@quest_rate < 1) .@quest_rate = 100;
-	.@est_exp = .@est_exp * (.@quest_rate / 100) * .@effective_mult / 100;
+
+	.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
+	.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
+	.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
+	.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
+	if (.@points < 1) .@points = 1;
+	return;
+
+// S_ApplyMultipliers - Applies effective multiplier and server EXP rate
+// Requires: .@base_exp, .@job_exp, .@zeny, .@points, .@effective_mult must be set
+// Modifies: .@base_exp, .@job_exp, .@zeny, .@points
+S_ApplyMultipliers:
+	.@base_exp = .@base_exp * .@effective_mult / 100;
+	.@job_exp = .@job_exp * .@effective_mult / 100;
+	.@zeny = .@zeny * .@effective_mult / 100;
+	.@points = .@points * .@effective_mult / 100;
+	if (.@points < 1) .@points = 1;
+
+	// Apply server EXP rate
+	.@exp_rate = getbattleflag("base_exp_rate");
+	if (.@exp_rate < 1) .@exp_rate = 100;
+	.@base_exp = .@base_exp * .@exp_rate / 100;
+	.@job_exp = .@job_exp * .@exp_rate / 100;
+	return;
+
+// S_CalculateEstExp - Calculates estimated EXP percentage for display
+// Requires: .@mob_lv, .@kills, .@mult, .@effective_mult must be set before calling
+// Sets: .@est_pct (percentage of level)
+S_CalculateEstExp:
+	// Safeguards
+	if (.@mult < 1) .@mult = 100;
+	if (.@effective_mult < 25) .@effective_mult = 100;
+	.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
+	if (.@exp_scale < 1) .@exp_scale = 1;
+	.@est_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
+	.@est_exp = .@est_exp * .@effective_mult / 100;
+	.@exp_rate = getbattleflag("base_exp_rate");
+	if (.@exp_rate < 1) .@exp_rate = 100;
+	.@est_exp = .@est_exp * .@exp_rate / 100;
 	.@next_exp = (NextBaseExp > 100) ? NextBaseExp : 100;
 	.@est_pct = .@est_exp / (.@next_exp / 100);
 	return;
@@ -1218,8 +1217,9 @@ S_GrantBountyRewards:
 		getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
 
 	// Update cooldown table
+	.@cd_sec = getvariableofnpc(.CooldownSeconds, "BountyBoard");
 	query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" +
-		getcharid(0) + ", " + Bounty_MobID + ", 1, NOW(), 1) ON DUPLICATE KEY UPDATE hunt_count = hunt_count + 1, first_hunt_time = IF(TIMESTAMPDIFF(SECOND, first_hunt_time, NOW()) >= " + .CooldownSeconds + ", NOW(), first_hunt_time), first_clear = 1");
+		getcharid(0) + ", " + Bounty_MobID + ", 1, NOW(), 1) ON DUPLICATE KEY UPDATE hunt_count = hunt_count + 1, first_hunt_time = IF(TIMESTAMPDIFF(SECOND, first_hunt_time, NOW()) >= " + .@cd_sec + ", NOW(), first_hunt_time), first_clear = 1");
 
 	// Increment total hunts
 	#HUNT_TOTAL += 1;
@@ -1733,22 +1733,29 @@ prontera,164,172,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 			mes "^FFAA00Active Bounty:^000000";
 		}
 		mes "  " + .@mob_name$ + " [" + Bounty_MobID + "] (" + Bounty_Kills + "/" + Bounty_Target + ")";
-		// Check cooldown/discovery status
+
+		// Check cooldown/discovery status and show reward status
 		.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
-		if (.@cooldown_pct >= 300) {
+		if (.@cooldown_pct < 25) .@cooldown_pct = 100;
+		if (Bounty_MOTD_Bonus) {
+			mes "  ^FF8800* Monster of the Day: 3x! *^000000";
+		} else if (.@cooldown_pct >= 300) {
 			mes "  ^00FF00* Discovery: 3x rewards! *^000000";
 		} else if (.@cooldown_pct < 100) {
 			mes "  ^FF8800(Cooldown: " + .@cooldown_pct + "%)^000000";
 		}
-		// Calculate estimated EXP
+
+		// Calculate estimated EXP (same formula as S_CalculateEstExp)
 		.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
+		.@mult = 100;  // Single tier
+		.@effective_mult = Bounty_MOTD_Bonus ? 300 : .@cooldown_pct;
 		.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
 		if (.@exp_scale < 1) .@exp_scale = 1;
-		.@est_exp = ((100 + .@mob_lv * 5) * Bounty_Target * 100 * .@exp_scale) / 100;
-		.@quest_rate = getbattleflag("quest_exp_rate");
-		if (.@quest_rate < 1) .@quest_rate = 100;
-		.@est_exp = .@est_exp * (.@quest_rate / 100);  // Divide quest_rate first to avoid overflow
-		.@est_exp = .@est_exp * .@cooldown_pct / 100;  // Apply discovery/cooldown multiplier
+		.@est_exp = ((100 + .@mob_lv * 5) * Bounty_Target * .@mult * .@exp_scale) / 100;
+		.@est_exp = .@est_exp * .@effective_mult / 100;
+		.@exp_rate = getbattleflag("base_exp_rate");
+		if (.@exp_rate < 1) .@exp_rate = 100;
+		.@est_exp = .@est_exp * .@exp_rate / 100;
 		.@next_exp = (NextBaseExp > 100) ? NextBaseExp : 100;
 		.@est_pct = .@est_exp / (.@next_exp / 100);
 		if (NextBaseExp > 0)
@@ -1815,48 +1822,42 @@ prontera,164,172,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 L_ClaimBounty:
 	.@mob_name$ = getmonsterinfo(Bounty_MobID, MOB_NAME);
 	.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
-	.@mult = 100;  // Single tier now
+	.@mult = 100;  // Single tier
 	.@kills = Bounty_Target;
 
-	// EXP scaling
+	// Calculate base rewards (same formula as BountyBoard::S_CalculateBaseRewards)
 	.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
 	if (.@exp_scale < 1) .@exp_scale = 1;
-
 	.@base_exp = ((100 + .@mob_lv * 5) * .@kills * .@mult * .@exp_scale) / 100;
 	.@job_exp = ((60 + .@mob_lv * 3) * .@kills * .@mult * .@exp_scale) / 100;
 	.@zeny = ((20 + .@mob_lv) * .@kills * .@mult) / 5;
 	.@points = ((.@mob_lv / 10 + 1) * .@mult * .@kills / 25) / 100;
 	if (.@points < 1) .@points = 1;
 
-	// Get cooldown penalty (before updating table)
+	// Get cooldown and calculate effective multiplier (MOTD 3x or cooldown%)
 	.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
+	if (.@cooldown_pct < 25) .@cooldown_pct = 100;
+	.@effective_mult = Bounty_MOTD_Bonus ? 300 : .@cooldown_pct;
 
-	// MOTD = flat 3x, ignores discovery AND cooldown entirely
-	if (Bounty_MOTD_Bonus) {
-		.@effective_mult = 300;  // Always 3x for MOTD
-	} else {
-		// Not MOTD: use discovery/cooldown as normal
-		.@effective_mult = .@cooldown_pct;
-	}
-
-	// Apply multiplier to rewards
+	// Apply multiplier and server EXP rate (same as BountyBoard::S_ApplyMultipliers)
 	.@base_exp = .@base_exp * .@effective_mult / 100;
 	.@job_exp = .@job_exp * .@effective_mult / 100;
 	.@zeny = .@zeny * .@effective_mult / 100;
 	.@points = .@points * .@effective_mult / 100;
 	if (.@points < 1) .@points = 1;
+	.@exp_rate = getbattleflag("base_exp_rate");
+	if (.@exp_rate < 1) .@exp_rate = 100;
+	.@base_exp = .@base_exp * .@exp_rate / 100;
+	.@job_exp = .@job_exp * .@exp_rate / 100;
 
-	// Calculate % of player's level for display (include quest_rate since getexp applies it)
-	.@quest_rate = getbattleflag("quest_exp_rate");
-	if (.@quest_rate < 1) .@quest_rate = 100;
-	.@display_exp = .@base_exp * (.@quest_rate / 100);
+	// Calculate % of player's level for display
 	.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
-	.@pct = .@display_exp / (.@next_exp / 100);
+	.@pct = .@base_exp / (.@next_exp / 100);
 
 	mes "[Monster Hunter Guild]";
 	mes "^00FF00Bounty Complete!^000000";
 	mes "^0055FF" + Bounty_Target + "x " + .@mob_name$ + "^000000 defeated!";
-	// MOTD overrides discovery AND cooldown entirely
+	// Show reward status
 	if (Bounty_MOTD_Bonus) {
 		mes "^FF8800* Monster of the Day: 3x EXP & Points! *^000000";
 	} else if (.@cooldown_pct >= 300) {
@@ -1879,27 +1880,24 @@ L_ClaimBounty:
 	query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" +
 		getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
 
-	// Update bounty cooldown table
-	.@cooldown_seconds = getvariableofnpc(.CooldownSeconds, "BountyBoard");
-	query_sql("SELECT TIMESTAMPDIFF(SECOND, `first_hunt_time`, NOW()) as elapsed FROM `bounty_cooldowns` WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID, .@elapsed);
-	if (!.@elapsed || .@elapsed >= .@cooldown_seconds) {
-		query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `first_hunt_time`, `hunt_count`, `first_clear`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", NOW(), 1, 1)");
-	} else {
-		query_sql("UPDATE `bounty_cooldowns` SET `hunt_count` = `hunt_count` + 1, `first_clear` = 1 WHERE `char_id` = " + getcharid(0) + " AND `mob_id` = " + Bounty_MobID);
-	}
+	// Update bounty cooldown (single query with ON DUPLICATE KEY, same as S_GrantBountyRewards)
+	.@cd_sec = getvariableofnpc(.CooldownSeconds, "BountyBoard");
+	query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" +
+		getcharid(0) + ", " + Bounty_MobID + ", 1, NOW(), 1) ON DUPLICATE KEY UPDATE hunt_count = hunt_count + 1, first_hunt_time = IF(TIMESTAMPDIFF(SECOND, first_hunt_time, NOW()) >= " + .@cd_sec + ", NOW(), first_hunt_time), first_clear = 1");
 
 	#HUNT_TOTAL += 1;
 
 	// Store for display before clearing
 	.@completed_mob = Bounty_MobID;
 
-	// Clear bounty
+	// Clear bounty (same as S_ClearBounty)
 	Bounty_Map$ = "";
 	Bounty_MobID = 0;
 	Bounty_Target = 0;
 	Bounty_Tier = 0;
 	Bounty_StartKills = 0;
 	Bounty_Kills = 0;
+	Bounty_MOTD_Bonus = 0;
 
 	specialeffect2 EF_ANGEL;
 	specialeffect2 EF_TRUESIGHT;
@@ -1931,10 +1929,11 @@ L_BountyProgress:
 	mes "^777777Target:^000000 ^0055FF" + .@mob_name$ + "^000000";
 	mes "^777777Progress:^000000 ^0055FF" + Bounty_Kills + " / " + Bounty_Target + "^000000";
 
-	// Check cooldown/discovery status (only matters if not MOTD)
+	// Check cooldown/discovery status
 	.@cooldown_pct = callfunc("F_BountyCooldown", getcharid(0), Bounty_MobID, getvariableofnpc(.CooldownSeconds, "BountyBoard"));
+	if (.@cooldown_pct < 25) .@cooldown_pct = 100;
 
-	// MOTD overrides discovery AND cooldown entirely
+	// Show reward status
 	if (Bounty_MOTD_Bonus) {
 		mes "^FF8800* Monster of the Day: 3x EXP & Points! *^000000";
 	} else if (.@cooldown_pct >= 300) {
@@ -1943,22 +1942,17 @@ L_BountyProgress:
 		mes "^FF8800(Cooldown: " + .@cooldown_pct + "% rewards)^000000";
 	}
 
-	// Calculate estimated EXP
+	// Calculate estimated EXP (same formula as S_CalculateEstExp)
 	.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
+	.@mult = 100;  // Single tier
+	.@effective_mult = Bounty_MOTD_Bonus ? 300 : .@cooldown_pct;
 	.@exp_scale = (.@mob_lv > 10) ? ((.@mob_lv - 10) * (.@mob_lv - 10) / 98) : 1;
 	if (.@exp_scale < 1) .@exp_scale = 1;
-	.@est_exp = ((100 + .@mob_lv * 5) * Bounty_Target * 100 * .@exp_scale) / 100;
-	.@quest_rate = getbattleflag("quest_exp_rate");
-	if (.@quest_rate < 1) .@quest_rate = 100;
-	.@est_exp = .@est_exp * (.@quest_rate / 100);
-
-	// MOTD = flat 3x, ignores discovery AND cooldown
-	if (Bounty_MOTD_Bonus) {
-		.@est_exp = .@est_exp * 3;
-	} else {
-		.@est_exp = .@est_exp * .@cooldown_pct / 100;
-	}
-
+	.@est_exp = ((100 + .@mob_lv * 5) * Bounty_Target * .@mult * .@exp_scale) / 100;
+	.@est_exp = .@est_exp * .@effective_mult / 100;
+	.@exp_rate = getbattleflag("base_exp_rate");
+	if (.@exp_rate < 1) .@exp_rate = 100;
+	.@est_exp = .@est_exp * .@exp_rate / 100;
 	.@next_exp = (NextBaseExp > 100) ? NextBaseExp : 100;
 	.@est_pct = .@est_exp / (.@next_exp / 100);
 	if (NextBaseExp > 0)
