@@ -6,7 +6,7 @@
 //= Integrates with the Bounty Board Hunt Points economy.
 //============================================================
 
-prontera,165,181,5	script	Card Recycler	91,{
+prontera,168,180,5	script	Card Recycler	91,{
 	// Configuration
 	.@points_per_card = 15;
 

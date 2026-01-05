@@ -39,7 +39,7 @@
 	}
 
 	// ============================================================
-	// Check grace period (for buff purchasers)
+	// Check grace period (for buff purchasers) - silent auto-heal
 	// ============================================================
 	.@now = gettimetick(2);
 	if (healer_paid_until > .@now) {
@@ -54,11 +54,8 @@
 			next;
 			// Fall through to payment menu
 		} else {
+			// Silent heal + buffs, no dialog
 			healer_grace_uses = healer_grace_uses + 1;
-			mes "[Nurse]";
-			mes "Back again already?";
-			mes "Let me take care of that for you.";
-			close2;
 			callsub S_Heal, .@IdentifyItems;
 			callsub S_Buffs, .@BuffDuration;
 			end;

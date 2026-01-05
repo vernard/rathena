@@ -15,6 +15,7 @@
 //= 2.0 Custom MVP Healer with flat pricing (no level discount)
 //= 3.0 Override Protector function, buffs include heal
 //= 3.1 Override Arena Guide to remove free heal option
+//= 3.2 Add grace period support to Healer and Protector NPCs
 //============================================================
 
 // ============================================================
@@ -41,211 +42,43 @@ quiz_00,49,31,4	script	MVP Arena Guide	778,{
 
 // ============================================================
 // Override the Protector function from mvp_arena.txt
-// Charges 3k for heal, 10k for buffs (includes heal)
+// Navigation only - healing removed (use skills in lobby instead)
 // ============================================================
 function	script	Protector	{
 	.@nextMap$ = getarg(0);
-	.@HealPrice = 3000;
-	.@BuffsPrice = 10000;	// Includes heal
-	.@BuffDuration = 420000;	// 7 minutes
 
-	// Build menu dynamically
 	if (.@nextMap$ != "") {
-		.@menu$ = "Harder Monsters:";
-	}
-	.@menu$ = .@menu$ + "Heal (" + callfunc("F_InsertComma", .@HealPrice) + "z):Heal + Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z):Exit";
-
-	switch(select(.@menu$)) {
-	case 1:
-		if (.@nextMap$ != "") {
+		switch(select("Harder Monsters:Exit to Lobby")) {
+		case 1:
 			warp .@nextMap$, 102, 102;
 			end;
-		}
-		// Fall through to heal if no next map
-	case 2:
-		// Heal only
-		if (Zeny < .@HealPrice) {
-			mes "[MVP-Protector]";
-			mes "You need " + callfunc("F_InsertComma", .@HealPrice) + " Zeny.";
-			close;
-		}
-		Zeny -= .@HealPrice;
-		specialeffect2 EF_HEAL2;
-		percentheal 100,100;
-		end;
-	case 3:
-		// Buffs (includes heal)
-		if (Zeny < .@BuffsPrice) {
-			mes "[MVP-Protector]";
-			mes "You need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
-			close;
-		}
-		Zeny -= .@BuffsPrice;
-
-		// Heal first
-		specialeffect2 EF_HEAL2;
-		percentheal 100,100;
-
-		// Apply buffs
-		specialeffect2 EF_INCAGILITY;
-		sc_start SC_INCREASEAGI, .@BuffDuration, 10;
-		specialeffect2 EF_BLESSING;
-		sc_start SC_BLESSING, .@BuffDuration, 10;
-		specialeffect2 EF_IMPOSITIO;
-		sc_start SC_IMPOSITIO, .@BuffDuration, 10;
-		specialeffect2 EF_MAGNIFICAT;
-		sc_start SC_MAGNIFICAT, .@BuffDuration, 10;
-		specialeffect2 EF_ANGELUS;
-		sc_start SC_ANGELUS, .@BuffDuration, 10;
-		specialeffect2 EF_GLORIA;
-		sc_start SC_GLORIA, .@BuffDuration, 10;
-		specialeffect2 EF_ASSUMPTIO;
-		sc_start SC_ASSUMPTIO, .@BuffDuration, 5;
-
-		// Re-heal after buffs
-		percentheal 100,100;
-		end;
-	case 4:
-		warp "prontera", 156, 179;
-		end;
-	}
-}
-
-// ============================================================
-// MVP Arena Lobby Healer - dedicated healer with flat pricing
-// No level discount - everyone pays the same in MVP arena
-// ============================================================
-quiz_00,57,21,4	script	Healer#mvp_arena	569,{
-
-	.@IdentifyItems = 1;	// Identify all unidentified equipment? (1: yes / 0: no)
-
-	// Pricing configuration (same as town healer, but no level discount)
-	.@HealPrice = 3000;
-	.@BuffsPrice = 10000;	// Includes heal + identify
-	.@BuffDuration = 420000;	// 7 minutes
-
-	mes "[Nurse]";
-	mes "Another brave hunter!";
-	mes "You look like you've seen";
-	mes "some tough battles out there.";
-	mes " ";
-	mes "What can I do for you?";
-	next;
-
-	switch(select(
-		"Heal + Identify (" + callfunc("F_InsertComma", .@HealPrice) + "z)",
-		"Heal + Identify + Buffs (" + callfunc("F_InsertComma", .@BuffsPrice) + "z)",
-		"Cancel"
-	)) {
-		case 1:
-			// Heal only
-			if (Zeny < .@HealPrice) {
-				mes "[Nurse]";
-				mes "Oh dear... I'm afraid the";
-				mes "medical supplies aren't free.";
-				mes " ";
-				mes "You need " + callfunc("F_InsertComma", .@HealPrice) + " Zeny.";
-				close;
-			}
-			Zeny -= .@HealPrice;
-			close2;
-			callsub S_Heal, .@IdentifyItems;
-			end;
-
 		case 2:
-			// Full service (heal + identify + buffs)
-			if (Zeny < .@BuffsPrice) {
-				mes "[Nurse]";
-				mes "Oh dear... I'm afraid the";
-				mes "medical supplies aren't free.";
-				mes " ";
-				mes "You need " + callfunc("F_InsertComma", .@BuffsPrice) + " Zeny.";
-				close;
-			}
-			Zeny -= .@BuffsPrice;
-			mes "[Nurse]";
-			mes "There you go, all patched up!";
-			mes " ";
-			mes "These tonics should help you";
-			mes "take down those MVPs. Good luck!";
-			close2;
-			callsub S_Heal, .@IdentifyItems;
-			callsub S_Buffs, .@BuffDuration;
+			warp "quiz_00", 50, 24;
 			end;
-
-		case 3:
-			// Cancel
-			mes "[Nurse]";
-			mes "Good luck out there, hunter!";
-			mes "Come back if you need patching up.";
-			close;
-	}
-	end;
-
-// ============================================================
-// Subroutine: Heal + Identify
-// ============================================================
-S_Heal:
-	specialeffect2 EF_HEAL2;
-	percentheal 100,100;
-
-	if (getarg(0)) {
-		.@identified = identifyall();
-		if (.@identified > 0) {
-			specialeffect2 EF_MAGNIFIERITEM;
-			message strcharinfo(0), "Identified " + .@identified + " item(s).";
+		}
+	} else {
+		// Hardest room - only exit option
+		switch(select("Exit to Lobby")) {
+		case 1:
+			warp "quiz_00", 50, 24;
+			end;
 		}
 	}
-	return;
-
-// ============================================================
-// Subroutine: Apply all 8 buffs
-// ============================================================
-S_Buffs:
-	.@duration = getarg(0);
-
-	// 1. Increase Agi (+12 AGI, +25% move speed)
-	specialeffect2 EF_INCAGILITY;
-	sc_start SC_INCREASEAGI, .@duration, 10;
-
-	// 2. Blessing (+10 STR/INT/DEX)
-	specialeffect2 EF_BLESSING;
-	sc_start SC_BLESSING, .@duration, 10;
-
-	// 3. Impositio Manus (+25 ATK)
-	specialeffect2 EF_IMPOSITIO;
-	sc_start SC_IMPOSITIO, .@duration, 10;
-
-	// 4. Magnificat (2x SP regen)
-	specialeffect2 EF_MAGNIFICAT;
-	sc_start SC_MAGNIFICAT, .@duration, 10;
-
-	// 5. Angelus (+50% DEF)
-	specialeffect2 EF_ANGELUS;
-	sc_start SC_ANGELUS, .@duration, 10;
-
-	// 6. Gloria (+30 LUK)
-	specialeffect2 EF_GLORIA;
-	sc_start SC_GLORIA, .@duration, 10;
-
-	// 7. Assumptio (halves damage in pre-renewal)
-	specialeffect2 EF_ASSUMPTIO;
-	sc_start SC_ASSUMPTIO, .@duration, 5;
-
-	// Re-heal after buffs so Blessing's INT bonus affects max SP
-	percentheal 100,100;
-	return;
 }
+
+// ============================================================
+// MVP Arena Lobby Healer - duplicate of town Healer
+// Same behavior: free for lv60-, paid for lv61+, grace period
+// ============================================================
+quiz_00,57,21,4	duplicate(Healer)	Healer#mvp_arena	569
 
 // MVP Arena Enchanter - duplicate of Element Endow NPC
 // Positioned to the right of the Healer - useful for matching element to MVP weakness
 quiz_00,61,21,4	duplicate(Enchanter)	Enchanter#mvp_arena	4_M_SAGE_A
 
-// MVP Arena Tool Dealer - sells potions and MVP hunting supplies
-// Positioned below the Kafra
-// Items: Orange/Yellow/White/Blue Potions, Bargain Blue, Green Potion,
-//        Grape Juice, Condensed White, Awakening/Berserk Potion, Fly/Butterfly Wing, Yggdrasil Leaf
-quiz_00,53,17,4	shop	Tool Dealer#mvp	83,502:-1,503:-1,504:-1,505:-1,30004:-1,506:-1,533:-1,645:-1,656:-1,657:-1,601:-1,602:-1,610:-1
+// MVP Arena Tool Dealer - duplicate of Prontera Premium Tool Dealer
+// Same items: potions, converters, resist potions, Ygg Leaf, etc.
+quiz_00,53,17,4	duplicate(Tool Dealer#prt_center)	Tool Dealer#mvp	900
 
 // MVP Arena Kafra - provides storage and save point
 // Positioned near the Healer
