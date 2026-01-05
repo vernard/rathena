@@ -1,0 +1,261 @@
+//===== Custom Script =======================================
+//= Card Recycler - Trade Cards for Hunt Points
+//===== Description: =========================================
+//= Allows players to trade unwanted monster cards for Hunt Points.
+//= Excludes MVP and Mini-boss cards to protect valuable items.
+//= Integrates with the Bounty Board Hunt Points economy.
+//============================================================
+
+prontera,165,181,5	script	Card Recycler	91,{
+	// Configuration
+	.@points_per_card = 15;
+
+	mes "[Card Recycler]";
+	mes "Hello there, hunter!";
+	mes " ";
+	mes "I collect unwanted ^0055FFmonster cards^000000.";
+	mes "For each card, I'll give you";
+	mes "^00CC00" + .@points_per_card + " Hunt Point" + ((.@points_per_card > 1) ? "s" : "") + "^000000.";
+	next;
+
+	mes "[Card Recycler]";
+	mes "^777777Note: I don't accept MVP or";
+	mes "Mini-boss cards - those are";
+	mes "too valuable to recycle!^000000";
+	next;
+
+	// Scan inventory for tradeable cards
+	getinventorylist;
+	.@card_count = 0;
+
+	for (.@i = 0; .@i < @inventorylist_count; .@i++) {
+		.@item_id = @inventorylist_id[.@i];
+
+		// Check if item is a card (type 6 = IT_CARD)
+		if (getiteminfo(.@item_id, ITEMINFO_TYPE) != IT_CARD)
+			continue;
+
+		// Check if card is blacklisted (MVP or Mini-boss)
+		if (callfunc("F_IsBlacklistedCard", .@item_id))
+			continue;
+
+		// Valid card found - add to list
+		.@card_ids[.@card_count] = .@item_id;
+		.@card_amounts[.@card_count] = @inventorylist_amount[.@i];
+		.@card_count++;
+	}
+
+	if (.@card_count == 0) {
+		mes "[Card Recycler]";
+		mes "You don't have any cards I can accept.";
+		mes " ";
+		mes "Come back when you have some";
+		mes "regular monster cards to trade!";
+		close;
+	}
+
+	// Build menu of tradeable cards
+	.@menu$ = "";
+	for (.@i = 0; .@i < .@card_count; .@i++) {
+		.@menu$ = .@menu$ + getitemname(.@card_ids[.@i]) + " x" + .@card_amounts[.@i] + ":";
+	}
+	.@menu$ = .@menu$ + "^777777Cancel^000000";
+
+	mes "[Card Recycler]";
+	mes "Which card would you like to trade?";
+	mes " ";
+	mes "Your Hunt Points: ^00CC00" + #HUNT_POINTS + "^000000";
+	next;
+
+	.@choice = select(.@menu$) - 1;
+
+	if (.@choice >= .@card_count) {
+		mes "[Card Recycler]";
+		mes "No problem! Come back anytime.";
+		close;
+	}
+
+	.@selected_id = .@card_ids[.@choice];
+	.@selected_amount = countitem(.@selected_id);
+
+	if (.@selected_amount <= 0) {
+		mes "[Card Recycler]";
+		mes "Hmm, you don't seem to have";
+		mes "that card anymore.";
+		close;
+	}
+
+	mes "[Card Recycler]";
+	mes "You have ^0055FF" + .@selected_amount + " " + getitemname(.@selected_id) + "^000000.";
+	mes " ";
+	mes "How many would you like to trade?";
+	mes "^777777(Each = " + .@points_per_card + " Hunt Point)^000000";
+	next;
+
+	input .@trade_amount;
+
+	if (.@trade_amount <= 0) {
+		mes "[Card Recycler]";
+		mes "Changed your mind? No worries!";
+		close;
+	}
+
+	if (.@trade_amount > .@selected_amount) {
+		mes "[Card Recycler]";
+		mes "You don't have that many!";
+		mes "You only have " + .@selected_amount + ".";
+		close;
+	}
+
+	.@total_points = .@trade_amount * .@points_per_card;
+
+	mes "[Card Recycler]";
+	mes "Trade ^0055FF" + .@trade_amount + " " + getitemname(.@selected_id) + "^000000";
+	mes "for ^00CC00" + .@total_points + " Hunt Point" + ((.@total_points > 1) ? "s" : "") + "^000000?";
+	next;
+
+	if (select("Yes, trade them:No, cancel") == 2) {
+		mes "[Card Recycler]";
+		mes "No problem. Come back anytime!";
+		close;
+	}
+
+	// Verify cards still exist
+	if (countitem(.@selected_id) < .@trade_amount) {
+		mes "[Card Recycler]";
+		mes "Wait, your cards are gone!";
+		mes "Did you move them?";
+		close;
+	}
+
+	// Execute trade
+	delitem .@selected_id, .@trade_amount;
+	#HUNT_POINTS += .@total_points;
+
+	specialeffect2 EF_STEAL;
+
+	mes "[Card Recycler]";
+	mes "Done! Thank you for the cards.";
+	mes " ";
+	mes "^00CC00+" + .@total_points + " Hunt Points^000000";
+	mes " ";
+	mes "Your total: ^00CC00" + #HUNT_POINTS + " Hunt Points^000000";
+	close;
+}
+
+//============================================================
+// Function: Check if card is MVP or Mini-boss (blacklisted)
+//============================================================
+function	script	F_IsBlacklistedCard	{
+	.@card_id = getarg(0);
+
+	// MVP Cards (46 cards)
+	// Mini-boss Cards (44 cards)
+	// Total: 90 blacklisted cards
+	setarray .@blacklist,
+		// MVP Cards
+		4005,   // Poring_ Card (MVP version)
+		4121,   // Phreeoni Card
+		4123,   // Eddga Card
+		4128,   // Golden Bug Card
+		4131,   // Moonlight Flower Card
+		4132,   // Mistress Card
+		4134,   // Dracula Card
+		4135,   // Orc Lord Card
+		4137,   // Drake Card
+		4142,   // Doppelganger Card
+		4143,   // Orc Hero Card
+		4144,   // Osiris Card
+		4145,   // Berzebub Card
+		4146,   // Maya Card
+		4147,   // Baphomet Card
+		4148,   // Pharaoh Card
+		4168,   // Dark Lord Card
+		4236,   // Amon Ra Card
+		4263,   // Incantation Samurai Card
+		4276,   // Lord of Death Card
+		4302,   // Tao Gunka Card
+		4305,   // Turtle General Card
+		4318,   // Stormy Knight Card
+		4324,   // Garm Card
+		4330,   // Dark Snake Lord Card
+		4342,   // RSX-0806 Card
+		4352,   // Ygnizem Card (Bio MVP)
+		4357,   // Seyren Card (Bio MVP)
+		4359,   // Eremes Card (Bio MVP)
+		4361,   // Howard Card (Bio MVP)
+		4363,   // Margaretha Card (Bio MVP)
+		4365,   // Kathryne Card (Bio MVP)
+		4367,   // Cecil Card (Bio MVP)
+		4372,   // Bacsojin Card
+		4374,   // Vesper Card
+		4376,   // Lady Tanee Card
+		4386,   // Detale Card
+		4399,   // Thanatos Card
+		4403,   // Kiel D-01 Card
+		4407,   // Valkyrie Randgris Card
+		4408,   // Gloom Under Night Card
+		4419,   // Ktullanux Card
+		4425,   // Atroce Card
+		4430,   // Ifrit Card
+		4441,   // Fallen Bishop Card
+		// Mini-boss Cards
+		4047,   // Ghostring Card
+		4049,   // Vadon Card
+		4054,   // Angeling Card
+		4055,   // Marina Card
+		4093,   // Obeaune Card
+		4105,   // Marc Card
+		4111,   // Strouf Card
+		4163,   // Gryphon Card
+		4169,   // Dark Illusion Card
+		4171,   // Dark Priest Card
+		4174,   // Deviling Card
+		4179,   // Dragonfly Card
+		4183,   // Vagabond Wolf Card
+		4197,   // Mastering Card
+		4198,   // Maya Purple Card
+		4203,   // Mutant Dragon Card
+		4207,   // Mysteltainn Card
+		4237,   // Owl Duke Card
+		4238,   // Owl Baron Card
+		4241,   // Archangeling Card
+		4250,   // Executioner Card
+		4254,   // Tirfing Card
+		4266,   // Eclipse Card
+		4290,   // Cat o' Nine Tails Card
+		4300,   // Chimera Card
+		4306,   // Toad Card
+		4354,   // Gemini-S58 Card
+		4384,   // Hydro Card
+		4391,   // Retribution Card
+		4392,   // Observation Card
+		4393,   // Shelter Card
+		4394,   // Solace Card
+		4395,   // Tha Maero Card
+		4396,   // Tha Odium Card
+		4397,   // Tha Despero Card
+		4398,   // Tha Dolor Card
+		4406,   // Skeggiold Card
+		4423,   // Galion Card
+		4426,   // Byorgue Card
+		4427,   // Sword Guardian Card
+		4428,   // Bow Guardian Card
+		4429,   // Salamander Card
+		4431,   // Kasa Card
+		4440,   // Necromancer Card
+		4451;   // Ant Buyanne Card
+
+	// Check if card is in blacklist
+	for (.@i = 0; .@i < getarraysize(.@blacklist); .@i++) {
+		if (.@card_id == .@blacklist[.@i])
+			return 1;
+	}
+
+	return 0;
+}
+
+// Duplicate NPC in other cities
+alberta,117,56,5	duplicate(Card Recycler)	Card Recycler#alb	91
+geffen,124,63,5	duplicate(Card Recycler)	Card Recycler#gef	91
+payon,162,233,5	duplicate(Card Recycler)	Card Recycler#pay	91
