@@ -12,7 +12,7 @@
 //============================================================
 
 // ==================== HELPER FUNCTIONS ====================
-// Format number as human readable (4200 → "4.2k", 1500000 → "1.5m")
+// Format number as human readable (4200 -> "4.2k", 1500000 -> "1.5m")
 function	script	F_ShortNum	{
 	.@n = getarg(0);
 	if (.@n >= 1000000) {

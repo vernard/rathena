@@ -102,14 +102,231 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 	}
 	next;
 
+	// Menu options
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_motd_enabled'", .@reshuffle_enabled$;
+
 	mes "[Monster Hunter Board]";
-	mes "All featured monsters have";
-	mes "^00AA00Bounty Board quests^000000!";
+	mes "What would you like to do?";
+	next;
+
+	.@menu$ = "Hunt Information";
+	if (.@reshuffle_enabled$ == "1" && .@cur_id > 0) {
+		.@menu$ = .@menu$ + ":^FF8800Reshuffle Monster^000000";
+	}
+	.@menu$ = .@menu$ + ":Reshuffle Hall of Fame:Close";
+
+	switch(select(.@menu$)) {
+		case 1:
+			mes "[Monster Hunter Board]";
+			mes "All featured monsters have";
+			mes "^00AA00Bounty Board quests^000000!";
+			mes " ";
+			mes "Hunt the featured monster for";
+			mes "^FF00003x EXP and 3x Drops^000000, then";
+			mes "complete your bounty for bonus!";
+			close;
+		case 2:
+			if (.@reshuffle_enabled$ == "1" && .@cur_id > 0) {
+				goto L_Reshuffle;
+			}
+			goto L_HallOfFame;
+		case 3:
+			if (.@reshuffle_enabled$ == "1" && .@cur_id > 0) {
+				goto L_HallOfFame;
+			}
+			close;
+		case 4:
+			close;
+	}
+	end;
+
+// ============================================================
+// MOTD Reshuffle
+// ============================================================
+L_Reshuffle:
+	// Get current MOTD
+	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@cur_mob_id, .@cur_mob$, .@mins_left;
+
+	if (.@cur_mob_id == 0) {
+		mes "[Monster Hunter Board]";
+		mes "No Monster of the Day is active";
+		mes "right now. Check back later!";
+		close;
+	}
+
+	// Get reshuffle cost
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_motd_base_cost'", .@base$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_motd_cost_multiplier'", .@mult$;
+	.@base_cost = atoi(.@base$);
+	.@cost_mult = atoi(.@mult$);
+
+	// Get today's reshuffle count
+	query_sql "SELECT reshuffle_count FROM event_motd_reshuffle WHERE reshuffle_date = CURDATE()", .@count;
+
+	// Calculate cost: base * (multiplier/100)^count
+	.@cost = .@base_cost;
+	for (.@i = 0; .@i < .@count; .@i++) {
+		.@cost = .@cost * .@cost_mult / 100;
+	}
+
+	mes "[Reshuffle Monster]";
+	mes "Current target:";
+	mes "^0000FF" + .@cur_mob$ + "^000000";
+	mes "Time remaining: " + .@mins_left + " minutes";
 	mes " ";
-	mes "Hunt the featured monster for";
-	mes "^FF00003x EXP and 3x Drops^000000, then";
-	mes "complete your bounty for bonus!";
+	mes "Reshuffle cost: ^FF0000" + callfunc("F_InsertComma", .@cost) + "z^000000";
+	if (.@count > 0) {
+		mes "^888888(Reshuffled " + .@count + "x today)^000000";
+	}
+	mes " ";
+	mes "Your zeny: " + callfunc("F_InsertComma", Zeny) + "z";
+	next;
+
+	if (select("Pay to Reshuffle:Cancel") == 2) {
+		close;
+	}
+
+	if (Zeny < .@cost) {
+		mes "[Monster Hunter Board]";
+		mes "^FF0000You don't have enough zeny!^000000";
+		close;
+	}
+
+	// Confirm
+	mes "[Confirm Reshuffle]";
+	mes "Pay ^FF0000" + callfunc("F_InsertComma", .@cost) + "z^000000 to reshuffle?";
+	mes " ";
+	mes "A new random monster will be";
+	mes "selected for the current slot.";
+	next;
+
+	if (select("Yes, reshuffle!:Cancel") == 2) {
+		close;
+	}
+
+	// Deduct zeny
+	Zeny -= .@cost;
+
+	// Update daily reshuffle count
+	query_sql "INSERT INTO event_motd_reshuffle (reshuffle_date, reshuffle_count, last_reshuffle_by, last_reshuffle_at) VALUES (CURDATE(), 1, " + getcharid(0) + ", NOW()) ON DUPLICATE KEY UPDATE reshuffle_count = reshuffle_count + 1, last_reshuffle_by = " + getcharid(0) + ", last_reshuffle_at = NOW()";
+
+	// Get current slot ID
+	query_sql "SELECT id, tier FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@slot_id, .@tier$;
+
+	// Pick a new random monster (different from current)
+	query_sql "SELECT mob_id, mob_name FROM event_motd_monsters WHERE enabled = 1 AND mob_id != " + .@cur_mob_id + " ORDER BY RAND() LIMIT 1", .@new_mob_id, .@new_mob_name$;
+
+	if (.@new_mob_id == 0) {
+		// Fallback: just pick any
+		query_sql "SELECT mob_id, mob_name FROM event_motd_monsters WHERE enabled = 1 ORDER BY RAND() LIMIT 1", .@new_mob_id, .@new_mob_name$;
+	}
+
+	// Log the reshuffle for leaderboard
+	query_sql "INSERT INTO event_motd_reshuffle_log (char_id, char_name, cost_paid, old_mob_id, old_mob_name, new_mob_id, new_mob_name) VALUES (" + getcharid(0) + ", '" + escape_sql(strcharinfo(0)) + "', " + .@cost + ", " + .@cur_mob_id + ", '" + escape_sql(.@cur_mob$) + "', " + .@new_mob_id + ", '" + escape_sql(.@new_mob_name$) + "')";
+
+	// Update totals for leaderboard
+	query_sql "INSERT INTO event_motd_reshuffle_totals (char_id, char_name, total_spent, reshuffle_count) VALUES (" + getcharid(0) + ", '" + escape_sql(strcharinfo(0)) + "', " + .@cost + ", 1) ON DUPLICATE KEY UPDATE total_spent = total_spent + " + .@cost + ", reshuffle_count = reshuffle_count + 1, char_name = '" + escape_sql(strcharinfo(0)) + "', last_reshuffle = NOW()";
+
+	// Update the schedule
+	query_sql "UPDATE event_motd_schedule SET mob_id = " + .@new_mob_id + ", mob_name = '" + escape_sql(.@new_mob_name$) + "' WHERE id = " + .@slot_id;
+
+	// Update global variables
+	set $@LastMOTDMobID, .@new_mob_id;
+	set $@CurrentMOTDName$, .@new_mob_name$;
+
+	// Announce
+	announce "[Monster Hunter] " + strcharinfo(0) + " reshuffled the target! New Monster of the Day: " + .@new_mob_name$ + " - 3x EXP & Drops for " + .@mins_left + " minutes!", bc_all, 0x00FF00;
+
+	mes "[Monster Hunter Board]";
+	mes "^00FF00Monster reshuffled!^000000";
+	mes " ";
+	mes "New Monster of the Day:";
+	mes "^0000FF" + .@new_mob_name$ + "^000000";
+	mes " ";
+	mes "Happy hunting!";
 	close;
+
+// ============================================================
+// Reshuffle Hall of Fame (Leaderboard)
+// ============================================================
+L_HallOfFame:
+	mes "[Reshuffle Hall of Fame]";
+	mes "Honoring hunters who shaped";
+	mes "the daily hunt!";
+	next;
+
+	switch(select("Top Spenders (All-Time):Most Reshuffles (All-Time):Recent Reshuffles:Back")) {
+		case 1:
+			mes "[Top Spenders]";
+			mes "Most zeny spent on reshuffles:";
+			mes " ";
+
+			query_sql "SELECT char_name, total_spent, reshuffle_count FROM event_motd_reshuffle_totals ORDER BY total_spent DESC LIMIT 10", .@names$, .@spent, .@counts;
+
+			if (getarraysize(.@names$) == 0) {
+				mes "^888888No reshuffles recorded yet.^000000";
+			} else {
+				for (.@i = 0; .@i < getarraysize(.@names$); .@i++) {
+					if (.@i == 0) {
+						mes "^FFD700#1 " + .@names$[.@i] + "^000000";
+					} else if (.@i == 1) {
+						mes "^C0C0C0#2 " + .@names$[.@i] + "^000000";
+					} else if (.@i == 2) {
+						mes "^CD7F32#3 " + .@names$[.@i] + "^000000";
+					} else {
+						mes "#" + (.@i+1) + " " + .@names$[.@i];
+					}
+					mes "   " + callfunc("F_InsertComma", .@spent[.@i]) + "z (" + .@counts[.@i] + " reshuffles)";
+				}
+			}
+			close;
+
+		case 2:
+			mes "[Most Active Reshufflers]";
+			mes "Most reshuffles performed:";
+			mes " ";
+
+			query_sql "SELECT char_name, reshuffle_count, total_spent FROM event_motd_reshuffle_totals ORDER BY reshuffle_count DESC LIMIT 10", .@names$, .@counts, .@spent;
+
+			if (getarraysize(.@names$) == 0) {
+				mes "^888888No reshuffles recorded yet.^000000";
+			} else {
+				for (.@i = 0; .@i < getarraysize(.@names$); .@i++) {
+					if (.@i == 0) {
+						mes "^FFD700#1 " + .@names$[.@i] + "^000000";
+					} else if (.@i == 1) {
+						mes "^C0C0C0#2 " + .@names$[.@i] + "^000000";
+					} else if (.@i == 2) {
+						mes "^CD7F32#3 " + .@names$[.@i] + "^000000";
+					} else {
+						mes "#" + (.@i+1) + " " + .@names$[.@i];
+					}
+					mes "   " + .@counts[.@i] + " reshuffles (" + callfunc("F_InsertComma", .@spent[.@i]) + "z total)";
+				}
+			}
+			close;
+
+		case 3:
+			mes "[Recent Reshuffles]";
+			mes "Latest monster changes:";
+			mes " ";
+
+			query_sql "SELECT char_name, old_mob_name, new_mob_name, DATE_FORMAT(reshuffled_at, '%m/%d %H:%i') FROM event_motd_reshuffle_log ORDER BY reshuffled_at DESC LIMIT 10", .@names$, .@old$, .@new$, .@times$;
+
+			if (getarraysize(.@names$) == 0) {
+				mes "^888888No reshuffles recorded yet.^000000";
+			} else {
+				for (.@i = 0; .@i < getarraysize(.@names$); .@i++) {
+					mes "^0055FF" + .@names$[.@i] + "^000000 [" + .@times$[.@i] + "]";
+					mes "  " + .@old$[.@i] + " -> " + .@new$[.@i];
+				}
+			}
+			close;
+
+		case 4:
+			close;
+	}
+	end;
 }
 
 // ============================================================

@@ -844,7 +844,7 @@ L_EditMOTDSchedule:
 	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
 		set .@slot_label$, "["+(.@i+1)+"] "+.@start_hrs$[.@i]+"h-"+.@end_hrs$[.@i]+"h "+.@names$[.@i];
 		if (.@is_current[.@i]) {
-			mes "^00FF00► "+.@slot_label$+"^000000";
+			mes "^00FF00> "+.@slot_label$+"^000000";
 		} else {
 			mes .@slot_label$;
 		}

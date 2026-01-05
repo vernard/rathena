@@ -1,0 +1,960 @@
+//===== rAthena Script =======================================
+//= Event Patron NPC
+//= Player-funded EXP Boost events (zeny sink)
+//===== Description: =========================================
+//= Allows players to:
+//= - Contribute zeny to EXP Boost pool (crowdfund)
+//= - Activate the boost when tier is reached (with countdown)
+//= - View contribution leaderboards
+//= Features:
+//= - Cooldown: minimum time before pool can be activated
+//= - Activation delay: countdown period with announcements
+//= - During countdown: contributions still count toward higher tiers
+//= - Leftover zeny rolls over to next pool
+//============================================================
+
+prontera,152,193,4	script	Event Patron	4_F_EDEN,{
+	mes "[Event Patron]";
+	mes "Welcome! I coordinate";
+	mes "player-sponsored EXP events.";
+	mes " ";
+	mes "Your contributions help fund";
+	mes "server-wide EXP boosts!";
+	next;
+
+	// Check if feature is enabled
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_enabled'", .@enabled$;
+
+	if (.@enabled$ != "1") {
+		mes "[Event Patron]";
+		mes "EXP Boost sponsorship is";
+		mes "currently disabled.";
+		mes " ";
+		mes "Check back later!";
+		close;
+	}
+
+	goto L_MainMenu;
+
+// ============================================================
+// Main Menu
+// ============================================================
+L_MainMenu:
+	// Get current pool info (including pending activation state)
+	query_sql "SELECT id, total_amount, current_tier, activation_pending, UNIX_TIMESTAMP(activation_triggered_at), UNIX_TIMESTAMP(created_at) FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pool_id, .@pool_total, .@pool_tier, .@pending, .@triggered_at, .@created_at;
+
+	// If no active pool, create one
+	if (.@pool_id == 0) {
+		query_sql "INSERT INTO event_crowdfund_pool (event_type, status) VALUES ('exp_boost', 'collecting')";
+		query_sql "SELECT LAST_INSERT_ID()", .@pool_id;
+		.@pool_total = 0;
+		.@pool_tier = 0;
+		.@pending = 0;
+		.@triggered_at = 0;
+		query_sql "SELECT UNIX_TIMESTAMP(created_at) FROM event_crowdfund_pool WHERE id = " + .@pool_id, .@created_at;
+	}
+
+	// Get cooldown and activation delay settings
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_cooldown'", .@cooldown_str$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_activation_delay'", .@delay_str$;
+	.@cooldown = atoi(.@cooldown_str$);
+	.@activation_delay = atoi(.@delay_str$);
+	.@now = gettimetick(2);
+
+	// Check if cooldown has passed
+	.@cooldown_remaining = 0;
+	if (.@cooldown > 0 && .@created_at > 0) {
+		.@cooldown_end = .@created_at + .@cooldown;
+		if (.@now < .@cooldown_end) {
+			.@cooldown_remaining = .@cooldown_end - .@now;
+		}
+	}
+
+	// Check if activation countdown is in progress
+	.@countdown_remaining = 0;
+	if (.@pending && .@triggered_at > 0) {
+		.@activation_time = .@triggered_at + .@activation_delay;
+		if (.@now < .@activation_time) {
+			.@countdown_remaining = .@activation_time - .@now;
+		}
+	}
+
+	// Get tier thresholds
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_1_amount'", .@t1_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_2_amount'", .@t2_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_3_amount'", .@t3_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_4_amount'", .@t4_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_5_amount'", .@t5_amt$;
+	.@t1 = atoi(.@t1_amt$);
+	.@t2 = atoi(.@t2_amt$);
+	.@t3 = atoi(.@t3_amt$);
+	.@t4 = atoi(.@t4_amt$);
+	.@t5 = atoi(.@t5_amt$);
+
+	// Get tier rewards for display
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_1_duration'", .@t1_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_1_multiplier'", .@t1_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_2_duration'", .@t2_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_2_multiplier'", .@t2_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_3_duration'", .@t3_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_3_multiplier'", .@t3_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_4_duration'", .@t4_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_4_multiplier'", .@t4_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_5_duration'", .@t5_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_5_multiplier'", .@t5_mult$;
+
+	// Determine current tier reached
+	if (.@pool_total >= .@t5) {
+		.@reached_tier = 5;
+	} else if (.@pool_total >= .@t4) {
+		.@reached_tier = 4;
+	} else if (.@pool_total >= .@t3) {
+		.@reached_tier = 3;
+	} else if (.@pool_total >= .@t2) {
+		.@reached_tier = 2;
+	} else if (.@pool_total >= .@t1) {
+		.@reached_tier = 1;
+	} else {
+		.@reached_tier = 0;
+	}
+
+	mes "[EXP Boost Pool]";
+	mes "Current pool: ^0000FF" + callfunc("F_InsertComma", .@pool_total) + "z^000000";
+	mes " ";
+
+	// Show countdown status if pending
+	if (.@pending && .@countdown_remaining > 0) {
+		.@mins = .@countdown_remaining / 60;
+		.@secs = .@countdown_remaining % 60;
+		mes "^FF6600** ACTIVATING IN " + .@mins + ":" + (.@secs < 10 ? "0" : "") + .@secs + " **^000000";
+		mes "^00FF00Contribute now for higher tiers!^000000";
+		mes " ";
+	} else if (.@cooldown_remaining > 0) {
+		.@mins = .@cooldown_remaining / 60;
+		.@secs = .@cooldown_remaining % 60;
+		mes "^888888Cooldown: " + .@mins + ":" + (.@secs < 10 ? "0" : "") + .@secs + "^000000";
+		mes " ";
+	}
+
+	// Show tier progress
+	if (.@reached_tier >= 5) {
+		mes "^00FF00** MAX TIER REACHED! **^000000";
+		mes "   " + atoi(.@t5_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t5_mult$)) + " EXP";
+	} else if (.@reached_tier >= 4) {
+		mes "^00FF00[OK] Tier 4 unlocked^000000";
+		mes "   " + atoi(.@t4_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t4_mult$));
+		mes "^888888Next: " + callfunc("F_InsertComma", .@t5) + "z^000000";
+	} else if (.@reached_tier >= 3) {
+		mes "^00FF00[OK] Tier 3 unlocked^000000";
+		mes "   " + atoi(.@t3_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t3_mult$));
+		mes "^888888Next: " + callfunc("F_InsertComma", .@t4) + "z^000000";
+	} else if (.@reached_tier >= 2) {
+		mes "^00FF00[OK] Tier 2 unlocked^000000";
+		mes "   " + atoi(.@t2_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t2_mult$));
+		mes "^888888Next: " + callfunc("F_InsertComma", .@t3) + "z^000000";
+	} else if (.@reached_tier >= 1) {
+		mes "^00FF00[OK] Tier 1 unlocked^000000";
+		mes "   " + atoi(.@t1_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t1_mult$));
+		mes "^888888Next: " + callfunc("F_InsertComma", .@t2) + "z^000000";
+	} else {
+		mes "^FF0000No tier reached yet^000000";
+		mes "^888888First tier at " + callfunc("F_InsertComma", .@t1) + "z^000000";
+	}
+	next;
+
+	// Show top contributors to current pool
+	mes "[Current Contributors]";
+	query_sql "SELECT char_name, SUM(amount) as total FROM event_contributions WHERE pool_id = " + .@pool_id + " GROUP BY char_id ORDER BY total DESC LIMIT 5", .@top_names$, .@top_amounts;
+
+	if (getarraysize(.@top_names$) == 0) {
+		mes "^888888No contributions yet.^000000";
+		mes "Be the first!";
+	} else {
+		for (.@i = 0; .@i < getarraysize(.@top_names$); .@i++) {
+			mes "  " + (.@i+1) + ". " + .@top_names$[.@i] + " - ^0000FF" + callfunc("F_InsertComma", .@top_amounts[.@i]) + "z^000000";
+		}
+	}
+	next;
+
+	// Menu - determine if activation option should show
+	// Can activate if: tier >= 1 AND cooldown passed AND not already pending
+	.@can_activate = (.@reached_tier > 0 && .@cooldown_remaining == 0 && !.@pending);
+
+	.@menu$ = "Contribute Zeny";
+	if (.@can_activate) {
+		.@menu$ = .@menu$ + ":^00FF00Activate EXP Boost!^000000";
+	} else if (.@pending) {
+		.@menu$ = .@menu$ + ":^888888(Activation pending...)^000000";
+	}
+	.@menu$ = .@menu$ + ":View Tier Rewards:Hall of Patrons";
+	if (getgmlevel() >= 60) {
+		.@menu$ = .@menu$ + ":^FF0000[GM] Settings^000000";
+	}
+	.@menu$ = .@menu$ + ":Close";
+
+	.@choice = select(.@menu$);
+	.@menu_offset = 0;
+
+	// Handle dynamic menu
+	if (.@choice == 1) {
+		goto L_Contribute;
+	}
+	.@menu_offset++;
+
+	// Activation option (either active or grayed out pending)
+	if (.@can_activate || .@pending) {
+		if (.@choice == 2) {
+			if (.@pending) {
+				mes "[Event Patron]";
+				mes "Activation is already in progress!";
+				mes "Keep contributing to reach";
+				mes "higher tiers before it triggers.";
+				next;
+				goto L_MainMenu;
+			}
+			goto L_Activate;
+		}
+		.@menu_offset++;
+	}
+
+	if (.@choice == .@menu_offset + 1) {
+		goto L_ViewTiers;
+	}
+	if (.@choice == .@menu_offset + 2) {
+		goto L_Leaderboards;
+	}
+	if (getgmlevel() >= 60 && .@choice == .@menu_offset + 3) {
+		goto L_GMSettings;
+	}
+	close;
+
+// ============================================================
+// Contribute to Pool
+// ============================================================
+L_Contribute:
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_min_contribution'", .@min$;
+	.@min_contrib = atoi(.@min$);
+
+	// Re-fetch pool id
+	query_sql "SELECT id, total_amount FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pool_id, .@old_total;
+
+	mes "[Contribute]";
+	mes "Your zeny: ^0000FF" + callfunc("F_InsertComma", Zeny) + "z^000000";
+	mes " ";
+	mes "Minimum contribution: " + callfunc("F_InsertComma", .@min_contrib) + "z";
+	mes " ";
+	mes "Enter amount to contribute:";
+	mes "^888888(0 to cancel)^000000";
+	input .@amount;
+
+	if (.@amount == 0) {
+		mes "Contribution cancelled.";
+		next;
+		goto L_MainMenu;
+	}
+
+	if (.@amount < .@min_contrib) {
+		mes "^FF0000Minimum is " + callfunc("F_InsertComma", .@min_contrib) + "z.^000000";
+		next;
+		goto L_MainMenu;
+	}
+
+	if (.@amount > Zeny) {
+		mes "^FF0000You don't have enough zeny!^000000";
+		next;
+		goto L_MainMenu;
+	}
+
+	// Calculate new total and tier
+	.@new_total = .@old_total + .@amount;
+
+	// Get tier thresholds
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_1_amount'", .@t1_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_2_amount'", .@t2_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_3_amount'", .@t3_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_4_amount'", .@t4_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_5_amount'", .@t5_amt$;
+	.@t1 = atoi(.@t1_amt$);
+	.@t2 = atoi(.@t2_amt$);
+	.@t3 = atoi(.@t3_amt$);
+	.@t4 = atoi(.@t4_amt$);
+	.@t5 = atoi(.@t5_amt$);
+
+	// Get old tier
+	if (.@old_total >= .@t5) { .@old_tier = 5; }
+	else if (.@old_total >= .@t4) { .@old_tier = 4; }
+	else if (.@old_total >= .@t3) { .@old_tier = 3; }
+	else if (.@old_total >= .@t2) { .@old_tier = 2; }
+	else if (.@old_total >= .@t1) { .@old_tier = 1; }
+	else { .@old_tier = 0; }
+
+	// Get new tier
+	if (.@new_total >= .@t5) { .@new_tier = 5; }
+	else if (.@new_total >= .@t4) { .@new_tier = 4; }
+	else if (.@new_total >= .@t3) { .@new_tier = 3; }
+	else if (.@new_total >= .@t2) { .@new_tier = 2; }
+	else if (.@new_total >= .@t1) { .@new_tier = 1; }
+	else { .@new_tier = 0; }
+
+	// Deduct zeny
+	Zeny -= .@amount;
+
+	// Record contribution
+	query_sql "INSERT INTO event_contributions (pool_id, char_id, char_name, amount) VALUES (" + .@pool_id + ", " + getcharid(0) + ", '" + escape_sql(strcharinfo(0)) + "', " + .@amount + ")";
+
+	// Update pool
+	query_sql "UPDATE event_crowdfund_pool SET total_amount = " + .@new_total + ", current_tier = " + .@new_tier + " WHERE id = " + .@pool_id;
+
+	// Update all-time totals
+	query_sql "INSERT INTO event_contribution_totals (char_id, char_name, total_contributed, contribution_count) VALUES (" + getcharid(0) + ", '" + escape_sql(strcharinfo(0)) + "', " + .@amount + ", 1) ON DUPLICATE KEY UPDATE total_contributed = total_contributed + " + .@amount + ", contribution_count = contribution_count + 1, char_name = '" + escape_sql(strcharinfo(0)) + "', last_contribution = NOW()";
+
+	mes "[Event Patron]";
+	mes "Thank you for your contribution!";
+	mes " ";
+	mes "You donated: ^0000FF" + callfunc("F_InsertComma", .@amount) + "z^000000";
+	mes "Pool total: ^0000FF" + callfunc("F_InsertComma", .@new_total) + "z^000000";
+
+	// Check for tier upgrade and announce
+	if (.@new_tier > .@old_tier) {
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@new_tier + "_duration'", .@tier_dur$;
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@new_tier + "_multiplier'", .@tier_mult$;
+		.@mult$ = callfunc("F_FormatExpMultiplier", atoi(.@tier_mult$));
+
+		if (.@new_tier == 5) {
+			announce "[Event Patron] EXP Boost pool hit MAX TIER! " + atoi(.@tier_dur$) + "min " + .@mult$ + " EXP ready to activate!", bc_all, 0x00BFFF;
+		} else {
+			announce "[Event Patron] EXP Boost pool reached Tier " + .@new_tier + "! " + atoi(.@tier_dur$) + "min " + .@mult$ + " EXP now available!", bc_all, 0x00BFFF;
+		}
+
+		mes " ";
+		mes "^00FF00** TIER " + .@new_tier + " UNLOCKED! **^000000";
+	}
+	next;
+	goto L_MainMenu;
+
+// ============================================================
+// Activate EXP Boost (starts countdown)
+// ============================================================
+L_Activate:
+	// Get current pool
+	query_sql "SELECT id, total_amount, current_tier FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pool_id, .@pool_total, .@pool_tier;
+
+	// Check if player has contributed to this pool
+	query_sql "SELECT SUM(amount) FROM event_contributions WHERE pool_id = " + .@pool_id + " AND char_id = " + getcharid(0), .@my_contrib;
+	if (.@my_contrib == 0) {
+		mes "[Event Patron]";
+		mes "Only contributors can activate";
+		mes "the EXP Boost!";
+		mes " ";
+		mes "Make a contribution first to";
+		mes "earn activation rights.";
+		next;
+		goto L_MainMenu;
+	}
+
+	if (.@pool_tier == 0) {
+		mes "[Event Patron]";
+		mes "The pool hasn't reached any tier.";
+		mes "Keep contributing!";
+		next;
+		goto L_MainMenu;
+	}
+
+	// Check if EXP Boost is already active
+	if ($@ExpBoostActive) {
+		mes "[Event Patron]";
+		mes "An EXP Boost is already active!";
+		mes "Wait for it to end first.";
+		next;
+		goto L_MainMenu;
+	}
+
+	// Get activation delay
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_activation_delay'", .@delay_str$;
+	.@activation_delay = atoi(.@delay_str$);
+
+	// Get tier rewards for display
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@pool_tier + "_duration'", .@dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@pool_tier + "_multiplier'", .@mult$;
+	.@duration = atoi(.@dur$);
+	.@multiplier = atoi(.@mult$);
+	.@mult_display$ = callfunc("F_FormatExpMultiplier", .@multiplier);
+
+	mes "[Activate EXP Boost]";
+	mes "Current tier: ^00FF00" + .@pool_tier + "^000000";
+	mes "Reward: ^0000FF" + .@duration + "min " + .@mult_display$ + " EXP^000000";
+	mes " ";
+	if (.@activation_delay > 0) {
+		.@delay_mins = .@activation_delay / 60;
+		mes "This will start a ^FF6600" + .@delay_mins + "-minute^000000";
+		mes "countdown. Others can still";
+		mes "contribute for higher tiers!";
+	} else {
+		mes "Activate now for everyone?";
+	}
+	next;
+
+	if (select("Yes, activate!:Wait for higher tier") == 2) {
+		goto L_MainMenu;
+	}
+
+	// If no delay, activate immediately
+	if (.@activation_delay == 0) {
+		// Store pool id and activate
+		set .@activate_pool_id, .@pool_id;
+		goto L_DoActivation;
+	}
+
+	// Start countdown - mark pool as pending
+	query_sql "UPDATE event_crowdfund_pool SET activation_pending = 1, activation_triggered_at = NOW(), activation_triggered_by = " + getcharid(0) + " WHERE id = " + .@pool_id;
+
+	// Store pool ID for timer callbacks
+	set $@CrowdfundPendingPoolId, .@pool_id;
+
+	// Cancel any existing timers
+	deltimer "Event Patron::OnCountdown5Min";
+	deltimer "Event Patron::OnCountdown1Min";
+	deltimer "Event Patron::OnCountdown30Sec";
+	deltimer "Event Patron::OnCountdown15Sec";
+	deltimer "Event Patron::OnCountdown10Sec";
+	deltimer "Event Patron::OnCountdown5Sec";
+	deltimer "Event Patron::OnCountdownFinal";
+
+	// Schedule countdown announcements
+	// Announce at: start, every 5 min, 1 min, 30 sec, 15-10-5-4-3-2-1-0
+	.@delay_ms = .@activation_delay * 1000;
+	.@delay_mins = .@activation_delay / 60;
+
+	// Initial announcement
+	announce "[Event Patron] " + strcharinfo(0) + " triggered EXP Boost activation! " + .@delay_mins + " minutes until boost starts. Contribute now for higher tiers!", bc_all, 0xFF6600;
+
+	// Schedule periodic announcements (every 5 min for delays > 5 min)
+	if (.@activation_delay > 300) {
+		// For 10+ min delays, announce at 5 min remaining
+		addtimer .@delay_ms - 300000, "Event Patron::OnCountdown5Min";
+	}
+
+	// 1 minute warning (if delay >= 60 sec)
+	if (.@activation_delay >= 60) {
+		addtimer .@delay_ms - 60000, "Event Patron::OnCountdown1Min";
+	}
+
+	// 30 second warning (if delay >= 30 sec)
+	if (.@activation_delay >= 30) {
+		addtimer .@delay_ms - 30000, "Event Patron::OnCountdown30Sec";
+	}
+
+	// 15 second countdown
+	if (.@activation_delay >= 15) {
+		addtimer .@delay_ms - 15000, "Event Patron::OnCountdown15Sec";
+	}
+
+	// 10 second
+	if (.@activation_delay >= 10) {
+		addtimer .@delay_ms - 10000, "Event Patron::OnCountdown10Sec";
+	}
+
+	// 5-4-3-2-1 countdown
+	if (.@activation_delay >= 5) {
+		addtimer .@delay_ms - 5000, "Event Patron::OnCountdown5Sec";
+	}
+
+	// Final activation
+	addtimer .@delay_ms, "Event Patron::OnCountdownFinal";
+
+	mes "[Event Patron]";
+	mes "^FF6600Countdown started!^000000";
+	mes " ";
+	mes "The EXP Boost will activate";
+	mes "in " + .@delay_mins + " minutes.";
+	mes " ";
+	mes "Tell others to contribute";
+	mes "for even better rewards!";
+	close;
+
+// ============================================================
+// Countdown Timer Events
+// ============================================================
+OnCountdown5Min:
+	// Get current tier for announcement
+	query_sql "SELECT current_tier FROM event_crowdfund_pool WHERE id = " + $@CrowdfundPendingPoolId, .@tier;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_multiplier'", .@mult$;
+	.@mult_display$ = callfunc("F_FormatExpMultiplier", atoi(.@mult$));
+	announce "[Event Patron] 5 minutes until EXP Boost! Current: Tier " + .@tier + " (" + .@mult_display$ + "). Keep contributing!", bc_all, 0xFF6600;
+	end;
+
+OnCountdown1Min:
+	query_sql "SELECT current_tier FROM event_crowdfund_pool WHERE id = " + $@CrowdfundPendingPoolId, .@tier;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_multiplier'", .@mult$;
+	.@mult_display$ = callfunc("F_FormatExpMultiplier", atoi(.@mult$));
+	announce "[Event Patron] 1 MINUTE until EXP Boost! Tier " + .@tier + " (" + .@mult_display$ + ") - Last chance to contribute!", bc_all, 0xFF6600;
+	end;
+
+OnCountdown30Sec:
+	announce "[Event Patron] 30 seconds until EXP Boost activation!", bc_all, 0xFF6600;
+	end;
+
+OnCountdown15Sec:
+	announce "[Event Patron] 15...", bc_all, 0x00FF00;
+	end;
+
+OnCountdown10Sec:
+	announce "[Event Patron] 10...", bc_all, 0x00FF00;
+	// Schedule 5-4-3-2-1 individually
+	addtimer 1000, "Event Patron::OnCount5";
+	addtimer 2000, "Event Patron::OnCount4";
+	addtimer 3000, "Event Patron::OnCount3";
+	addtimer 4000, "Event Patron::OnCount2";
+	addtimer 5000, "Event Patron::OnCount1";
+	end;
+
+OnCountdown5Sec:
+	announce "[Event Patron] 5...", bc_all, 0x00FF00;
+	addtimer 1000, "Event Patron::OnCount4";
+	addtimer 2000, "Event Patron::OnCount3";
+	addtimer 3000, "Event Patron::OnCount2";
+	addtimer 4000, "Event Patron::OnCount1";
+	end;
+
+OnCount5:
+	announce "[Event Patron] 5...", bc_all, 0x00FF00;
+	end;
+
+OnCount4:
+	announce "[Event Patron] 4...", bc_all, 0x00FF00;
+	end;
+
+OnCount3:
+	announce "[Event Patron] 3...", bc_all, 0x00FF00;
+	end;
+
+OnCount2:
+	announce "[Event Patron] 2...", bc_all, 0x00FF00;
+	end;
+
+OnCount1:
+	announce "[Event Patron] 1...", bc_all, 0x00FF00;
+	end;
+
+OnCountdownFinal:
+	// Activate the boost!
+	set .@activate_pool_id, $@CrowdfundPendingPoolId;
+	set $@CrowdfundPendingPoolId, 0;
+	goto L_DoActivation;
+
+// ============================================================
+// Actually Activate the EXP Boost
+// ============================================================
+L_DoActivation:
+	// Get pool info at activation time (tier may have increased during countdown!)
+	query_sql "SELECT id, total_amount, current_tier, activation_triggered_by FROM event_crowdfund_pool WHERE id = " + .@activate_pool_id, .@pool_id, .@pool_total, .@pool_tier, .@triggered_by;
+
+	// Get tier thresholds for rollover calculation
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@pool_tier + "_amount'", .@tier_threshold$;
+	.@tier_threshold = atoi(.@tier_threshold$);
+
+	// Calculate leftover for next pool
+	.@leftover = .@pool_total - .@tier_threshold;
+	if (.@leftover < 0) .@leftover = 0;
+
+	// Get tier rewards
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@pool_tier + "_duration'", .@dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@pool_tier + "_multiplier'", .@mult$;
+	.@duration = atoi(.@dur$);
+	.@multiplier = atoi(.@mult$);
+	.@mult_display$ = callfunc("F_FormatExpMultiplier", .@multiplier);
+
+	// Mark pool as activated
+	query_sql "UPDATE event_crowdfund_pool SET status = 'activated', activation_pending = 0, activated_at = NOW() WHERE id = " + .@pool_id;
+
+	// Create new pool with leftover zeny
+	query_sql "INSERT INTO event_crowdfund_pool (event_type, status, total_amount) VALUES ('exp_boost', 'collecting', " + .@leftover + ")";
+
+	// Trigger the EXP Boost
+	set $@ExpBoostMultiplier, .@multiplier;
+	set $@ExpBoostDuration, .@duration;
+
+	// Create event instance
+	query_sql "SELECT id FROM event_types WHERE code = 'exp_boost'", .@type_id;
+	query_sql "INSERT INTO event_instances (event_type_id, event_code, scheduled_start, scheduled_end, actual_start, status, trigger_type, triggered_by, event_data) VALUES (" + .@type_id + ", 'exp_boost', NOW(), DATE_ADD(NOW(), INTERVAL " + .@duration + " MINUTE), NOW(), 'active', 'one_time', " + .@triggered_by + ", JSON_OBJECT('multiplier', " + .@multiplier + ", 'source', 'crowdfund', 'pool_total', " + .@pool_total + ", 'leftover', " + .@leftover + "))";
+	query_sql "SELECT LAST_INSERT_ID()", .@instance_id;
+	set $@ExpBoostInstanceId, .@instance_id;
+
+	donpcevent "ExpBoost::OnEventStart";
+
+	// Get top contributor for announcement
+	query_sql "SELECT char_name, SUM(amount) as total FROM event_contributions WHERE pool_id = " + .@pool_id + " GROUP BY char_id ORDER BY total DESC LIMIT 1", .@top_name$, .@top_amount;
+
+	// Announce activation
+	announce "[Event Patron] EXP Boost ACTIVATED! Tier " + .@pool_tier + " - " + .@mult_display$ + " EXP for " + .@duration + " minutes! Top patron: " + .@top_name$ + " (" + callfunc("F_InsertComma", .@top_amount) + "z)", bc_all, 0x00FF00;
+
+	if (.@leftover > 0) {
+		announce "[Event Patron] " + callfunc("F_InsertComma", .@leftover) + "z rolled over to the next pool!", bc_all, 0x00BFFF;
+	}
+	end;
+
+// ============================================================
+// View Tier Rewards
+// ============================================================
+L_ViewTiers:
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_1_amount'", .@t1_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_1_duration'", .@t1_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_1_multiplier'", .@t1_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_2_amount'", .@t2_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_2_duration'", .@t2_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_2_multiplier'", .@t2_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_3_amount'", .@t3_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_3_duration'", .@t3_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_3_multiplier'", .@t3_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_4_amount'", .@t4_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_4_duration'", .@t4_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_4_multiplier'", .@t4_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_5_amount'", .@t5_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_5_duration'", .@t5_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_5_multiplier'", .@t5_mult$;
+
+	mes "[EXP Boost Tiers]";
+	mes " ";
+	mes "^FFD700Tier 1^000000 - " + callfunc("F_InsertComma", atoi(.@t1_amt$)) + "z";
+	mes "   " + atoi(.@t1_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t1_mult$)) + " EXP";
+	mes " ";
+	mes "^C0C0C0Tier 2^000000 - " + callfunc("F_InsertComma", atoi(.@t2_amt$)) + "z";
+	mes "   " + atoi(.@t2_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t2_mult$)) + " EXP";
+	mes " ";
+	mes "^FFD700Tier 3^000000 - " + callfunc("F_InsertComma", atoi(.@t3_amt$)) + "z";
+	mes "   " + atoi(.@t3_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t3_mult$)) + " EXP";
+	mes " ";
+	mes "^C0C0C0Tier 4^000000 - " + callfunc("F_InsertComma", atoi(.@t4_amt$)) + "z";
+	mes "   " + atoi(.@t4_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t4_mult$)) + " EXP";
+	mes " ";
+	mes "^00FFFFTier 5 (MAX)^000000 - " + callfunc("F_InsertComma", atoi(.@t5_amt$)) + "z";
+	mes "   " + atoi(.@t5_dur$) + "min " + callfunc("F_FormatExpMultiplier", atoi(.@t5_mult$)) + " EXP";
+	next;
+	goto L_MainMenu;
+
+// ============================================================
+// Leaderboards (Hall of Patrons)
+// ============================================================
+L_Leaderboards:
+	mes "[Hall of Patrons]";
+	mes "Honoring those who fuel";
+	mes "the server's EXP boosts!";
+	next;
+
+	switch(select("Current Pool Contributors:All-Time Top Patrons:Back")) {
+		case 1:
+			query_sql "SELECT id, total_amount FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pool_id, .@pool_total;
+
+			mes "[Current Pool - Top 10]";
+			mes "Pool total: ^0000FF" + callfunc("F_InsertComma", .@pool_total) + "z^000000";
+			mes " ";
+
+			query_sql "SELECT char_name, SUM(amount) as total FROM event_contributions WHERE pool_id = " + .@pool_id + " GROUP BY char_id ORDER BY total DESC LIMIT 10", .@names$, .@amounts;
+
+			if (getarraysize(.@names$) == 0) {
+				mes "^888888No contributions yet.^000000";
+			} else {
+				for (.@i = 0; .@i < getarraysize(.@names$); .@i++) {
+					if (.@i == 0) {
+						mes "^FFD700#1 " + .@names$[.@i] + "^000000";
+					} else if (.@i == 1) {
+						mes "^C0C0C0#2 " + .@names$[.@i] + "^000000";
+					} else if (.@i == 2) {
+						mes "^CD7F32#3 " + .@names$[.@i] + "^000000";
+					} else {
+						mes "#" + (.@i+1) + " " + .@names$[.@i];
+					}
+					mes "   " + callfunc("F_InsertComma", .@amounts[.@i]) + "z";
+				}
+			}
+			next;
+			goto L_Leaderboards;
+
+		case 2:
+			mes "[All-Time Top Patrons]";
+			mes " ";
+
+			query_sql "SELECT char_name, total_contributed, contribution_count FROM event_contribution_totals ORDER BY total_contributed DESC LIMIT 10", .@names$, .@totals, .@counts;
+
+			if (getarraysize(.@names$) == 0) {
+				mes "^888888No contributions recorded.^000000";
+			} else {
+				for (.@i = 0; .@i < getarraysize(.@names$); .@i++) {
+					if (.@i == 0) {
+						mes "^FFD700#1 " + .@names$[.@i] + "^000000";
+					} else if (.@i == 1) {
+						mes "^C0C0C0#2 " + .@names$[.@i] + "^000000";
+					} else if (.@i == 2) {
+						mes "^CD7F32#3 " + .@names$[.@i] + "^000000";
+					} else {
+						mes "#" + (.@i+1) + " " + .@names$[.@i];
+					}
+					mes "   " + callfunc("F_InsertComma", .@totals[.@i]) + "z (" + .@counts[.@i] + " donations)";
+				}
+			}
+			next;
+			goto L_Leaderboards;
+
+		case 3:
+			goto L_MainMenu;
+	}
+	end;
+
+// ============================================================
+// GM Settings
+// ============================================================
+L_GMSettings:
+	mes "[GM Settings]";
+	mes "Configure EXP Boost sponsorship.";
+	next;
+
+	switch(select("Edit Tier Thresholds:Activation Timing:Toggle Feature:Reset Current Pool:Cancel Pending Activation:Back")) {
+		case 1:
+			goto L_GM_EditTiers;
+		case 2:
+			goto L_GM_Timing;
+		case 3:
+			query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_enabled'", .@enabled$;
+			.@new_val = (.@enabled$ == "1") ? "0" : "1";
+			query_sql "UPDATE event_config SET config_value = '" + .@new_val + "' WHERE config_key = 'crowdfund_exp_enabled'";
+			mes "EXP Boost sponsorship " + (.@new_val == "1" ? "enabled" : "disabled") + "!";
+			next;
+			goto L_GMSettings;
+		case 4:
+			goto L_GM_ResetPool;
+		case 5:
+			goto L_GM_CancelPending;
+		case 6:
+			goto L_MainMenu;
+	}
+	end;
+
+L_GM_Timing:
+	// Get current timing settings
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_cooldown'", .@cooldown$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_activation_delay'", .@delay$;
+	.@cooldown = atoi(.@cooldown$);
+	.@delay = atoi(.@delay$);
+
+	mes "[Activation Timing]";
+	mes " ";
+	mes "^0000FFCooldown^000000: " + (.@cooldown / 60) + " min";
+	mes "^888888(Time pool must exist before";
+	mes "activation is allowed)^000000";
+	mes " ";
+	mes "^0000FFActivation Delay^000000: " + (.@delay / 60) + " min";
+	mes "^888888(Countdown after trigger,";
+	mes "allows last-minute contributions)^000000";
+	next;
+
+	switch(select("Set Cooldown:Set Activation Delay:Back")) {
+		case 1:
+			mes "Enter cooldown in minutes";
+			mes "(0 = no cooldown):";
+			input .@new_cooldown;
+			.@new_cooldown_sec = .@new_cooldown * 60;
+			query_sql "UPDATE event_config SET config_value = '" + .@new_cooldown_sec + "' WHERE config_key = 'crowdfund_exp_cooldown'";
+			mes "^00FF00Cooldown set to " + .@new_cooldown + " minutes!^000000";
+			next;
+			goto L_GM_Timing;
+		case 2:
+			mes "Enter activation delay in minutes";
+			mes "(0 = instant activation):";
+			input .@new_delay;
+			.@new_delay_sec = .@new_delay * 60;
+			query_sql "UPDATE event_config SET config_value = '" + .@new_delay_sec + "' WHERE config_key = 'crowdfund_exp_activation_delay'";
+			mes "^00FF00Activation delay set to " + .@new_delay + " minutes!^000000";
+			next;
+			goto L_GM_Timing;
+		case 3:
+			goto L_GMSettings;
+	}
+	end;
+
+L_GM_CancelPending:
+	// Check for pending activation
+	query_sql "SELECT id, activation_pending FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pool_id, .@pending;
+
+	if (!.@pending) {
+		mes "[Cancel Pending]";
+		mes "No activation is pending.";
+		next;
+		goto L_GMSettings;
+	}
+
+	mes "[Cancel Pending]";
+	mes "^FF0000An activation is pending!^000000";
+	mes " ";
+	mes "Cancel it? Players will need";
+	mes "to trigger activation again.";
+	next;
+
+	if (select("Yes, cancel:No, keep it") == 2) {
+		goto L_GMSettings;
+	}
+
+	// Cancel pending activation
+	query_sql "UPDATE event_crowdfund_pool SET activation_pending = 0, activation_triggered_at = NULL, activation_triggered_by = NULL WHERE id = " + .@pool_id;
+	set $@CrowdfundPendingPoolId, 0;
+
+	// Cancel all timers
+	deltimer "Event Patron::OnCountdown5Min";
+	deltimer "Event Patron::OnCountdown1Min";
+	deltimer "Event Patron::OnCountdown30Sec";
+	deltimer "Event Patron::OnCountdown15Sec";
+	deltimer "Event Patron::OnCountdown10Sec";
+	deltimer "Event Patron::OnCountdown5Sec";
+	deltimer "Event Patron::OnCountdownFinal";
+	deltimer "Event Patron::OnCount5";
+	deltimer "Event Patron::OnCount4";
+	deltimer "Event Patron::OnCount3";
+	deltimer "Event Patron::OnCount2";
+	deltimer "Event Patron::OnCount1";
+
+	announce "[Event Patron] EXP Boost activation has been cancelled by a GM.", bc_all, 0xFF6600;
+
+	mes "^00FF00Pending activation cancelled!^000000";
+	next;
+	goto L_GMSettings;
+
+L_GM_EditTiers:
+	mes "[Edit Tier]";
+	mes "Select tier to edit:";
+	next;
+
+	.@tier = select("Tier 1:Tier 2:Tier 3:Tier 4:Back");
+	if (.@tier == 5) goto L_GMSettings;
+
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_amount'", .@cur_amt$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_duration'", .@cur_dur$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_multiplier'", .@cur_mult$;
+
+	mes "[Tier " + .@tier + "]";
+	mes "Amount: " + callfunc("F_InsertComma", atoi(.@cur_amt$)) + "z";
+	mes "Duration: " + atoi(.@cur_dur$) + " min";
+	mes "Multiplier: " + callfunc("F_FormatExpMultiplier", atoi(.@cur_mult$));
+	mes " ";
+	mes "New amount (0=skip):";
+	input .@new_amt;
+	if (.@new_amt > 0) {
+		query_sql "UPDATE event_config SET config_value = '" + .@new_amt + "' WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_amount'";
+	}
+
+	mes "New duration in minutes (0=skip):";
+	input .@new_dur;
+	if (.@new_dur > 0) {
+		query_sql "UPDATE event_config SET config_value = '" + .@new_dur + "' WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_duration'";
+	}
+
+	mes "New multiplier % (200=2x, 0=skip):";
+	input .@new_mult;
+	if (.@new_mult > 0) {
+		query_sql "UPDATE event_config SET config_value = '" + .@new_mult + "' WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_multiplier'";
+	}
+
+	mes "^00FF00Settings saved!^000000";
+	next;
+	goto L_GMSettings;
+
+L_GM_ResetPool:
+	query_sql "SELECT id, total_amount FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pool_id, .@pool_total;
+
+	mes "[Reset Pool]";
+	mes "Current: " + callfunc("F_InsertComma", .@pool_total) + "z";
+	mes " ";
+	mes "^FF0000This will reset to 0!^000000";
+	next;
+
+	if (select("Yes, reset:Cancel") == 2) {
+		goto L_GMSettings;
+	}
+
+	query_sql "UPDATE event_crowdfund_pool SET status = 'activated' WHERE id = " + .@pool_id;
+	query_sql "INSERT INTO event_crowdfund_pool (event_type, status) VALUES ('exp_boost', 'collecting')";
+
+	mes "Pool reset!";
+	next;
+	goto L_GMSettings;
+
+// ============================================================
+// OnInit - Resume pending countdown after server restart
+// ============================================================
+OnInit:
+	// Check for pending activation in database
+	query_sql "SELECT id, UNIX_TIMESTAMP(activation_triggered_at) FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' AND activation_pending = 1 ORDER BY id DESC LIMIT 1", .@pool_id, .@triggered_at;
+
+	if (.@pool_id == 0 || .@triggered_at == 0) {
+		end; // No pending activation
+	}
+
+	// Get activation delay setting
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_activation_delay'", .@delay_str$;
+	.@activation_delay = atoi(.@delay_str$);
+
+	// Calculate remaining time
+	.@now = gettimetick(2);
+	.@activation_time = .@triggered_at + .@activation_delay;
+	.@remaining = .@activation_time - .@now;
+
+	// If already past activation time, activate immediately
+	if (.@remaining <= 0) {
+		set $@CrowdfundPendingPoolId, .@pool_id;
+		donpcevent "Event Patron::OnCountdownFinal";
+		end;
+	}
+
+	// Resume countdown
+	set $@CrowdfundPendingPoolId, .@pool_id;
+	.@remaining_ms = .@remaining * 1000;
+
+	// Announce resume
+	.@remaining_mins = .@remaining / 60;
+	.@remaining_secs = .@remaining % 60;
+	announce "[Event Patron] Server restarted - EXP Boost countdown resuming! " + .@remaining_mins + ":" + (.@remaining_secs < 10 ? "0" : "") + .@remaining_secs + " remaining.", bc_all, 0xFF6600;
+
+	// Schedule remaining announcements
+	if (.@remaining > 300) {
+		addtimer .@remaining_ms - 300000, "Event Patron::OnCountdown5Min";
+	}
+	if (.@remaining > 60) {
+		addtimer .@remaining_ms - 60000, "Event Patron::OnCountdown1Min";
+	}
+	if (.@remaining > 30) {
+		addtimer .@remaining_ms - 30000, "Event Patron::OnCountdown30Sec";
+	}
+	if (.@remaining > 15) {
+		addtimer .@remaining_ms - 15000, "Event Patron::OnCountdown15Sec";
+	}
+	if (.@remaining > 10) {
+		addtimer .@remaining_ms - 10000, "Event Patron::OnCountdown10Sec";
+	}
+	if (.@remaining > 5) {
+		addtimer .@remaining_ms - 5000, "Event Patron::OnCountdown5Sec";
+	}
+
+	// Final activation
+	addtimer .@remaining_ms, "Event Patron::OnCountdownFinal";
+	end;
+}
+
+// ============================================================
+// Helper: Format number with commas
+// ============================================================
+function	script	F_InsertComma	{
+	.@num = getarg(0, 0);
+	if (.@num < 1000) return ""+.@num;
+
+	.@str$ = "";
+	.@count = 0;
+
+	while (.@num > 0) {
+		if (.@count > 0 && .@count % 3 == 0) {
+			.@str$ = "," + .@str$;
+		}
+		.@str$ = (.@num % 10) + .@str$;
+		.@num = .@num / 10;
+		.@count++;
+	}
+
+	return .@str$;
+}
