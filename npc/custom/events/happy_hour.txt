@@ -94,8 +94,12 @@ OnTimer7200000:  // 120 minutes
 // Event End
 // ============================================================
 OnEventEnd:
+	// Always announce end (even if NPC state was desynced from DB)
+	// This ensures players know the event ended regardless of internal state
+	announce "[Happy Hour] Event ended - EXP rates returned to normal.", bc_all, 0xFFD700;
+
 	if (!$@HappyHourActive) {
-		debugmes "[HappyHour] Not active, ignoring end request";
+		debugmes "[HappyHour] End called but was not active (announced anyway)";
 		end;
 	}
 
@@ -114,9 +118,6 @@ OnEventEnd:
 
 	// Stop timer
 	stopnpctimer;
-
-	// Announce
-	announce "[Happy Hour] Event ended - EXP rates returned to normal.", bc_all, 0xFFD700;
 
 	debugmes "[HappyHour] Ended";
 	end;

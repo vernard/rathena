@@ -43,7 +43,7 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 		if (.@eb_mult > 0 && .@eb_remaining > 0) {
 			set .@mult$, callfunc("F_FormatExpMultiplier", .@eb_mult);
 			set .@remaining$, callfunc("F_FormatDuration", .@eb_remaining);
-			mes "^00BFFF[Active] EXP Boost^000000 ^888888(loading...)^000000";
+			mes "^00BFFF[Active] EXP Boost^000000 ^888888(activating...)^000000";
 			mes "   "+.@mult$+" EXP rates!";
 			mes "   Time left: ^00AA00"+.@remaining$+"^000000";
 			set .@has_active, 1;
@@ -440,7 +440,7 @@ L_ExpBoost:
 	if (.@active_id > 0 && .@active_remaining > 0) {
 		set .@mult$, callfunc("F_FormatExpMultiplier", .@active_mult);
 		set .@remaining$, callfunc("F_FormatDuration", .@active_remaining);
-		mes "^00AA00Status: ACTIVE^000000 ^888888(loading...)^000000";
+		mes "^00AA00Status: ACTIVE^000000 ^888888(activating...)^000000";
 		mes "Multiplier: "+.@mult$;
 		mes "Time left: "+.@remaining$;
 		next;
@@ -449,10 +449,8 @@ L_ExpBoost:
 			case 1:
 				// Mark as completed in event_instances
 				query_sql "UPDATE event_instances SET status = 'completed', actual_end = NOW() WHERE id = "+.@active_id;
-				// If scheduler already loaded it, stop it
-				if ($@ExpBoostActive) {
-					donpcevent "ExpBoost::OnEventEnd";
-				}
+				// Always call OnEventEnd to announce and restore rates if needed
+				donpcevent "ExpBoost::OnEventEnd";
 				mes "[Events Manager]";
 				mes "EXP Boost has been stopped.";
 				close;

@@ -102,7 +102,12 @@ OnEventStart:
 // Event End - Called by Events Manager or auto-timer
 // ============================================================
 OnEventEnd:
+	// Always announce end (even if NPC state was desynced from DB)
+	// This ensures players know the event ended regardless of internal state
+	announce "[EXP Boost] Event ended - EXP rates returned to normal.", bc_all, 0x00BFFF;
+
 	if (!$@ExpBoostActive) {
+		debugmes "[ExpBoost] End called but was not active (announced anyway)";
 		end;
 	}
 
@@ -124,9 +129,6 @@ OnEventEnd:
 	set $@ExpBoostStartTime, 0;
 	set $@ExpBoostEndTime, 0;
 	set $@ExpBoostInstanceId, 0;
-
-	// Announce
-	announce "[EXP Boost] Event ended - EXP rates returned to normal.", bc_all, 0x00BFFF;
 
 	debugmes "[ExpBoost] Ended";
 	end;
