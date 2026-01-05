@@ -117,7 +117,19 @@ S_RestoreActiveEvents:
 		}
 	}
 
-	// Note: Happy Hour is time-based so it doesn't need restoration
+	// Check for Happy Hour - restore if we're within an active schedule window
+	if (!$@HappyHourActive) {
+		// Find any weekly schedule where we're currently in the time window
+		query_sql "SELECT es.id, es.duration_minutes, es.start_hour, es.start_minute, (es.start_hour * 60 + es.start_minute + es.duration_minutes) - (HOUR(NOW()) * 60 + MINUTE(NOW())) as remaining FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' AND et.enabled = 1 AND es.enabled = 1 AND es.day_of_week = WEEKDAY(NOW()) AND (HOUR(NOW()) * 60 + MINUTE(NOW())) >= (es.start_hour * 60 + es.start_minute) AND (HOUR(NOW()) * 60 + MINUTE(NOW())) < (es.start_hour * 60 + es.start_minute + es.duration_minutes) LIMIT 1", .@hh_sched_id, .@hh_duration, .@hh_hour, .@hh_min, .@hh_remaining;
+
+		if (.@hh_sched_id > 0 && .@hh_remaining > 0) {
+			set $@HappyHourDuration, .@hh_remaining;
+			set $@HappyHourScheduleId, .@hh_sched_id;
+			donpcevent "HappyHour::OnEventStart";
+			debugmes "[EventScheduler] Restored Happy Hour - "+.@hh_remaining+" minutes remaining";
+		}
+	}
+
 	// MOTD is handled by S_CheckMOTDRotation
 	return;
 
@@ -160,7 +172,13 @@ S_CheckScheduledEvents:
 
 		// Trigger the event NPC
 		if (.@event_code$ == "happy_hour") {
-			set $@HappyHourDuration, .@duration;
+			// Calculate actual remaining time (schedule may have started earlier)
+			// For weekly: end time = today's scheduled start + duration
+			query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), DATE_ADD(DATE_ADD(CURDATE(), INTERVAL "+.@hours[.@i]+" HOUR), INTERVAL "+.@mins[.@i]+" + "+.@duration+" MINUTE))", .@remaining;
+			if (.@remaining < 1) set .@remaining, 1;  // At least 1 minute
+			if (.@remaining > .@duration) set .@remaining, .@duration;  // Cap at full duration
+
+			set $@HappyHourDuration, .@remaining;
 			set $@HappyHourScheduleId, .@schedule_id;
 			set $@HappyHourInstanceId, .@instance_id;
 			donpcevent "HappyHour::OnEventStart";

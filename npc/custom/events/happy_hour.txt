@@ -12,9 +12,8 @@
 	end;
 
 OnInit:
-	// Initialize state
-	set $@HappyHourActive, 0;
-	set $@HappyHourEndTime, 0;
+	// Don't reset if already restored by scheduler
+	// (scheduler restore runs before this OnInit)
 	end;
 
 // ============================================================
@@ -46,38 +45,49 @@ OnEventStart:
 	// $@HappyHourInstanceId is set by scheduler before calling OnEventStart
 
 	// Announce
-	announce "===========================================", bc_all, 0xFFD700;
-	announce "      HAPPY HOUR HAS BEGUN!", bc_all, 0xFFD700;
-	announce "   2x EXP rates for "+$@HappyHourDuration+" minutes!", bc_all, 0xFFD700;
-	announce "===========================================", bc_all, 0xFFD700;
+	announce "[Happy Hour] 2x EXP rates activated for "+$@HappyHourDuration+" minutes!", bc_all, 0xFFD700;
 
-	// Set timer for periodic announcements (every 30 minutes)
+	// Set timer for periodic checks (every 60 seconds to check end time)
 	initnpctimer;
-
-	// Set end timer
-	addtimer $@HappyHourDuration * 60 * 1000, strnpcinfo(0)+"::OnEventEnd";
 
 	debugmes "[HappyHour] Started - Duration: "+$@HappyHourDuration+" minutes";
 	end;
 
 // ============================================================
-// Periodic Reminder (every 30 minutes)
+// Check End Time (every 60 seconds)
 // ============================================================
-OnTimer1800000:  // 30 minutes
+OnTimer60000:
 	if (!$@HappyHourActive) {
 		stopnpctimer;
+		end;
+	}
+
+	// Check if event should end
+	if (gettimetick(2) >= $@HappyHourEndTime) {
+		goto OnEventEnd;
+	}
+
+	// Continue timer
+	initnpctimer;
+	end;
+
+// ============================================================
+// Periodic Reminder (every 30 minutes from start)
+// ============================================================
+OnTimer1800000:  // 30 minutes
+OnTimer3600000:  // 60 minutes
+OnTimer5400000:  // 90 minutes
+OnTimer7200000:  // 120 minutes
+	if (!$@HappyHourActive) {
 		end;
 	}
 
 	// Calculate remaining time
 	set .@remaining, ($@HappyHourEndTime - gettimetick(2)) / 60;
 
-	if (.@remaining > 0) {
-		announce "Happy Hour is active! 2x EXP rates - "+.@remaining+" minutes remaining!", bc_all, 0xFFD700;
+	if (.@remaining > 5) {
+		announce "[Happy Hour] "+.@remaining+" minutes remaining! 2x EXP rates!", bc_all, 0xFFD700;
 	}
-
-	// Continue timer
-	initnpctimer;
 	end;
 
 // ============================================================
@@ -106,10 +116,7 @@ OnEventEnd:
 	stopnpctimer;
 
 	// Announce
-	announce "===========================================", bc_all, 0xFFD700;
-	announce "      HAPPY HOUR HAS ENDED!", bc_all, 0xFFD700;
-	announce "   EXP rates have returned to normal.", bc_all, 0xFFD700;
-	announce "===========================================", bc_all, 0xFFD700;
+	announce "[Happy Hour] Event ended - EXP rates returned to normal.", bc_all, 0xFFD700;
 
 	debugmes "[HappyHour] Ended";
 	end;

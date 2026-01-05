@@ -235,119 +235,176 @@ L_GMMenu:
 	end;
 
 // ============================================================
-// Happy Hour Management
+// Happy Hour Schedule Management
 // ============================================================
 L_HappyHour:
-	mes "[Happy Hour Management]";
+	mes "[Happy Hour Schedule]";
+	mes "^888888Weekly recurring 2x EXP events^000000";
+	mes " ";
 
+	// Show current status
 	if ($@HappyHourActive) {
 		set .@remaining, callfunc("F_HappyHourRemaining");
-		mes "^00AA00Status: ACTIVE^000000";
-		mes "Time remaining: "+.@remaining+" minutes";
-		next;
-
-		if (select("Stop Happy Hour:Back") == 1) {
-			donpcevent "HappyHour::OnManualStop";
-			mes "[Events Manager]";
-			mes "Happy Hour has been stopped.";
-			close;
-		}
-		goto L_HappyHour;
+		mes "^00AA00Status: ACTIVE^000000 ("+.@remaining+"m left)";
+	} else {
+		mes "^FF0000Status: INACTIVE^000000";
 	}
+	mes " ";
 
-	mes "^FF0000Status: INACTIVE^000000";
+	// Show scheduled Happy Hours
+	query_sql "SELECT es.id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour, es.start_minute, es.duration_minutes, es.enabled FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' ORDER BY es.day_of_week, es.start_hour", .@ids, .@days$, .@hours, .@mins, .@durations, .@enabled;
+
+	if (getarraysize(.@ids) == 0) {
+		mes "^888888No schedules configured.^000000";
+	} else {
+		mes "^0055FFScheduled:^000000";
+		for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+			set .@status$, (.@enabled[.@i] ? "^00AA00ON^000000" : "^FF0000OFF^000000");
+			mes "["+.@ids[.@i]+"] "+.@days$[.@i]+" "+.@hours[.@i]+":"+(.@mins[.@i] < 10 ? "0" : "")+.@mins[.@i]+" ("+.@durations[.@i]+"m) "+.@status$;
+		}
+	}
 	next;
 
-	switch(select("Start Happy Hour:Manage Schedule:Back")) {
-		case 1:
-			mes "[Start Happy Hour]";
-			mes "Select duration:";
-			next;
-			set .@choice, select("30 minutes:1 hour:2 hours:3 hours:Custom");
-			switch(.@choice) {
-				case 1: set $@HappyHourDuration, 30; break;
-				case 2: set $@HappyHourDuration, 60; break;
-				case 3: set $@HappyHourDuration, 120; break;
-				case 4: set $@HappyHourDuration, 180; break;
-				case 5:
-					mes "[Custom Duration]";
-					mes "Enter duration in minutes:";
-					input .@custom;
-					if (.@custom < 10 || .@custom > 480) {
-						mes "Invalid duration. Must be 10-480 minutes.";
-						close;
-					}
-					set $@HappyHourDuration, .@custom;
-					break;
-			}
-			donpcevent "HappyHour::OnEventStart";
-			mes "[Events Manager]";
-			mes "Happy Hour started for "+$@HappyHourDuration+" minutes!";
-			close;
-
-		case 2:
-			mes "[Happy Hour Schedule]";
-			query_sql "SELECT es.id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour, es.start_minute, es.duration_minutes, es.enabled FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' ORDER BY es.day_of_week", .@ids, .@days$, .@hours, .@mins, .@durations, .@enabled;
-
-			if (getarraysize(.@ids) == 0) {
-				mes "No scheduled Happy Hours.";
-			} else {
-				for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
-					set .@status$, (.@enabled[.@i] ? "^00AA00ON^000000" : "^FF0000OFF^000000");
-					mes .@days$[.@i]+" "+.@hours[.@i]+":"+(.@mins[.@i] < 10 ? "0" : "")+.@mins[.@i]+" ("+.@durations[.@i]+"m) ["+.@status$+"]";
-				}
-			}
-			next;
-
-			switch(select("Add Schedule:Toggle Schedule:Remove Schedule:Back")) {
-				case 1:
-					mes "Select day:";
-					next;
-					set .@day, select("Monday:Tuesday:Wednesday:Thursday:Friday:Saturday:Sunday") - 1;
-					mes "Enter hour (0-23):";
-					input .@hour;
-					if (.@hour < 0 || .@hour > 23) { mes "Invalid hour."; close; }
-					mes "Enter minute (0-59):";
-					input .@minute;
-					if (.@minute < 0 || .@minute > 59) { mes "Invalid minute."; close; }
-					mes "Duration (minutes):";
-					input .@duration;
-					if (.@duration < 10 || .@duration > 480) { mes "Invalid duration."; close; }
-
-					// Get event_type_id for happy_hour
-					query_sql "SELECT id FROM event_types WHERE code = 'happy_hour'", .@type_id;
-					query_sql "INSERT INTO event_schedule (event_type_id, event_code, schedule_type, day_of_week, start_hour, start_minute, duration_minutes, enabled) VALUES ("+.@type_id+", 'happy_hour', 'weekly', "+.@day+", "+.@hour+", "+.@minute+", "+.@duration+", 1)";
-					callsub S_InvalidateCache;
-					mes "Schedule added!";
-					close;
-
-				case 2:
-					if (getarraysize(.@ids) == 0) { mes "No schedules to toggle."; close; }
-					mes "Enter schedule ID to toggle:";
-					input .@toggle_id;
-					query_sql "UPDATE event_schedule SET enabled = NOT enabled WHERE id = "+.@toggle_id;
-					callsub S_InvalidateCache;
-					mes "Schedule toggled!";
-					close;
-
-				case 3:
-					if (getarraysize(.@ids) == 0) { mes "No schedules to remove."; close; }
-					mes "Enter schedule ID to remove:";
-					input .@remove_id;
-					query_sql "DELETE FROM event_schedule WHERE id = "+.@remove_id;
-					callsub S_InvalidateCache;
-					mes "Schedule removed!";
-					close;
-
-				case 4:
-					goto L_GMMenu;
-			}
-			close;
-
-		case 3:
-			goto L_GMMenu;
+	// Menu options
+	if ($@HappyHourActive) {
+		switch(select("Add Schedule:Toggle Schedule:Remove Schedule:Stop Current:Back")) {
+			case 1: goto L_HH_Add;
+			case 2: goto L_HH_Toggle;
+			case 3: goto L_HH_Remove;
+			case 4:
+				donpcevent "HappyHour::OnManualStop";
+				mes "[Events Manager]";
+				mes "Happy Hour stopped.";
+				close;
+			case 5: goto L_GMMenu;
+		}
+	} else {
+		switch(select("Add Schedule:Toggle Schedule:Remove Schedule:Back")) {
+			case 1: goto L_HH_Add;
+			case 2: goto L_HH_Toggle;
+			case 3: goto L_HH_Remove;
+			case 4: goto L_GMMenu;
+		}
 	}
 	end;
+
+L_HH_Add:
+	mes "[Add Happy Hour]";
+	mes "Select day:";
+	next;
+	set .@day, select("Monday:Tuesday:Wednesday:Thursday:Friday:Saturday:Sunday") - 1;
+
+	mes "Select start time:";
+	next;
+	set .@time_choice, select("9 AM:12 PM:3 PM:6 PM:9 PM:Custom");
+	switch(.@time_choice) {
+		case 1: set .@hour, 9; set .@minute, 0; break;
+		case 2: set .@hour, 12; set .@minute, 0; break;
+		case 3: set .@hour, 15; set .@minute, 0; break;
+		case 4: set .@hour, 18; set .@minute, 0; break;
+		case 5: set .@hour, 21; set .@minute, 0; break;
+		case 6:
+			mes "Enter hour (0-23):";
+			input .@hour;
+			if (.@hour < 0 || .@hour > 23) { mes "Invalid hour."; close; }
+			mes "Enter minute (0-59):";
+			input .@minute;
+			if (.@minute < 0 || .@minute > 59) { mes "Invalid minute."; close; }
+			break;
+	}
+
+	mes "Select duration:";
+	next;
+	set .@dur_choice, select("30 minutes:1 hour:2 hours:3 hours");
+	switch(.@dur_choice) {
+		case 1: set .@duration, 30; set .@dur$, "30 min"; break;
+		case 2: set .@duration, 60; set .@dur$, "1 hour"; break;
+		case 3: set .@duration, 120; set .@dur$, "2 hours"; break;
+		case 4: set .@duration, 180; set .@dur$, "3 hours"; break;
+	}
+
+	// Format day name and time for confirmation
+	setarray .@daynames$[0], "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday";
+	set .@ampm$, (.@hour >= 12) ? "PM" : "AM";
+	set .@hour12, (.@hour > 12) ? .@hour - 12 : ((.@hour == 0) ? 12 : .@hour);
+	set .@time$, .@hour12 + ":" + ((.@minute < 10) ? "0" : "") + .@minute + " " + .@ampm$;
+
+	mes "[Confirm Schedule]";
+	mes "^0055FF" + .@daynames$[.@day] + " at " + .@time$ + "^000000";
+	mes "Duration: ^0055FF" + .@dur$ + "^000000";
+	next;
+	if (select("Confirm:Cancel") == 2) {
+		mes "Schedule cancelled.";
+		close;
+	}
+
+	// Get event_type_id for happy_hour
+	query_sql "SELECT id FROM event_types WHERE code = 'happy_hour'", .@type_id;
+	query_sql "INSERT INTO event_schedule (event_type_id, event_code, schedule_type, day_of_week, start_hour, start_minute, duration_minutes, enabled) VALUES ("+.@type_id+", 'happy_hour', 'weekly', "+.@day+", "+.@hour+", "+.@minute+", "+.@duration+", 1)";
+	query_sql "SELECT LAST_INSERT_ID()", .@new_id;
+
+	// Calculate next_run for the new schedule
+	query_sql "UPDATE event_schedule SET next_run = DATE_ADD(DATE_ADD(CURDATE(), INTERVAL (("+.@day+" - WEEKDAY(CURDATE()) + 7) % 7) DAY), INTERVAL "+.@hour+" * 60 + "+.@minute+" MINUTE) WHERE id = "+.@new_id;
+
+	// Check if we're currently within the active window and should trigger now
+	query_sql "SELECT WEEKDAY(NOW()), HOUR(NOW()) * 60 + MINUTE(NOW())", .@today_dow, .@cur_mins;
+	.@start_mins = .@hour * 60 + .@minute;
+	.@end_mins = .@start_mins + .@duration;
+
+	if (.@today_dow == .@day && .@cur_mins >= .@start_mins && .@cur_mins < .@end_mins && !$@HappyHourActive) {
+		// We're in the window! Trigger Happy Hour
+		.@remaining = .@end_mins - .@cur_mins;
+		set $@HappyHourDuration, .@remaining;
+		set $@HappyHourScheduleId, .@new_id;
+		donpcevent "HappyHour::OnEventStart";
+		callsub S_InvalidateCache;
+		mes "[Events Manager]";
+		mes "Schedule added and ^00AA00Happy Hour started^000000!";
+		mes "Time remaining: "+.@remaining+" minutes";
+		close;
+	}
+
+	callsub S_InvalidateCache;
+	mes "[Events Manager]";
+	mes "Schedule added!";
+	close;
+
+L_HH_Toggle:
+	query_sql "SELECT es.id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour, es.enabled FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' ORDER BY es.day_of_week", .@ids, .@days$, .@hours, .@enabled;
+	if (getarraysize(.@ids) == 0) {
+		mes "No schedules to toggle.";
+		close;
+	}
+	mes "[Toggle Schedule]";
+	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+		set .@status$, (.@enabled[.@i] ? "ON" : "OFF");
+		mes "["+.@ids[.@i]+"] "+.@days$[.@i]+" "+.@hours[.@i]+":00 - "+.@status$;
+	}
+	mes " ";
+	mes "Enter ID to toggle:";
+	input .@toggle_id;
+	query_sql "UPDATE event_schedule SET enabled = NOT enabled WHERE id = "+.@toggle_id+" AND event_code = 'happy_hour'";
+	callsub S_InvalidateCache;
+	mes "Toggled!";
+	close;
+
+L_HH_Remove:
+	query_sql "SELECT es.id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' ORDER BY es.day_of_week", .@ids, .@days$, .@hours;
+	if (getarraysize(.@ids) == 0) {
+		mes "No schedules to remove.";
+		close;
+	}
+	mes "[Remove Schedule]";
+	for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
+		mes "["+.@ids[.@i]+"] "+.@days$[.@i]+" "+.@hours[.@i]+":00";
+	}
+	mes " ";
+	mes "Enter ID to remove:";
+	input .@remove_id;
+	query_sql "DELETE FROM event_schedule WHERE id = "+.@remove_id+" AND event_code = 'happy_hour'";
+	callsub S_InvalidateCache;
+	mes "Removed!";
+	close;
 
 // ============================================================
 // EXP Boost Management (Simplified)

@@ -93,10 +93,7 @@ OnEventStart:
 	set .@dur$, callfunc("F_FormatDuration", $@ExpBoostDuration);
 
 	// Announce
-	announce "===========================================", bc_all, 0x00BFFF;
-	announce "      EXP BOOST ACTIVATED!", bc_all, 0x00BFFF;
-	announce "   "+.@mult$+" EXP rates for "+.@dur$+"!", bc_all, 0x00BFFF;
-	announce "===========================================", bc_all, 0x00BFFF;
+	announce "[EXP Boost] "+.@mult$+" EXP rates activated for "+.@dur$+"!", bc_all, 0x00BFFF;
 
 	debugmes "[ExpBoost] Started - "+.@mult$+" for "+.@dur$;
 	end;
@@ -129,10 +126,7 @@ OnEventEnd:
 	set $@ExpBoostInstanceId, 0;
 
 	// Announce
-	announce "===========================================", bc_all, 0x00BFFF;
-	announce "      EXP BOOST DEACTIVATED!", bc_all, 0x00BFFF;
-	announce "   EXP rates have returned to normal.", bc_all, 0x00BFFF;
-	announce "===========================================", bc_all, 0x00BFFF;
+	announce "[EXP Boost] Event ended - EXP rates returned to normal.", bc_all, 0x00BFFF;
 
 	debugmes "[ExpBoost] Ended";
 	end;
