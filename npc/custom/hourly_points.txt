@@ -209,14 +209,10 @@ OnInit:
 	// Define shop items and their point costs
 	// Format: Item ID, Point Cost
 	setarray .ShopItems[0],
-		12028,   // Box of Thunder (45 sec, +40% speed)
-		12016,   // Speed Potion (15 sec, +60% speed)
 		14003,   // Elite Siege Supply Box
 		12210;   // Bubble Gum
 
 	setarray .ShopPrices[0],
-		5,       // Box of Thunder = 5 pts (mid-tier speed)
-		5,       // Speed Potion = 5 pts (burst speed)
 		15,      // Elite Siege Supply = 15 pts
 		100;     // Bubble Gum = 100 pts
 

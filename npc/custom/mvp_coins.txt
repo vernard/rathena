@@ -278,16 +278,18 @@ OnInit:
 	// Define shop items and their point costs
 	// Format: Item ID, Point Cost
 	setarray .ShopItems[0],
-		678,     // Poison Bottle
-		12016,   // Speed Potion
 		14003,   // Elite Siege Supply Box
-		7621;    // Token of Siegfried
+		12214,   // Convex Mirror
+		7621,    // Token of Siegfried
+		616,     // Old Card Album
+		12103;   // Bloody Branch
 
 	setarray .ShopPrices[0],
-		1,       // Poison Bottle = 1 pt
-		2,       // Speed Potion = 2 pts
 		5,       // Elite Siege Supply = 5 pts
-		10;      // Token of Siegfried = 10 pts
+		8,       // Convex Mirror = 8 pts
+		10,      // Token of Siegfried = 10 pts
+		25,      // Old Card Album = 25 pts
+		25;      // Bloody Branch = 25 pts
 
 	// Build the visual shop (prices shown are point costs)
 	// Clear all items first to prevent duplicates on reload

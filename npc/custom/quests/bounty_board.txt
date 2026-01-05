@@ -2206,9 +2206,7 @@ OnBuyItem:
 OnInit:
 	// Shop items and costs (parallel arrays)
 	setarray .ShopItems[0],
-		12028,  // Box of Thunder
-		12016,  // Speed Potion
-		608,    // Yggdrasil Leaf
+		608,    // Yggdrasil Seed
 		607,    // Yggdrasil Berry
 		12075,  // Str Dish10
 		12090,  // Agi Dish10
@@ -2217,21 +2215,21 @@ OnInit:
 		12095,  // Dex Dish10
 		12100,  // Luk Dish10
 		4103,   // Horong Card (Sight)
-		4040;   // Creamy Card (Teleport)
+		4040,   // Creamy Card (Teleport)
+		7776;   // Gym Pass (+200 weight)
 
 	setarray .ShopCosts[0],
-		25,     // Box of Thunder
-		25,     // Speed Potion
-		50,     // Yggdrasil Leaf
-		75,     // Yggdrasil Berry
+		3,      // Yggdrasil Seed
+		5,      // Yggdrasil Berry
 		30,     // Str Dish10
 		30,     // Agi Dish10
 		30,     // Vit Dish10
 		30,     // Int Dish10
 		30,     // Dex Dish10
 		30,     // Luk Dish10
-		400,    // Horong Card
-		500;    // Creamy Card
+		300,    // Horong Card
+		400,    // Creamy Card
+		200;    // Gym Pass
 
 	// Build visual shop (prices shown are point costs)
 	// Clear items first to prevent duplicates on reload
