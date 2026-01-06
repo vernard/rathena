@@ -1,0 +1,461 @@
+//===== rAthena Script =======================================
+//= Event Trigger Library
+//= Shared functions for conditional trigger management
+//===== Description: =========================================
+//= Provides reusable UI and logic for event NPCs to manage
+//= their conditional trigger groups and conditions.
+//=
+//= Usage in event NPCs:
+//=   callfunc "F_TriggerMenu", <event_code$>;
+//============================================================
+
+// ============================================================
+// Main Trigger Management Menu
+// Args: event_code$ - The event type code (e.g., "invasion")
+// ============================================================
+function	script	F_TriggerMenu	{
+	.@event_code$ = getarg(0);
+
+	// Get event type info
+	query_sql "SELECT id, name FROM event_types WHERE code = '"+escape_sql(.@event_code$)+"'", .@event_type_id, .@event_name$;
+	if (!.@event_type_id) {
+		mes "^FF0000Error: Unknown event type '"+.@event_code$+"'^000000";
+		return;
+	}
+
+	// Count trigger groups
+	query_sql "SELECT COUNT(*) FROM event_trigger_groups WHERE event_type_id = "+.@event_type_id, .@group_count;
+
+F_TriggerMenu_Loop:
+	clear;
+	mes "[Trigger Settings]";
+	mes "^0055FF"+.@event_name$+"^000000";
+	mes " ";
+	mes "Manage conditional triggers for this event.";
+	mes "^777777("+.@group_count+" trigger group"+((.@group_count != 1) ? "s" : "")+" configured)^000000";
+	next;
+
+	switch(select(
+		"View Trigger Groups",
+		"Test Triggers Now",
+		"View Recent Triggers",
+		"Back"
+	)) {
+	case 1:
+		callfunc "F_TriggerGroups", .@event_type_id, .@event_name$;
+		goto F_TriggerMenu_Loop;
+	case 2:
+		callfunc "F_TestTriggers", .@event_type_id, .@event_code$;
+		goto F_TriggerMenu_Loop;
+	case 3:
+		callfunc "F_RecentTriggers", .@event_type_id, .@event_name$;
+		goto F_TriggerMenu_Loop;
+	case 4:
+		return;
+	}
+	return;
+}
+
+// ============================================================
+// View/Manage Trigger Groups
+// ============================================================
+function	script	F_TriggerGroups	{
+	.@event_type_id = getarg(0);
+	.@event_name$ = getarg(1);
+
+F_TriggerGroups_Loop:
+	clear;
+	mes "[Trigger Groups]";
+	mes "^0055FF"+.@event_name$+"^000000";
+	mes " ";
+
+	// Get all groups
+	query_sql "SELECT id, name, enabled, check_interval_minutes, priority FROM event_trigger_groups WHERE event_type_id = "+.@event_type_id+" ORDER BY priority DESC", .@ids, .@names$, .@enabled, .@intervals, .@priority;
+
+	.@count = getarraysize(.@ids);
+	if (.@count == 0) {
+		mes "No trigger groups configured.";
+		mes " ";
+		mes "^777777Trigger groups define conditions";
+		mes "that can start this event.^000000";
+		next;
+		select("Back");
+		return;
+	}
+
+	mes "Select a group to view/edit:";
+	mes " ";
+
+	// Build menu
+	.@menu$ = "";
+	for (.@i = 0; .@i < .@count; .@i++) {
+		.@status$ = (.@enabled[.@i]) ? "^00AA00ON^000000" : "^FF0000OFF^000000";
+		.@menu$ = .@menu$ + .@status$ + " " + .@names$[.@i] + ":";
+	}
+	.@menu$ = .@menu$ + "Back";
+
+	next;
+	.@sel = select(.@menu$) - 1;
+
+	if (.@sel >= .@count) return;  // Back selected
+
+	// Show group details
+	callfunc "F_GroupDetail", .@ids[.@sel], .@names$[.@sel], .@enabled[.@sel], .@intervals[.@sel];
+	goto F_TriggerGroups_Loop;
+}
+
+// ============================================================
+// Group Detail View
+// ============================================================
+function	script	F_GroupDetail	{
+	.@group_id = getarg(0);
+	.@group_name$ = getarg(1);
+	.@enabled = getarg(2);
+	.@interval = getarg(3);
+
+F_GroupDetail_Loop:
+	clear;
+	mes "["+.@group_name$+"]";
+	mes " ";
+
+	// Get description
+	query_sql "SELECT description, last_checked FROM event_trigger_groups WHERE id = "+.@group_id, .@desc$, .@last_checked$;
+
+	if (.@desc$ != "") {
+		mes "^777777"+.@desc$+"^000000";
+		mes " ";
+	}
+
+	mes "Status: " + ((.@enabled) ? "^00AA00Enabled^000000" : "^FF0000Disabled^000000");
+	mes "Check Interval: ^0055FF"+.@interval+" min^000000";
+	if (.@last_checked$ != "" && .@last_checked$ != "NULL") {
+		mes "Last Checked: ^777777"+.@last_checked$+"^000000";
+	}
+	mes " ";
+
+	// Show conditions summary
+	query_sql "SELECT COUNT(*) FROM event_trigger_conditions WHERE group_id = "+.@group_id, .@cond_count;
+	mes "Conditions: ^0055FF"+.@cond_count+"^000000";
+
+	next;
+	switch(select(
+		((.@enabled) ? "Disable" : "Enable") + " Group",
+		"View Conditions",
+		"Edit Check Interval",
+		"Back"
+	)) {
+	case 1:
+		// Toggle enabled
+		.@new_enabled = !.@enabled;
+		query_sql "UPDATE event_trigger_groups SET enabled = "+.@new_enabled+" WHERE id = "+.@group_id;
+		.@enabled = .@new_enabled;
+		mes "Group " + ((.@enabled) ? "^00AA00enabled^000000" : "^FF0000disabled^000000") + ".";
+		next;
+		goto F_GroupDetail_Loop;
+	case 2:
+		callfunc "F_ViewConditions", .@group_id, .@group_name$;
+		goto F_GroupDetail_Loop;
+	case 3:
+		callfunc "F_EditInterval", .@group_id;
+		query_sql "SELECT check_interval_minutes FROM event_trigger_groups WHERE id = "+.@group_id, .@interval;
+		goto F_GroupDetail_Loop;
+	case 4:
+		return;
+	}
+	return;
+}
+
+// ============================================================
+// View Conditions for a Group
+// ============================================================
+function	script	F_ViewConditions	{
+	.@group_id = getarg(0);
+	.@group_name$ = getarg(1);
+
+	clear;
+	mes "[Conditions]";
+	mes "^0055FF"+.@group_name$+"^000000";
+	mes " ";
+	mes "All conditions must pass (AND logic)";
+	mes "for this trigger group to fire.";
+	mes " ";
+
+	// Get conditions ordered by eval_order
+	query_sql "SELECT condition_type, params, required, eval_order FROM event_trigger_conditions WHERE group_id = "+.@group_id+" ORDER BY eval_order", .@types$, .@params$, .@required, .@orders;
+
+	.@count = getarraysize(.@types$);
+	if (.@count == 0) {
+		mes "^777777No conditions configured.^000000";
+		next;
+		select("Back");
+		return;
+	}
+
+	for (.@i = 0; .@i < .@count; .@i++) {
+		.@req$ = (.@required[.@i]) ? "" : " ^777777(optional)^000000";
+		.@desc$ = callfunc("F_ConditionDesc", .@types$[.@i], .@params$[.@i]);
+		mes "^0055FF"+(.@i+1)+".^000000 "+.@desc$+.@req$;
+	}
+
+	next;
+	select("Back");
+	return;
+}
+
+// ============================================================
+// Get human-readable condition description
+// ============================================================
+function	script	F_ConditionDesc	{
+	.@type$ = getarg(0);
+	.@params$ = getarg(1);
+
+	if (.@type$ == "random_chance") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.percent'))", .@pct$;
+		return "Random: ^00AA00"+.@pct$+"%^000000 chance";
+	}
+	else if (.@type$ == "outside_woe") {
+		return "Outside WoE times";
+	}
+	else if (.@type$ == "cooldown") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.minutes'))", .@min$;
+		return "Cooldown: ^00AA00"+.@min$+"^000000 min since last";
+	}
+	else if (.@type$ == "time_window") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.start_hour')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.end_hour'))", .@start$, .@end$;
+		return "Time: ^00AA00"+.@start$+":00 - "+.@end$+":00^000000";
+	}
+	else if (.@type$ == "player_count") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.min')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.max'))", .@min$, .@max$;
+		if (.@max$ == "" || .@max$ == "null" || .@max$ == "0") {
+			return "Players: ^00AA00"+.@min$+"+^000000 online";
+		}
+		return "Players: ^00AA00"+.@min$+"-"+.@max$+"^000000 online";
+	}
+	else if (.@type$ == "active_player_count") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.min')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.window_minutes'))", .@min$, .@win$;
+		return "Active players: ^00AA00"+.@min$+"+^000000 in "+.@win$+" min";
+	}
+	else if (.@type$ == "no_active_event") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.events'))", .@events$;
+		return "No conflicts: "+.@events$;
+	}
+	else if (.@type$ == "day_of_week") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.days'))", .@days$;
+		return "Days: "+.@days$;
+	}
+
+	return .@type$+": "+.@params$;
+}
+
+// ============================================================
+// Edit Check Interval
+// ============================================================
+function	script	F_EditInterval	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[Check Interval]";
+	mes " ";
+	mes "How often should this trigger";
+	mes "group be evaluated?";
+	mes " ";
+	mes "^777777Lower = more responsive but";
+	mes "uses more server resources.^000000";
+	next;
+
+	switch(select(
+		"Every 1 minute",
+		"Every 5 minutes",
+		"Every 10 minutes",
+		"Every 15 minutes",
+		"Every 30 minutes",
+		"Cancel"
+	)) {
+	case 1: .@new_interval = 1; break;
+	case 2: .@new_interval = 5; break;
+	case 3: .@new_interval = 10; break;
+	case 4: .@new_interval = 15; break;
+	case 5: .@new_interval = 30; break;
+	case 6: return;
+	}
+
+	query_sql "UPDATE event_trigger_groups SET check_interval_minutes = "+.@new_interval+" WHERE id = "+.@group_id;
+	mes "Interval updated to ^00AA00"+.@new_interval+" minutes^000000.";
+	next;
+	return;
+}
+
+// ============================================================
+// Test Triggers (evaluate now without waiting)
+// ============================================================
+function	script	F_TestTriggers	{
+	.@event_type_id = getarg(0);
+	.@event_code$ = getarg(1);
+
+	clear;
+	mes "[Test Triggers]";
+	mes " ";
+	mes "This will evaluate all trigger";
+	mes "groups right now and show which";
+	mes "conditions pass or fail.";
+	mes " ";
+	mes "^FF0000Note: This is a dry-run.^000000";
+	mes "^FF0000The event won't actually start.^000000";
+	next;
+
+	if (select("Run Test:Cancel") == 2) return;
+
+	clear;
+	mes "[Test Results]";
+	mes " ";
+
+	// Get all enabled groups
+	query_sql "SELECT id, name, last_ended_config_key FROM event_trigger_groups WHERE event_type_id = "+.@event_type_id+" AND enabled = 1 ORDER BY priority DESC", .@gids, .@gnames$, .@config_keys$;
+
+	.@gcount = getarraysize(.@gids);
+	if (.@gcount == 0) {
+		mes "^FF0000No enabled trigger groups.^000000";
+		next;
+		select("Back");
+		return;
+	}
+
+	for (.@g = 0; .@g < .@gcount; .@g++) {
+		mes "^0055FF"+.@gnames$[.@g]+"^000000:";
+
+		// Get conditions
+		query_sql "SELECT condition_type, params, required FROM event_trigger_conditions WHERE group_id = "+.@gids[.@g]+" ORDER BY eval_order", .@ctypes$, .@cparams$, .@creq;
+
+		.@all_passed = 1;
+		.@ccount = getarraysize(.@ctypes$);
+
+		for (.@c = 0; .@c < .@ccount; .@c++) {
+			.@result = callfunc("F_EvalCondition", .@ctypes$[.@c], .@cparams$[.@c], .@event_type_id, .@config_keys$[.@g]);
+			.@status$ = (.@result) ? "^00AA00PASS^000000" : "^FF0000FAIL^000000";
+			.@req$ = (.@creq[.@c]) ? "" : " (opt)";
+			mes "  "+.@status$+" "+callfunc("F_ConditionDesc", .@ctypes$[.@c], .@cparams$[.@c])+.@req$;
+
+			if (!.@result && .@creq[.@c]) .@all_passed = 0;
+		}
+
+		if (.@all_passed) {
+			mes "  ^00AA00--> GROUP WOULD TRIGGER^000000";
+		} else {
+			mes "  ^777777--> Group blocked^000000";
+		}
+		mes " ";
+	}
+
+	next;
+	select("Back");
+	return;
+}
+
+// ============================================================
+// Evaluate a condition (for testing - returns value directly)
+// This duplicates logic from scheduler but returns value
+// ============================================================
+function	script	F_EvalCondition	{
+	.@type$ = getarg(0);
+	.@params$ = getarg(1);
+	.@event_type_id = getarg(2);
+	.@config_key$ = getarg(3, "");
+
+	if (.@type$ == "random_chance") {
+		// For testing, always pass random (we want to see other conditions)
+		return 1;
+	}
+	else if (.@type$ == "outside_woe") {
+		if (agitcheck() || agitcheck2()) return 0;
+		return 1;
+	}
+	else if (.@type$ == "no_active_event") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.events'))", .@events$;
+		if (countstr(.@events$, "invasion") > 0) {
+			query_sql "SELECT 1 FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'invasion' AND ei.status = 'active' LIMIT 1", .@active;
+			if (.@active || $@InvasionActive) return 0;
+		}
+		if (countstr(.@events$, "exp_boost") > 0) {
+			query_sql "SELECT 1 FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND ei.status = 'active' LIMIT 1", .@active;
+			if (.@active || $@ExpBoostActive) return 0;
+		}
+		if (countstr(.@events$, "happy_hour") > 0) {
+			query_sql "SELECT 1 FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'happy_hour' AND ei.status = 'active' LIMIT 1", .@active;
+			if (.@active || $@HappyHourActive) return 0;
+		}
+		return 1;
+	}
+	else if (.@type$ == "cooldown") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.minutes'))", .@minutes$;
+		.@minutes = atoi(.@minutes$);
+		if (.@minutes <= 0) return 1;
+		if (.@config_key$ == "") return 1;
+		query_sql "SELECT config_value FROM event_config WHERE config_key = '"+escape_sql(.@config_key$)+"'", .@last_ended$;
+		.@last_ended = atoi(.@last_ended$);
+		if (.@last_ended == 0) return 1;
+		.@elapsed_min = (gettimetick(2) - .@last_ended) / 60;
+		return (.@elapsed_min >= .@minutes);
+	}
+	else if (.@type$ == "time_window") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.start_hour')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.end_hour'))", .@start$, .@end$;
+		.@start = atoi(.@start$);
+		.@end = atoi(.@end$);
+		.@hour = gettime(3);
+		return (.@hour >= .@start && .@hour < .@end);
+	}
+	else if (.@type$ == "player_count") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.min')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.max'))", .@min$, .@max$;
+		.@min = atoi(.@min$);
+		.@max = atoi(.@max$);
+		.@count = getusers(1);
+		if (.@min > 0 && .@count < .@min) return 0;
+		if (.@max > 0 && .@count > .@max) return 0;
+		return 1;
+	}
+	else if (.@type$ == "active_player_count") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.min')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.window_minutes'))", .@min$, .@window$;
+		.@min = atoi(.@min$);
+		.@window = atoi(.@window$);
+		if (.@window <= 0) .@window = 10;
+		query_sql "SELECT COUNT(*) FROM player_activity_tracking WHERE position_changed = 1 AND last_seen >= DATE_SUB(NOW(), INTERVAL "+.@window+" MINUTE)", .@active_count;
+		return (.@active_count >= .@min);
+	}
+	else if (.@type$ == "day_of_week") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.days'))", .@days$;
+		.@today = gettime(4);
+		.@today_mon = (.@today == 0) ? 6 : (.@today - 1);
+		return (countstr(.@days$, ""+.@today_mon) > 0);
+	}
+
+	return 0;
+}
+
+// ============================================================
+// View Recent Triggers (history)
+// ============================================================
+function	script	F_RecentTriggers	{
+	.@event_type_id = getarg(0);
+	.@event_name$ = getarg(1);
+
+	clear;
+	mes "[Recent Triggers]";
+	mes "^0055FF"+.@event_name$+"^000000";
+	mes " ";
+
+	// Get last 5 conditional triggers
+	query_sql "SELECT DATE_FORMAT(actual_start, '%m/%d %H:%i'), tg.name FROM event_instances ei LEFT JOIN event_trigger_groups tg ON ei.trigger_group_id = tg.id WHERE ei.event_type_id = "+.@event_type_id+" AND ei.trigger_type = 'conditional' ORDER BY ei.actual_start DESC LIMIT 5", .@times$, .@groups$;
+
+	.@count = getarraysize(.@times$);
+	if (.@count == 0) {
+		mes "No conditional triggers yet.";
+	} else {
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@group$ = (.@groups$[.@i] != "") ? .@groups$[.@i] : "Unknown";
+			mes "^0055FF"+.@times$[.@i]+"^000000 - "+.@group$;
+		}
+	}
+
+	next;
+	select("Back");
+	return;
+}

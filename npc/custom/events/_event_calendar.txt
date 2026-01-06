@@ -305,7 +305,7 @@ L_HappyHour:
 
 	// Menu options
 	if ($@HappyHourActive) {
-		switch(select("Add Schedule:Toggle Schedule:Remove Schedule:Stop Current:Back")) {
+		switch(select("Add Schedule:Toggle Schedule:Remove Schedule:Stop Current:Manage Triggers:Back")) {
 			case 1: goto L_HH_Add;
 			case 2: goto L_HH_Toggle;
 			case 3: goto L_HH_Remove;
@@ -314,17 +314,23 @@ L_HappyHour:
 				mes "[Events Manager]";
 				mes "Happy Hour stopped.";
 				close;
-			case 5: goto L_GMMenu;
+			case 5: goto L_HH_Triggers;
+			case 6: goto L_GMMenu;
 		}
 	} else {
-		switch(select("Add Schedule:Toggle Schedule:Remove Schedule:Back")) {
+		switch(select("Add Schedule:Toggle Schedule:Remove Schedule:Manage Triggers:Back")) {
 			case 1: goto L_HH_Add;
 			case 2: goto L_HH_Toggle;
 			case 3: goto L_HH_Remove;
-			case 4: goto L_GMMenu;
+			case 4: goto L_HH_Triggers;
+			case 5: goto L_GMMenu;
 		}
 	}
 	end;
+
+L_HH_Triggers:
+	callfunc "F_TriggerMenu", "happy_hour";
+	goto L_HappyHour;
 
 L_HH_Add:
 	mes "[Add Happy Hour]";
@@ -559,18 +565,24 @@ L_ExpBoost:
 	next;
 
 	if (getarraysize(.@pend_ids) > 0) {
-		switch(select("Schedule EXP Boost:Cancel Scheduled:Back")) {
+		switch(select("Schedule EXP Boost:Cancel Scheduled:Manage Triggers:Back")) {
 			case 1: goto L_ScheduleExpBoost;
 			case 2: goto L_CancelExpBoost;
-			case 3: goto L_GMMenu;
+			case 3: goto L_ExpBoost_Triggers;
+			case 4: goto L_GMMenu;
 		}
 	} else {
-		switch(select("Schedule EXP Boost:Back")) {
+		switch(select("Schedule EXP Boost:Manage Triggers:Back")) {
 			case 1: goto L_ScheduleExpBoost;
-			case 2: goto L_GMMenu;
+			case 2: goto L_ExpBoost_Triggers;
+			case 3: goto L_GMMenu;
 		}
 	}
 	end;
+
+L_ExpBoost_Triggers:
+	callfunc "F_TriggerMenu", "exp_boost";
+	goto L_ExpBoost;
 
 // ============================================================
 // Schedule EXP Boost (NOW or future)
@@ -1008,21 +1020,23 @@ L_Invasion:
 
 	// Menu options
 	if ($@InvasionActive) {
-		switch(select("View Details:Force Wave Clear:Cancel Invasion:Configure:Back")) {
+		switch(select("View Details:Force Wave Clear:Cancel Invasion:Configure:Manage Triggers:Back")) {
 			case 1: goto L_Inv_Details;
 			case 2: goto L_Inv_ForceWave;
 			case 3: goto L_Inv_Cancel;
 			case 4: goto L_Inv_Config;
-			case 5: goto L_GMMenu;
+			case 5: goto L_Inv_Triggers;
+			case 6: goto L_GMMenu;
 		}
 	} else {
-		switch(select("Start Now:Schedule Invasion:View Schedules:Configure:Invasion History:Back")) {
+		switch(select("Start Now:Schedule Invasion:View Schedules:Configure:Manage Triggers:Invasion History:Back")) {
 			case 1: goto L_Inv_Start;
 			case 2: goto L_Inv_Schedule;
 			case 3: goto L_Inv_ViewSchedules;
 			case 4: goto L_Inv_Config;
-			case 5: goto L_Inv_History;
-			case 6: goto L_GMMenu;
+			case 5: goto L_Inv_Triggers;
+			case 6: goto L_Inv_History;
+			case 7: goto L_GMMenu;
 		}
 	}
 	end;
@@ -1554,6 +1568,10 @@ L_Inv_Config:
 			goto L_GMMenu;
 	}
 	end;
+
+L_Inv_Triggers:
+	callfunc "F_TriggerMenu", "invasion";
+	goto L_Invasion;
 
 L_Inv_History:
 	mes "[Invasion History]";

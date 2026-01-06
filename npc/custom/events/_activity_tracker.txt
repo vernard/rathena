@@ -1,0 +1,138 @@
+//===== rAthena Script =======================================
+//= Activity Tracker
+//= Tracks player activity for conditional event triggers
+//===== Description: =========================================
+//= - Samples player positions every 3 minutes
+//= - Detects "active" players (those who moved)
+//= - Saves aggregate snapshots every 5 minutes for analytics
+//= - Cleans up offline players from tracking table
+//============================================================
+
+-	script	ActivityTracker	FAKE_NPC,{
+	end;
+
+OnInit:
+	// Configuration
+	.sample_interval = 180000;  // 3 minutes in ms
+	.snapshot_interval = 5;     // 5 minutes (checked on minute boundary)
+	.offline_cleanup_minutes = 10;
+
+	// Start sampling timer
+	initnpctimer;
+	debugmes "[ActivityTracker] Initialized - sampling every 3 min, snapshots every 5 min";
+	end;
+
+OnTimer180000:  // 3 minutes
+	stopnpctimer;
+
+	// Sample all online player positions
+	callsub S_SamplePlayerPositions;
+
+	// Check if it's time for a snapshot (every 5 min, aligned to clock)
+	// gettime(2) = current minute (0-59)
+	if (gettime(2) % .snapshot_interval == 0) {
+		callsub S_SaveSnapshot;
+	}
+
+	// Restart timer
+	initnpctimer;
+	end;
+
+// ============================================================
+// Sample all online player positions
+// Updates player_activity_tracking table
+// ============================================================
+S_SamplePlayerPositions:
+	// Get all online player character IDs
+	.@count = getunits(BL_PC, .@gids);
+
+	if (.@count == 0) {
+		debugmes "[ActivityTracker] No players online";
+		// Still cleanup old entries
+		query_sql "DELETE FROM player_activity_tracking WHERE last_seen < DATE_SUB(NOW(), INTERVAL "+.offline_cleanup_minutes+" MINUTE)";
+		return;
+	}
+
+	.@updated = 0;
+	.@moved = 0;
+
+	for (.@i = 0; .@i < .@count; .@i++) {
+		if (attachrid(.@gids[.@i])) {
+			.@char_id = getcharid(0);
+			.@account_id = getcharid(3);
+			getmapxy(.@map$, .@x, .@y, BL_PC);
+
+			// Check previous position
+			.@prev_x = 0;
+			.@prev_y = 0;
+			.@prev_map$ = "";
+			query_sql "SELECT map_name, pos_x, pos_y FROM player_activity_tracking WHERE char_id = "+.@char_id, .@prev_map$, .@prev_x, .@prev_y;
+
+			// Determine if position changed
+			.@position_changed = 0;
+			if (.@prev_map$ != .@map$ || .@prev_x != .@x || .@prev_y != .@y) {
+				.@position_changed = 1;
+				.@moved++;
+			}
+
+			// Upsert tracking record
+			query_sql "REPLACE INTO player_activity_tracking (char_id, account_id, map_name, pos_x, pos_y, last_seen, position_changed) VALUES ("+.@char_id+", "+.@account_id+", '"+escape_sql(.@map$)+"', "+.@x+", "+.@y+", NOW(), "+.@position_changed+")";
+
+			.@updated++;
+			detachrid;
+		}
+	}
+
+	// Cleanup players who logged off
+	query_sql "DELETE FROM player_activity_tracking WHERE last_seen < DATE_SUB(NOW(), INTERVAL "+.offline_cleanup_minutes+" MINUTE)";
+
+	debugmes "[ActivityTracker] Sampled "+.@updated+" players, "+.@moved+" moved";
+	return;
+
+// ============================================================
+// Save aggregate snapshot for analytics
+// Inserts into player_activity_snapshots table
+// ============================================================
+S_SaveSnapshot:
+	// Count totals
+	.@online = getusers(1);
+
+	// Count active players (position changed since last sample)
+	query_sql "SELECT COUNT(*) FROM player_activity_tracking WHERE position_changed = 1", .@active;
+
+	.@idle = .@online - .@active;
+	if (.@idle < 0) .@idle = 0;  // Sanity check
+
+	// Build map breakdown JSON
+	// Get counts per map for active players
+	query_sql "SELECT map_name, COUNT(*) as cnt FROM player_activity_tracking WHERE position_changed = 1 GROUP BY map_name ORDER BY cnt DESC LIMIT 10", .@maps$, .@counts;
+
+	.@map_json$ = "{";
+	for (.@i = 0; .@i < getarraysize(.@maps$); .@i++) {
+		if (.@i > 0) .@map_json$ = .@map_json$ + ", ";
+		.@map_json$ = .@map_json$ + "\"" + .@maps$[.@i] + "\": " + .@counts[.@i];
+	}
+	.@map_json$ = .@map_json$ + "}";
+
+	// Insert snapshot (rounded to minute boundary)
+	// ON DUPLICATE KEY handles re-runs within same minute
+	query_sql "INSERT INTO player_activity_snapshots (snapshot_time, online_count, active_count, idle_count, map_breakdown) VALUES (DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:00'), "+.@online+", "+.@active+", "+.@idle+", '"+escape_sql(.@map_json$)+"') ON DUPLICATE KEY UPDATE online_count = VALUES(online_count), active_count = VALUES(active_count), idle_count = VALUES(idle_count), map_breakdown = VALUES(map_breakdown)";
+
+	// Reset position_changed flags for next snapshot window
+	query_sql "UPDATE player_activity_tracking SET position_changed = 0";
+
+	debugmes "[ActivityTracker] Snapshot: "+.@online+" online, "+.@active+" active, "+.@idle+" idle";
+	return;
+}
+
+// ============================================================
+// Helper function to get active player count
+// Used by conditional trigger system
+// ============================================================
+function	script	F_GetActivePlayerCount	{
+	.@window_minutes = getarg(0, 10);
+
+	query_sql "SELECT COUNT(*) FROM player_activity_tracking WHERE position_changed = 1 AND last_seen >= DATE_SUB(NOW(), INTERVAL "+.@window_minutes+" MINUTE)", .@count;
+
+	return .@count;
+}

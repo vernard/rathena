@@ -34,14 +34,14 @@ OnTimer60000:
 	stopnpctimer;
 	initnpctimer;
 
-	// Check for events ready to trigger
+	// Check for events ready to trigger (recurring + one-time)
 	callsub S_CheckScheduledEvents;
 
 	// Check if MOTD needs rotation announcement
 	callsub S_CheckMOTDRotation;
 
-	// Check if town invasion should trigger
-	callsub S_CheckInvasionTrigger;
+	// Check conditional triggers (replaces hardcoded S_CheckInvasionTrigger)
+	callsub S_CheckCondTriggers;
 	end;
 
 // ============================================================
@@ -378,9 +378,305 @@ S_CheckMOTDRotation:
 	return;
 
 // ============================================================
-// Check if Town Invasion should trigger
-// Uses cooldown + max wait window system
+// Check Conditional Triggers
+// Generic system that evaluates trigger groups for all events
 // ============================================================
+S_CheckCondTriggers:
+	// Query event types that have enabled trigger groups
+	query_sql "SELECT DISTINCT et.id, et.code FROM event_types et JOIN event_trigger_groups tg ON tg.event_type_id = et.id WHERE et.enabled = 1 AND tg.enabled = 1", .@type_ids, .@codes$;
+
+	for (.@i = 0; .@i < getarraysize(.@type_ids); .@i++) {
+		.@event_type_id = .@type_ids[.@i];
+		.@event_code$ = .@codes$[.@i];
+
+		// Skip if event is already active
+		.@already_active = 0;
+		query_sql "SELECT 1 FROM event_instances WHERE event_type_id = "+.@event_type_id+" AND status = 'active' LIMIT 1", .@already_active;
+		if (.@already_active) continue;
+
+		// Special check for invasion - also check global variable
+		if (.@event_code$ == "invasion" && $@InvasionActive) continue;
+
+		// Evaluate trigger groups for this event type
+		callsub S_EvaluateTriggerGroups, .@event_type_id, .@event_code$;
+	}
+	return;
+
+// ============================================================
+// Evaluate all trigger groups for an event type
+// Groups are evaluated in priority order (OR between groups)
+// ============================================================
+S_EvaluateTriggerGroups:
+	.@event_type_id = getarg(0);
+	.@event_code$ = getarg(1);
+
+	// Get all enabled trigger groups for this event, ordered by priority
+	query_sql "SELECT id, name, check_interval_minutes, last_checked, event_params, last_ended_config_key FROM event_trigger_groups WHERE event_type_id = "+.@event_type_id+" AND enabled = 1 ORDER BY priority DESC", .@group_ids, .@group_names$, .@intervals, .@last_checked$, .@event_params$, .@config_keys$;
+
+	for (.@g = 0; .@g < getarraysize(.@group_ids); .@g++) {
+		.@group_id = .@group_ids[.@g];
+		.@interval = .@intervals[.@g];
+
+		// Check if enough time has passed since last check
+		if (.@last_checked$[.@g] != "" && .@last_checked$[.@g] != "NULL") {
+			query_sql "SELECT TIMESTAMPDIFF(MINUTE, '"+.@last_checked$[.@g]+"', NOW())", .@minutes_since;
+			if (.@minutes_since < .@interval) {
+				// Not time to check this group yet
+				continue;
+			}
+		}
+
+		// Update last_checked timestamp
+		query_sql "UPDATE event_trigger_groups SET last_checked = NOW() WHERE id = "+.@group_id;
+
+		// Evaluate all conditions in this group (AND logic)
+		.@group_passed = 1;
+
+		query_sql "SELECT id, condition_type, params, required FROM event_trigger_conditions WHERE group_id = "+.@group_id+" ORDER BY eval_order", .@cond_ids, .@cond_types$, .@cond_params$, .@cond_required;
+
+		for (.@c = 0; .@c < getarraysize(.@cond_ids); .@c++) {
+			// Evaluate condition - result stored in .cond_result (NPC-scoped)
+			.cond_result = 0;
+			callsub S_EvaluateCondition, .@cond_types$[.@c], .@cond_params$[.@c], .@event_type_id, .@config_keys$[.@g];
+
+			if (!.cond_result && .@cond_required[.@c]) {
+				// Required condition failed - group fails
+				.@group_passed = 0;
+				break;
+			}
+		}
+
+		if (.@group_passed) {
+			// All conditions passed - trigger the event!
+			debugmes "[ConditionalTrigger] Group '"+.@group_names$[.@g]+"' passed for "+.@event_code$;
+			callsub S_TriggerCondEvent, .@event_type_id, .@event_code$, .@group_id, .@event_params$[.@g];
+			return;  // Stop evaluating other groups (OR logic satisfied)
+		}
+	}
+	return;
+
+// ============================================================
+// Evaluate a single condition
+// Sets .cond_result to 1 if condition passes, 0 if fails
+// ============================================================
+S_EvaluateCondition:
+	.@type$ = getarg(0);
+	.@params$ = getarg(1);
+	.@event_type_id = getarg(2);
+	.@config_key$ = getarg(3, "");
+
+	// Random chance - check FIRST for performance (short-circuits most checks)
+	if (.@type$ == "random_chance") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.percent'))", .@percent$;
+		.@percent = atoi(.@percent$);
+		if (.@percent <= 0) {
+			.cond_result = 0;
+			return;
+		}
+		.cond_result = (rand(100) < .@percent);
+		return;
+	}
+
+	// Outside WoE - pass if WoE is NOT active
+	if (.@type$ == "outside_woe") {
+		// Check agit flag (WoE active indicator)
+		// agitcheck() returns 1 if WoE is active
+		if (agitcheck() || agitcheck2()) {
+			.cond_result = 0;
+			return;
+		}
+		.cond_result = 1;
+		return;
+	}
+
+	// No active event - pass if specified events are NOT running
+	if (.@type$ == "no_active_event") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.events'))", .@events$;
+		// Parse JSON array - simple approach: check each known event
+		// Format: ["invasion", "exp_boost"]
+		if (countstr(.@events$, "invasion") > 0) {
+			.@active = 0;
+			query_sql "SELECT 1 FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'invasion' AND ei.status = 'active' LIMIT 1", .@active;
+			if (.@active || $@InvasionActive) {
+				.cond_result = 0;
+				return;
+			}
+		}
+		if (countstr(.@events$, "exp_boost") > 0) {
+			.@active = 0;
+			query_sql "SELECT 1 FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND ei.status = 'active' LIMIT 1", .@active;
+			if (.@active || $@ExpBoostActive) {
+				.cond_result = 0;
+				return;
+			}
+		}
+		if (countstr(.@events$, "happy_hour") > 0) {
+			.@active = 0;
+			query_sql "SELECT 1 FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'happy_hour' AND ei.status = 'active' LIMIT 1", .@active;
+			if (.@active || $@HappyHourActive) {
+				.cond_result = 0;
+				return;
+			}
+		}
+		.cond_result = 1;
+		return;
+	}
+
+	// Cooldown - pass if enough time since last event ended
+	if (.@type$ == "cooldown") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.minutes'))", .@minutes$;
+		.@minutes = atoi(.@minutes$);
+		if (.@minutes <= 0) {
+			.cond_result = 1;
+			return;
+		}
+
+		// Get last ended timestamp from config
+		if (.@config_key$ == "") {
+			.cond_result = 1;
+			return;
+		}
+		query_sql "SELECT config_value FROM event_config WHERE config_key = '"+escape_sql(.@config_key$)+"'", .@last_ended$;
+		.@last_ended = atoi(.@last_ended$);
+		if (.@last_ended == 0) {
+			.cond_result = 1;
+			return;
+		}
+
+		.@elapsed_min = (gettimetick(2) - .@last_ended) / 60;
+		.cond_result = (.@elapsed_min >= .@minutes);
+		return;
+	}
+
+	// Time window - pass if current hour is within range
+	if (.@type$ == "time_window") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.start_hour')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.end_hour'))", .@start$, .@end$;
+		.@start = atoi(.@start$);
+		.@end = atoi(.@end$);
+		.@hour = gettime(3);  // Current hour (0-23)
+		.cond_result = (.@hour >= .@start && .@hour < .@end);
+		return;
+	}
+
+	// Player count - pass if online players within range
+	if (.@type$ == "player_count") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.min')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.max'))", .@min$, .@max$;
+		.@min = atoi(.@min$);
+		.@max = atoi(.@max$);
+		.@count = getusers(1);
+		if (.@min > 0 && .@count < .@min) {
+			.cond_result = 0;
+			return;
+		}
+		if (.@max > 0 && .@count > .@max) {
+			.cond_result = 0;
+			return;
+		}
+		.cond_result = 1;
+		return;
+	}
+
+	// Active player count - pass if enough players moved recently
+	if (.@type$ == "active_player_count") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.min')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.window_minutes'))", .@min$, .@window$;
+		.@min = atoi(.@min$);
+		.@window = atoi(.@window$);
+		if (.@window <= 0) .@window = 10;  // Default 10 minutes
+
+		query_sql "SELECT COUNT(*) FROM player_activity_tracking WHERE position_changed = 1 AND last_seen >= DATE_SUB(NOW(), INTERVAL "+.@window+" MINUTE)", .@active_count;
+		.cond_result = (.@active_count >= .@min);
+		return;
+	}
+
+	// Day of week - pass if today is in the list
+	if (.@type$ == "day_of_week") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.days'))", .@days$;
+		// gettime(4) returns day of week: 0=Sunday, 1=Monday, ..., 6=Saturday
+		// Convert to 0=Monday format used in our config
+		.@today = gettime(4);
+		.@today_mon = (.@today == 0) ? 6 : (.@today - 1);  // Convert to 0=Mon
+
+		// Check if today is in the days array (simple string search)
+		.cond_result = (countstr(.@days$, ""+.@today_mon) > 0);
+		return;
+	}
+
+	// Unknown condition type
+	debugmes "[ConditionalTrigger] Unknown condition type: "+.@type$;
+	.cond_result = 0;
+	return;
+
+// ============================================================
+// Trigger an event via conditional trigger
+// ============================================================
+S_TriggerCondEvent:
+	.@event_type_id = getarg(0);
+	.@event_code$ = getarg(1);
+	.@group_id = getarg(2);
+	.@event_params$ = getarg(3, "");
+
+	debugmes "[ConditionalTrigger] Triggering "+.@event_code$+" via group "+.@group_id;
+
+	// Create event instance
+	query_sql "INSERT INTO event_instances (event_type_id, event_code, trigger_type, trigger_group_id, actual_start, status, event_data) VALUES ("+.@event_type_id+", '"+.@event_code$+"', 'conditional', "+.@group_id+", NOW(), 'active', '"+escape_sql(.@event_params$)+"')";
+	query_sql "SELECT LAST_INSERT_ID()", .@instance_id;
+
+	// Update event_current_state cache
+	query_sql "UPDATE event_current_state SET instance_id = "+.@instance_id+", is_active = 1, cache_data = '"+escape_sql(.@event_params$)+"' WHERE event_type_id = "+.@event_type_id;
+
+	// Trigger the appropriate event NPC
+	if (.@event_code$ == "invasion") {
+		// For invasion, don't mark as active in DB yet - TownInvasion handles it
+		// Set up invasion params from event_params JSON
+		if (.@event_params$ != "" && .@event_params$ != "null") {
+			query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@event_params$)+"', '$.threat'))", .@threat$;
+			$@InvasionPendingThreat = atoi(.@threat$);
+		} else {
+			$@InvasionPendingThreat = rand(0, 2);  // Random easy-medium-hard
+		}
+		$@InvasionPendingTown = 0;   // Random
+		$@InvasionPendingTheme = 0;  // Random
+		$@InvasionPendingInstanceId = .@instance_id;
+		$@InvasionTriggerType$ = "conditional";
+		donpcevent "TownInvasion::OnScheduledInvasion";
+	}
+	else if (.@event_code$ == "exp_boost") {
+		// Parse multiplier and duration from event_params
+		.@multiplier = 150;  // Default 1.5x
+		.@duration = 30;     // Default 30 min
+		if (.@event_params$ != "" && .@event_params$ != "null") {
+			query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@event_params$)+"', '$.multiplier')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@event_params$)+"', '$.duration_minutes'))", .@mult$, .@dur$;
+			if (.@mult$ != "" && .@mult$ != "null") .@multiplier = atoi(.@mult$);
+			if (.@dur$ != "" && .@dur$ != "null") .@duration = atoi(.@dur$);
+		}
+		$@ExpBoostMultiplier = .@multiplier;
+		$@ExpBoostDuration = .@duration;
+		$@ExpBoostInstanceId = .@instance_id;
+		donpcevent "ExpBoost::OnEventStart";
+	}
+	else if (.@event_code$ == "happy_hour") {
+		// Parse duration from event_params
+		.@duration = 120;  // Default 2 hours
+		if (.@event_params$ != "" && .@event_params$ != "null") {
+			query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@event_params$)+"', '$.duration_minutes'))", .@dur$;
+			if (.@dur$ != "" && .@dur$ != "null") .@duration = atoi(.@dur$);
+		}
+		$@HappyHourDuration = .@duration;
+		$@HappyHourInstanceId = .@instance_id;
+		donpcevent "HappyHour::OnEventStart";
+	}
+	else {
+		// Generic event - try to call OnEventStart
+		donpcevent .@event_code$+"::OnEventStart";
+	}
+	return;
+
+// ============================================================
+// DEPRECATED: Old hardcoded invasion trigger (kept for rollback)
+// To rollback: comment out S_CheckCondTriggers call in OnTimer60000
+//              and uncomment S_CheckInvasionTrigger call
+// ============================================================
+/*
 S_CheckInvasionTrigger:
 	// Skip if invasion already active
 	if ($@InvasionActive) return;
@@ -439,6 +735,7 @@ S_CheckInvasionTrigger:
 		donpcevent "TownInvasion::OnScheduledInvasion";
 	}
 	return;
+*/
 
 // ============================================================
 // Generate MOTD Schedule (called daily at midnight and on init)
