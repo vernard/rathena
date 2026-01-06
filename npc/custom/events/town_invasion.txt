@@ -838,10 +838,6 @@ OnGMCancelInvasion:
 	if ($@InvasionEventInstanceID > 0) {
 		query_sql "UPDATE event_instances SET status = 'cancelled', actual_end = NOW() WHERE id = " + $@InvasionEventInstanceID;
 	}
-	// Set multiplier on the invasion record (for reward calculation)
-	if ($@InvasionID > 0) {
-		query_sql "UPDATE event_invasion_instances SET completion_multiplier = 100 WHERE id = " + $@InvasionID;
-	}
 
 	// Remove mapflag
 	removemapflag .@map$, mf_nopenalty;
@@ -861,8 +857,6 @@ S_DistributeRewards:
 	// Count defenders for display
 	query_sql "SELECT COUNT(*) FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@defenders;
 
-	// No multipliers - store 1000 (= 1.0x when divided by 1000 at claim)
-	query_sql "UPDATE event_invasion_instances SET completion_multiplier = 1000 WHERE id = " + $@InvasionID;
 
 	// Notify online players about pending rewards
 	query_sql "SELECT c.char_id, c.points_earned, ch.account_id FROM event_invasion_contributions c JOIN `char` ch ON c.char_id = ch.char_id WHERE c.invasion_id = " + $@InvasionID, .@char_ids, .@points, .@acc_ids;
