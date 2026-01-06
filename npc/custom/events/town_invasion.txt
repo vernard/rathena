@@ -112,39 +112,13 @@ OnScheduledInvasion:
 		end;
 	}
 
-	// Determine trigger type - "gm", "scheduled", or empty (random auto)
-	// GM and scheduled triggers bypass time window/player checks
+	// Get trigger type for logging
 	.@trigger$ = $@InvasionTriggerType$;
-	.@bypass_checks = (.@trigger$ == "gm" || .@trigger$ == "scheduled");
-	debugmes "[TownInvasion] Trigger type: " + .@trigger$ + " (bypass_checks=" + .@bypass_checks + ")";
+	if (.@trigger$ == "") .@trigger$ = "auto";
+	debugmes "[TownInvasion] Trigger type: " + .@trigger$;
 
-	// For random auto triggers only, check time window and players
-	if (!.@bypass_checks) {
-		// Check minimum players
-		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_players'", .@min$;
-		.@min_players = (.@min$ != "") ? atoi(.@min$) : 1;
-		if (getusers(1) < .@min_players) {
-			debugmes "[TownInvasion] Random trigger skipped - only " + getusers(1) + " players online (need " + .@min_players + ")";
-			end;
-		}
-
-		// Check time window
-		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_hour'", .@min_hour$;
-		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_hour'", .@max_hour$;
-		.@hour = gettime(3);  // 3 = hours (0-23)
-		.@min_h = (.@min_hour$ != "") ? atoi(.@min_hour$) : 9;
-		.@max_h = (.@max_hour$ != "") ? atoi(.@max_hour$) : 22;
-		if (.@hour < .@min_h || .@hour >= .@max_h) {
-			debugmes "[TownInvasion] Random trigger skipped - outside time window (" + .@hour + "h, window " + .@min_h + "-" + .@max_h + ")";
-			end;
-		}
-		// For random, use "auto" in DB
-		.@trigger$ = "auto";
-	}
-
-	// For GM/scheduled triggers with pre-set parameters, use them
-	// For random triggers, select random values
-	if (.@bypass_checks && $@InvasionPendingTown > 0) {
+	// Use pre-set parameters if available, otherwise randomize
+	if ($@InvasionPendingTown > 0) {
 		// Use parameters set by GM menu or scheduler
 		.@threat = $@InvasionPendingThreat;
 		.@town_id = $@InvasionPendingTown;
