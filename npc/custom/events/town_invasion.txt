@@ -32,6 +32,11 @@ OnInit:
 	$@InvasionLastAnnounce = 0;
 	$@InvasionNextWaveTime = 0;
 	$@InvasionEventInstanceID = 0;
+	// Wave tracking for required kills (MVP/miniboss must all die)
+	$@InvasionWaveBossSpawns = 0;    // MVP + miniboss spawned this wave
+	$@InvasionWaveBossKills = 0;     // MVP + miniboss killed this wave
+	$@InvasionWaveRegularSpawns = 0; // Non-boss monsters spawned
+	$@InvasionWaveRegularKills = 0;  // Non-boss monsters killed
 
 	// Cancel any active invasions from before server restart
 	// (We don't restore mid-invasion state - GMs can manually restart if needed)
@@ -318,6 +323,8 @@ S_SpawnWave:
 	debugmes "[TownInvasion] S_SpawnWave - Monster multiplier: " + .@multiplier + "%";
 
 	.@total_spawned = 0;
+	.@boss_spawned = 0;    // MVP + miniboss count
+	.@regular_spawned = 0; // Everything else
 
 	// Calculate spawn area (only walkable cells will be used by areamonster)
 	.@x1 = $@InvasionCenterX - $@InvasionRadius;
@@ -332,6 +339,9 @@ S_SpawnWave:
 		// Apply multiplier (100 = 1x, 200 = 2x)
 		.@count = (.@base_count * .@multiplier) / 100;
 		if (.@count < 1 && .@base_count > 0) .@count = 1; // At least 1 if base > 0
+
+		// Track if this tier is a "boss" tier (required kills)
+		.@is_boss_tier = (.@tier$ == "mvp" || .@tier$ == "miniboss");
 
 		// Get random monsters of this tier from the theme
 		query_sql "SELECT mob_id, mob_name FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND tier = '" + .@tier$ + "' ORDER BY RAND()", .@mob_ids, .@mob_names$;
@@ -357,6 +367,13 @@ S_SpawnWave:
 				// areamonster spawns on walkable cells only, preventing stuck monsters
 				areamonster $@InvasionMap$, .@x1, .@y1, .@x2, .@y2, .@name$, .@mob, .@spawn_count, "TownInvasion::OnMonsterKilled";
 				.@total_spawned += .@spawn_count;
+
+				// Track boss vs regular spawns
+				if (.@is_boss_tier) {
+					.@boss_spawned += .@spawn_count;
+				} else {
+					.@regular_spawned += .@spawn_count;
+				}
 			}
 		}
 	}
@@ -364,6 +381,12 @@ S_SpawnWave:
 	$@InvasionMonstersSpawned += .@total_spawned;
 	$@InvasionWaveMonsters = .@total_spawned;
 	$@InvasionWaveKills = 0;
+	// Track boss vs regular for wave clear logic
+	$@InvasionWaveBossSpawns = .@boss_spawned;
+	$@InvasionWaveBossKills = 0;
+	$@InvasionWaveRegularSpawns = .@regular_spawned;
+	$@InvasionWaveRegularKills = 0;
+	debugmes "[TownInvasion] S_SpawnWave - Bosses: " + .@boss_spawned + ", Regular: " + .@regular_spawned;
 
 	// Make all spawned monsters aggressive using getmapunits
 	// Mode flags: MD_CANMOVE(0x1) + MD_AGGRESSIVE(0x4) + MD_CANATTACK(0x80) + MD_CASTSENSOR_IDLE(0x10)
@@ -411,16 +434,24 @@ OnMonsterKilled:
 	else if (.@tier$ == "boss") .@tier_pts = 15;
 	else if (.@tier$ == "mvp") .@tier_pts = 50;
 
+	// Track boss vs regular kills for wave clear logic
+	if (.@tier$ == "mvp" || .@tier$ == "miniboss") {
+		$@InvasionWaveBossKills++;
+	} else {
+		$@InvasionWaveRegularKills++;
+	}
+
 	// Apply threat multiplier (100=1x, 125=1.25x, etc)
 	setarray .@threat_mult, 100, 125, 150, 200, 300;  // Wolf, Tiger, Demon, Dragon, God
 	.@kill_pts = (.@tier_pts * .@threat_mult[$@InvasionThreat]) / 100;
 	if (.@kill_pts < 1) .@kill_pts = 1;
 
-	// Track contribution and points earned
+	// Track contribution and points earned (NO immediate reward - claimed later)
 	query_sql "INSERT INTO event_invasion_contributions (invasion_id, char_id, char_name, kills, waves_participated, points_earned) VALUES (" + $@InvasionID + ", " + .@char_id + ", '" + escape_sql(.@char_name$) + "', 1, 1, " + .@kill_pts + ") ON DUPLICATE KEY UPDATE kills = kills + 1, points_earned = points_earned + " + .@kill_pts;
 
-	#HUNT_POINTS += .@kill_pts;
-	dispbottom "[Invasion] +" + .@kill_pts + " Hunt Points (Total: " + #HUNT_POINTS + ")", 0x00CC00;
+	// Show pending points (will be claimed after invasion ends)
+	query_sql "SELECT points_earned FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_id, .@pending;
+	dispbottom "[Invasion] +" + .@kill_pts + " Kill Points (Pending: " + .@pending + ")", 0x00CC00;
 
 	// Party kill sharing - give credit to nearby party members
 	if (getcharid(1) > 0) {
@@ -443,12 +474,17 @@ OnMonsterKilled:
 		}
 	}
 
-	// Check wave clear (90% threshold)
+	// Check wave clear conditions:
+	// 1. ALL bosses (MVP + miniboss) must be killed
+	// 2. 90% of regular monsters must be killed
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_wave_clear_percent'", .@threshold$;
 	.@threshold = (.@threshold$ != "") ? atoi(.@threshold$) : 90;
-	.@needed = ($@InvasionWaveMonsters * .@threshold) / 100;
+	.@regular_needed = ($@InvasionWaveRegularSpawns * .@threshold) / 100;
 
-	if ($@InvasionWaveKills >= .@needed) {
+	.@bosses_clear = ($@InvasionWaveBossKills >= $@InvasionWaveBossSpawns);
+	.@regular_clear = ($@InvasionWaveRegularKills >= .@regular_needed);
+
+	if (.@bosses_clear && .@regular_clear) {
 		donpcevent "TownInvasion::OnWaveCleared";
 	}
 	end;
@@ -463,12 +499,15 @@ OnWaveCleared:
 	killmonster $@InvasionMap$, "TownInvasion::OnMonsterKilled";
 	killmonsterall $@InvasionMap$;
 
-	// Award wave clear bonus to all participants
-	query_sql "SELECT char_id FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@char_ids;
+	// Award wave clear bonus to all participants (deferred to claim)
+	// Need account_id for attachrid, char_id for DB updates
+	query_sql "SELECT c.char_id, ch.account_id FROM event_invasion_contributions c JOIN `char` ch ON c.char_id = ch.char_id WHERE c.invasion_id = " + $@InvasionID, .@char_ids, .@acc_ids;
 	for (.@i = 0; .@i < getarraysize(.@char_ids); .@i++) {
-		if (attachrid(.@char_ids[.@i])) {
-			#HUNT_POINTS += 10; // Wave clear bonus
-			dispbottom "[Invasion] Wave Clear Bonus: +10 Hunt Points! (Total: " + #HUNT_POINTS + ")", 0x00FF00;
+		// Add bonus to DB
+		query_sql "UPDATE event_invasion_contributions SET points_earned = points_earned + 10 WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
+		if (attachrid(.@acc_ids[.@i])) {
+			query_sql "SELECT points_earned FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i], .@pending;
+			dispbottom "[Invasion] Wave Clear: +10 Points (Pending: " + .@pending + ")", 0x00FF00;
 			detachrid;
 		}
 	}
@@ -659,9 +698,13 @@ OnGMCancelInvasion:
 	// Announce cancellation
 	announce "[TownInvasion] Event in " + .@town$ + " cancelled by a GM.", bc_all, 0xFFFF00;
 
-	// Update event_instances status
+	// Update event_instances status (general event tracking)
 	if ($@InvasionEventInstanceID > 0) {
 		query_sql "UPDATE event_instances SET status = 'cancelled', actual_end = NOW() WHERE id = " + $@InvasionEventInstanceID;
+	}
+	// Set multiplier on the invasion record (for reward calculation)
+	if ($@InvasionID > 0) {
+		query_sql "UPDATE event_invasion_instances SET completion_multiplier = 100 WHERE id = " + $@InvasionID;
 	}
 
 	// Remove mapflag
@@ -674,42 +717,34 @@ OnGMCancelInvasion:
 	end;
 
 // ============================================================
-// DISTRIBUTE REWARDS
+// DISTRIBUTE REWARDS (deferred - stores multiplier for claim time)
 // ============================================================
 S_DistributeRewards:
 	.@victory = getarg(0);
+	.@multiplier = (.@victory) ? 150 : 100;  // 1.5x for victory, 1.0x for fail
 
-	// Base completion bonus by threat level (awarded at end)
+	// Store multiplier at invasion level (applied when player claims)
+	query_sql "UPDATE event_invasion_instances SET completion_multiplier = " + .@multiplier + " WHERE id = " + $@InvasionID;
+
+	// Add flat completion bonus to each participant's points_earned
+	// (Multiplier will be applied to ALL points at claim time)
 	setarray .@base_points, 50, 100, 150, 250, 500; // Wolf, Tiger, Demon, Dragon, God
 	.@base = .@base_points[$@InvasionThreat];
 
-	// Get all contributors
-	query_sql "SELECT char_id, kills, waves_participated FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@char_ids, .@kills, .@waves;
+	// Add completion bonus to all participants
+	query_sql "UPDATE event_invasion_contributions SET points_earned = points_earned + " + .@base + " WHERE invasion_id = " + $@InvasionID;
 
+	// Notify online players about pending rewards
+	query_sql "SELECT c.char_id, c.points_earned, ch.account_id FROM event_invasion_contributions c JOIN `char` ch ON c.char_id = ch.char_id WHERE c.invasion_id = " + $@InvasionID, .@char_ids, .@points, .@acc_ids;
 	for (.@i = 0; .@i < getarraysize(.@char_ids); .@i++) {
-		// Calculate end-of-invasion bonus
-		.@bonus = .@base; // Threat-based completion bonus
-
-		// Defense bonus for victory (+50% on the base bonus)
-		if (.@victory) {
-			.@bonus = (.@bonus * 150) / 100;
-		}
-
-		// Award bonus points
-		if (attachrid(.@char_ids[.@i])) {
-			#HUNT_POINTS += .@bonus;
+		if (attachrid(.@acc_ids[.@i])) {
+			.@final = (.@points[.@i] * .@multiplier) / 100;
 			if (.@victory) {
-				dispbottom "[Invasion] Victory Bonus: +" + .@bonus + " Hunt Points! (Total: " + #HUNT_POINTS + ")", 0x00FF00;
+				dispbottom "[Invasion] Victory! " + .@points[.@i] + " pts x1.5 = " + .@final + " Hunt Points ready to claim!", 0x00FF00;
 			} else {
-				dispbottom "[Invasion] Participation Bonus: +" + .@bonus + " Hunt Points (Total: " + #HUNT_POINTS + ")", 0xFFAA00;
+				dispbottom "[Invasion] Defense ended. " + .@points[.@i] + " Hunt Points ready to claim.", 0xFFAA00;
 			}
-
-			// Update database - bonus points added to any previously tracked
-			query_sql "UPDATE event_invasion_contributions SET points_earned = points_earned + " + .@bonus + ", claimed = 1 WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
 			detachrid;
-		} else {
-			// Player offline - mark bonus as unclaimed
-			query_sql "UPDATE event_invasion_contributions SET points_earned = points_earned + " + .@bonus + " WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
 		}
 	}
 	return;
