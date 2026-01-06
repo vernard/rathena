@@ -73,7 +73,7 @@ OnTimer5000:
 			debugmes "[ShutdownAnnouncer] Countdown complete! Triggering maintenance mode";
 			query_sql("UPDATE shutdown_schedule SET processed = 1, is_maintenance = 1 WHERE id = " + .@id[0]);
 			announce "[Server] Saving all players and entering maintenance mode...",bc_all,0xFFFF00;
-			atcommand "@maintenance";
+			maintenance;
 
 			// Reset state
 			.current_schedule_id = 0;
@@ -89,7 +89,7 @@ OnTimer5000:
 			debugmes "[ShutdownAnnouncer] Time's up! Triggering maintenance mode";
 			query_sql("UPDATE shutdown_schedule SET processed = 1, is_maintenance = 1 WHERE id = " + .@id[0]);
 			announce "[Server] Saving all players and entering maintenance mode...",bc_all,0xFFFF00;
-			atcommand "@maintenance";
+			maintenance;
 			.current_schedule_id = 0;
 			.last_announced_interval = 9999;
 		}
