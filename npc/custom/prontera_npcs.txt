@@ -2,7 +2,7 @@
 //= Prontera Custom NPC Arrangement
 //===== Description: =========================================
 //= Custom Kafra and adjusted NPC positions for Prontera center.
-//= - Kafra at center (147,172) - old Warpra position
+//= - Kafra at center (147,172) - saves to 156,184
 //= - Banker at (147,168) - see custom/etc/bank.txt
 //= - Reset Girl at (147,164) - relocated from 150,193
 //= - Warpra (Quest Warper) at (159,193) - near Healer
@@ -24,7 +24,7 @@ prontera,147,172,4	script	Kafra Employee::kaf_prontera_center	117,{
 	mes "you. So how can I be";
 	mes "of service today?";
 	callfunc "F_Kafra",5,0,0,40,800;
-	savepoint "prontera",147,175,1,1;
+	savepoint "prontera",156,184,1,1;
 	callfunc "F_KafEnd",0,1,"in the city of Prontera";
 }
 

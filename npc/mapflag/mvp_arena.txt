@@ -1,0 +1,10 @@
+//===== MVP Arena Mapflag Overrides =============================
+//= Allow skills in MVP Arena lobby (quiz_00)
+//= Players can self-heal/buff before entering MVP rooms
+//===============================================================
+
+// Remove noskill flag from lobby - allows players to use skills
+quiz_00	mapflag	noskill	off
+
+// Disable Teleport/Fly Wing - keep players in lobby
+quiz_00	mapflag	noteleport
