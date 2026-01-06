@@ -21,8 +21,9 @@
 // ============================================================
 // Override the MVP Arena Guide to remove the free heal option
 // Players should use the paid Healer NPC instead
+// Uses unique script name to replace the original NPC at same location
 // ============================================================
-quiz_00,49,31,4	script	MVP Arena Guide	778,{
+quiz_00,49,31,4	script	MVP Arena Guide#2	778,{
 	mes "[ ^0065DFMVP Arena Guide^000000 ]";
 	mes "Welcome and behold this sacred place. Here you will find out if you truly have what it takes to call yourself a warrior.";
 	next;
