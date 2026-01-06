@@ -46,7 +46,14 @@ OnEventStart:
 
 	// Validate multiplier (minimum 150 = 1.5x, maximum 500 = 5x)
 	if ($@ExpBoostMultiplier < 150 || $@ExpBoostMultiplier > 500) {
+		debugmes "[ExpBoost] Invalid multiplier "+$@ExpBoostMultiplier+", defaulting to 200";
 		set $@ExpBoostMultiplier, 200;
+	}
+
+	// Validate duration (minimum 5 min, maximum 480 min = 8 hours)
+	if ($@ExpBoostDuration <= 0 || $@ExpBoostDuration > 480) {
+		debugmes "[ExpBoost] Invalid duration "+$@ExpBoostDuration+", defaulting to 60";
+		set $@ExpBoostDuration, 60;
 	}
 
 	// Store original rates

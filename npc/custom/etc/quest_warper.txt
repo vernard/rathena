@@ -773,8 +773,8 @@ function	script	QWS_Tarray	{
 	setarray @pTprice[@Ti], $QW_AW_PRICE;
 
 	setarray @pTmap$[@Ti], "aldebaran";
-	setarray @pTXcoords[@Ti], 145;
-	setarray @pTYcoords[@Ti], 120;
+	setarray @pTXcoords[@Ti], 168;
+	setarray @pTYcoords[@Ti], 103;
 
 	QWS_Make_Town_Menu 2;
 //----------------Amatsu:
@@ -1040,8 +1040,9 @@ function	script	QWS_Darray	{
 
 	setarray @DGat$[@Dref], "abyss_01", "abyss_02", "abyss_03";
 	setarray @DLevelName$[@Dref], "Level 1", "Level 2", "Level 3";
-	setarray @DXcoords[@Dref], 265, 275, 116;
-	setarray @DYcoords[@Dref], 273, 270, 27;
+	// abyss_01: moved from 265,273 (exit at 265,274) to 245,250
+	setarray @DXcoords[@Dref], 245, 275, 116;
+	setarray @DYcoords[@Dref], 250, 270, 27;
 	setarray @DDepth[@Dref], 0, 1, 2;
 
 	QWS_Make_Dungeon_Menu 0;
@@ -1110,8 +1111,9 @@ function	script	QWS_Darray	{
 
 	setarray @DGat$[@Dref], "c_tower1", "c_tower2", "c_tower3", "c_tower4", "alde_dun01", "alde_dun02", "alde_dun03", "alde_dun04";
 	setarray @DLevelName$[@Dref], "Clock Tower Level 1", "Clock Tower Level 2", "Clock Tower Level 3", "Clock Tower Level 4", "Basement 1F", "Basement 2F", "Basement 3F", "Basement 4F";
-	setarray @DXcoords[@Dref], 200, 268, 64, 32, 197, 262, 276, 122;
-	setarray @DYcoords[@Dref], 163, 26, 148, 63, 25, 41, 53, 125;
+	// Coords moved away from exit portals to prevent accidental re-entry
+	setarray @DXcoords[@Dref], 190, 250, 80, 32, 197, 250, 260, 122;
+	setarray @DYcoords[@Dref], 140, 50, 130, 63, 40, 55, 70, 125;
 	setarray @DDepth[@Dref], 0, 1, 2, 3, 1, 2, 3, 4;
 
 	QWS_Make_Dungeon_Menu 5;

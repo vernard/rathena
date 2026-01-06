@@ -232,6 +232,12 @@ malangdo,132,114,6	duplicate(Healer)	Healer#mal	569
 malaya,227,204,6	duplicate(Healer)	Healer#ma	569
 mora,55,152,4	duplicate(Healer)	Healer#mora	569
 
+// Invasion Zone Healers (near spawn points, for towns with distant main healers)
+//============================================================
+alberta,115,60,4	duplicate(Healer)	Healer#alb_inv	569
+payon,154,78,4	duplicate(Healer)	Healer#pay_inv	569
+yuno,160,128,4	duplicate(Healer)	Healer#yuno_inv	569
+
 // Field Healers (near Quest Warpers)
 //============================================================
 ama_fild01,183,325,4	duplicate(Healer)	Healer#ama_fld	569

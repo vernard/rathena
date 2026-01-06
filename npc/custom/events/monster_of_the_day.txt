@@ -20,6 +20,19 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 		mes " ";
 		mes "Check back later for";
 		mes "featured hunts!";
+
+		// Allow GMs to still access management
+		if (getgmlevel() >= 80) {
+			next;
+			mes "[Monster Hunter Board]";
+			mes "^FF8800[GM Access]^000000";
+			mes "MOTD is disabled but you";
+			mes "can manage it from here.";
+			next;
+			if (select("^FF8800[GM] Manage MOTD^000000:Close") == 1) {
+				goto L_GMMenu;
+			}
+		}
 		close;
 	}
 
@@ -112,33 +125,47 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 	.@menu$ = "Hunt Information";
 	if (.@reshuffle_enabled$ == "1" && .@cur_id > 0) {
 		.@menu$ = .@menu$ + ":^FF8800Reshuffle Monster^000000";
+		.@has_reshuffle = 1;
+	} else {
+		.@has_reshuffle = 0;
 	}
-	.@menu$ = .@menu$ + ":Reshuffle Hall of Fame:Close";
+	.@menu$ = .@menu$ + ":Reshuffle Hall of Fame";
+	if (getgmlevel() >= 80) {
+		.@menu$ = .@menu$ + ":^FF8800[GM] Manage MOTD^000000";
+	}
+	.@menu$ = .@menu$ + ":Close";
 
-	switch(select(.@menu$)) {
-		case 1:
-			mes "[Monster Hunter Board]";
-			mes "All featured monsters have";
-			mes "^00AA00Bounty Board quests^000000!";
-			mes " ";
-			mes "Hunt the featured monster for";
-			mes "^FF00003x EXP and 3x Drops^000000, then";
-			mes "complete your bounty for bonus!";
-			close;
-		case 2:
-			if (.@reshuffle_enabled$ == "1" && .@cur_id > 0) {
-				goto L_Reshuffle;
-			}
-			goto L_HallOfFame;
-		case 3:
-			if (.@reshuffle_enabled$ == "1" && .@cur_id > 0) {
-				goto L_HallOfFame;
-			}
-			close;
-		case 4:
-			close;
+	.@choice = select(.@menu$);
+	.@idx = 1;
+
+	// Hunt Information
+	if (.@choice == .@idx) {
+		mes "[Monster Hunter Board]";
+		mes "All featured monsters have";
+		mes "^00AA00Bounty Board quests^000000!";
+		mes " ";
+		mes "Hunt the featured monster for";
+		mes "^FF00003x EXP and 3x Drops^000000, then";
+		mes "complete your bounty for bonus!";
+		close;
 	}
-	end;
+	.@idx++;
+
+	// Reshuffle (if enabled)
+	if (.@has_reshuffle) {
+		if (.@choice == .@idx) goto L_Reshuffle;
+		.@idx++;
+	}
+
+	// Hall of Fame
+	if (.@choice == .@idx) goto L_HallOfFame;
+	.@idx++;
+
+	// GM Menu (if GM)
+	if (getgmlevel() >= 80 && .@choice == .@idx) goto L_GMMenu;
+	.@idx++;
+
+	close;
 
 // ============================================================
 // MOTD Reshuffle
@@ -338,6 +365,226 @@ L_HallOfFame:
 			close;
 	}
 	end;
+
+// ============================================================
+// GM MENU - MOTD Management
+// ============================================================
+L_GMMenu:
+	mes "[Monster Hunter Board]";
+	mes "^FF8800[GM Mode]^000000";
+	mes " ";
+
+	// Show current status
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@motd_enabled$;
+	query_sql "SELECT mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@cur_mob$, .@cur_mins;
+
+	mes "MOTD Status: " + ((.@motd_enabled$ == "1") ? "^00AA00Enabled^000000" : "^FF0000Disabled^000000");
+	if (.@cur_mob$ != "") {
+		mes "Current: ^0055FF" + .@cur_mob$ + "^000000";
+		mes "Time left: " + .@cur_mins + " min";
+	} else {
+		mes "^888888No monster currently active^000000";
+	}
+	next;
+
+	switch(select("Change Current Monster:Regenerate Schedule:Configure:About MOTD:Back")) {
+		case 1:
+			goto L_GM_ChangeMonster;
+		case 2:
+			goto L_GM_Regenerate;
+		case 3:
+			goto L_GM_Config;
+		case 4:
+			goto L_GM_About;
+		case 5:
+			close;
+	}
+	end;
+
+L_GM_ChangeMonster:
+	mes "[Change Current Monster]";
+	mes "This will replace the current";
+	mes "featured monster with a new one.";
+	mes " ";
+	mes "Select source:";
+	next;
+
+	switch(select("Random from Pool:Specific Mob ID:Cancel")) {
+		case 1:
+			// Get random monster from pool
+			query_sql "SELECT mob_id, mob_name FROM event_motd_monsters ORDER BY RAND() LIMIT 1", .@new_mob_id, .@new_mob_name$;
+			if (.@new_mob_id == 0) {
+				mes "Monster pool is empty!";
+				close;
+			}
+
+			// Update current schedule entry
+			query_sql "UPDATE event_motd_schedule SET mob_id = " + .@new_mob_id + ", mob_name = '" + escape_sql(.@new_mob_name$) + "' WHERE NOW() BETWEEN start_time AND end_time";
+
+			mes "[Monster Hunter Board]";
+			mes "Monster changed to:";
+			mes "^0055FF" + .@new_mob_name$ + "^000000";
+
+			// Announce
+			announce "[MOTD] Featured monster changed: " + .@new_mob_name$ + "!", bc_all, 0xFFD700;
+			close;
+
+		case 2:
+			mes "Enter Mob ID:";
+			input .@mob_id;
+
+			// Validate mob exists
+			.@mob_name$ = strmobinfo(1, .@mob_id);
+			if (.@mob_name$ == "") {
+				mes "Invalid Mob ID!";
+				close;
+			}
+
+			// Update current schedule entry
+			query_sql "UPDATE event_motd_schedule SET mob_id = " + .@mob_id + ", mob_name = '" + escape_sql(.@mob_name$) + "' WHERE NOW() BETWEEN start_time AND end_time";
+
+			mes "[Monster Hunter Board]";
+			mes "Monster changed to:";
+			mes "^0055FF" + .@mob_name$ + "^000000";
+
+			announce "[MOTD] Featured monster changed: " + .@mob_name$ + "!", bc_all, 0xFFD700;
+			close;
+
+		case 3:
+			goto L_GMMenu;
+	}
+	end;
+
+L_GM_Regenerate:
+	mes "[Regenerate Schedule]";
+	mes "This will regenerate the MOTD";
+	mes "schedule for today and tomorrow.";
+	mes " ";
+	mes "^FF0000Current schedule will be lost!^000000";
+	next;
+
+	if (select("Regenerate:Cancel") == 2) goto L_GMMenu;
+
+	// Call the scheduler to regenerate
+	donpcevent "EventScheduler::OnGenerateMOTDSchedule";
+	mes "[Monster Hunter Board]";
+	mes "Schedule regenerated!";
+	mes "Check upcoming monsters.";
+	close;
+
+L_GM_Config:
+	mes "[Configuration]";
+
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@enabled$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_duration_hours'", .@duration$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_upcoming_count'", .@upcoming$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_selection_mode'", .@mode$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_min_level'", .@min_lv$;
+
+	mes "MOTD: " + ((.@enabled$ == "1") ? "^00AA00Enabled^000000" : "^FF0000Disabled^000000");
+	mes "Duration: ^0055FF" + .@duration$ + " hours^000000 per slot";
+	mes "Upcoming: ^0055FF" + .@upcoming$ + "^000000 shown";
+	mes "Mode: ^0055FF" + .@mode$ + "^000000";
+	mes "Min Level: ^0055FF" + .@min_lv$ + "^000000";
+	next;
+
+	// Dynamic menu text for enable/disable
+	.@toggle_text$ = (.@enabled$ == "1") ? "Disable MOTD" : "Enable MOTD";
+	switch(select(.@toggle_text$ + ":Set Duration:Set Upcoming Count:Set Selection Mode:Set Min Level:Back")) {
+		case 1:
+			.@new_val$ = (.@enabled$ == "1") ? "0" : "1";
+			// Update both event_config and event_types (scheduler checks event_types)
+			query_sql "UPDATE event_config SET config_value = '" + .@new_val$ + "' WHERE config_key = 'motd_enabled'";
+			query_sql "UPDATE event_types SET enabled = " + .@new_val$ + " WHERE code = 'motd'";
+
+			if (.@new_val$ == "1") {
+				// Enabling - generate schedule and activate
+				mes "[Monster Hunter Board]";
+				mes "^00AA00MOTD Enabled!^000000";
+				mes " ";
+				mes "Generating schedule...";
+				// Reset tracking so the first monster gets announced
+				set $@LastMOTDMobID, 0;
+				announce "[MOTD] Monster of the Day has been enabled!", bc_all, 0x00FF00;
+				donpcevent "EventScheduler::OnGenerateMOTDSchedule";
+				mes "Schedule generated!";
+				mes "Monster rotation is now active.";
+			} else {
+				// Disabling - announce cancellation
+				mes "[Monster Hunter Board]";
+				mes "^FF0000MOTD Disabled!^000000";
+				mes " ";
+				mes "Monster of the Day has been";
+				mes "cancelled until re-enabled.";
+				announce "[MOTD] Monster of the Day has been disabled.", bc_all, 0xFF6600;
+			}
+			close;
+		case 2:
+			mes "Enter duration (1, 2, 3, 4, or 6 hours):";
+			input .@val;
+			if (.@val != 1 && .@val != 2 && .@val != 3 && .@val != 4 && .@val != 6) {
+				mes "Invalid value!";
+				close;
+			}
+			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'motd_duration_hours'";
+			mes "[Monster Hunter Board]";
+			mes "Duration set to " + .@val + " hours.";
+			close;
+
+		case 3:
+			mes "Enter upcoming count (5-20):";
+			input .@val;
+			if (.@val < 5) .@val = 5;
+			if (.@val > 20) .@val = 20;
+			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'motd_upcoming_count'";
+			mes "[Monster Hunter Board]";
+			mes "Upcoming count set to " + .@val + ".";
+			close;
+
+		case 4:
+			mes "Select mode:";
+			next;
+			switch(select("random:tier_rotation:Cancel")) {
+				case 1:
+					query_sql "UPDATE event_config SET config_value = 'random' WHERE config_key = 'motd_selection_mode'";
+					mes "Mode set to random.";
+					close;
+				case 2:
+					query_sql "UPDATE event_config SET config_value = 'tier_rotation' WHERE config_key = 'motd_selection_mode'";
+					mes "Mode set to tier_rotation.";
+					close;
+				case 3:
+					goto L_GM_Config;
+			}
+			end;
+
+		case 5:
+			mes "Enter minimum level (1-99):";
+			input .@val;
+			if (.@val < 1) .@val = 1;
+			if (.@val > 99) .@val = 99;
+			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'motd_min_level'";
+			mes "[Monster Hunter Board]";
+			mes "Min level set to " + .@val + ".";
+			close;
+
+		case 6:
+			goto L_GMMenu;
+	}
+	end;
+
+L_GM_About:
+	mes "[About MOTD]";
+	mes "Monster of the Day features";
+	mes "rotating monsters with 3x bonuses.";
+	mes " ";
+	mes "The schedule auto-generates daily";
+	mes "and rotates based on configured";
+	mes "duration (default 2 hours).";
+	mes " ";
+	mes "Monsters are drawn from the";
+	mes "Bounty Board pool (level 50+).";
+	close;
 }
 
 // ============================================================

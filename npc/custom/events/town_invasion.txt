@@ -77,7 +77,13 @@ OnTimer10000:
 	if (gettimetick(2) - $@InvasionLastAnnounce >= 300) {
 		.@remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
 		if (.@remaining > 0) {
-			announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + $@InvasionMonstersKilled + " killed!", bc_all, 0xFF8800;
+			.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
+			.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+			if (.@boss_left > 0) {
+				announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + .@regular_left + " monsters + " + .@boss_left + " bosses remaining!", bc_all, 0xFF8800;
+			} else {
+				announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + .@regular_left + " monsters remaining!", bc_all, 0xFF8800;
+			}
 			$@InvasionLastAnnounce = gettimetick(2);
 		}
 	}
@@ -170,6 +176,44 @@ OnScheduledInvasion:
 	if (.@town_id == 0) {
 		debugmes "[TownInvasion] No enabled towns found!";
 		end;
+	}
+
+	// Check minimum player requirements for threat levels (configurable)
+	// Default: Wolf/Tiger = 1, Demon = 3, Dragon = 5, God = 10
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_threat_min_players_" + .@threat + "'", .@min_players$;
+	if (.@min_players$ == "") {
+		// Default minimums by threat level
+		if (.@threat == 0) .@min_players = 1;       // Wolf
+		else if (.@threat == 1) .@min_players = 1;  // Tiger
+		else if (.@threat == 2) .@min_players = 3;  // Demon
+		else if (.@threat == 3) .@min_players = 5;  // Dragon
+		else .@min_players = 10;                     // God
+	} else {
+		.@min_players = atoi(.@min_players$);
+	}
+
+	.@online_players = getusers(1);
+
+	// For auto/scheduled triggers, downgrade threat if not enough players
+	if (.@trigger$ != "gm" && .@online_players < .@min_players) {
+		debugmes "[TownInvasion] Not enough players (" + .@online_players + "/" + .@min_players + ") for threat " + .@threat + ", downgrading...";
+		// Find highest threat level we can support
+		.@original_threat = .@threat;
+		while (.@threat > 0 && .@online_players < .@min_players) {
+			.@threat--;
+			query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_threat_min_players_" + .@threat + "'", .@min_players$;
+			if (.@min_players$ == "") {
+				if (.@threat == 0) .@min_players = 1;
+				else if (.@threat == 1) .@min_players = 1;
+				else if (.@threat == 2) .@min_players = 3;
+				else .@min_players = 5;
+			} else {
+				.@min_players = atoi(.@min_players$);
+			}
+		}
+		if (.@threat != .@original_threat) {
+			debugmes "[TownInvasion] Downgraded from threat " + .@original_threat + " to " + .@threat;
+		}
 	}
 
 	// Actually start it
@@ -315,16 +359,56 @@ S_SpawnWave:
 	query_sql "SELECT tier, count FROM event_invasion_wave_config WHERE threat_level = " + $@InvasionThreat + " AND wave_num = " + $@InvasionWave, .@tiers$, .@counts;
 	debugmes "[TownInvasion] S_SpawnWave - Wave config tiers:" + getarraysize(.@tiers$);
 
-	// Get monster multiplier (100 = 1x, 200 = 2x, etc.)
+	// Count ACTIVE players on the invasion map
+	.@active_players = getmapunits(BL_PC, $@InvasionMap$, .@pc_ids[0]);
+	debugmes "[TownInvasion] S_SpawnWave - Active players on map: " + .@active_players;
+
+	// Get player-scaled monster multiplier tiers (configurable)
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_player_tier1_max'", .@pt1_max$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_player_tier1_monster_mult'", .@pt1_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_player_tier2_max'", .@pt2_max$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_player_tier2_monster_mult'", .@pt2_mult$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_player_tier3_monster_mult'", .@pt3_mult$;
+
+	.@pt1_max = (.@pt1_max$ != "") ? atoi(.@pt1_max$) : 5;      // 1-5 players
+	.@pt1_mult = (.@pt1_mult$ != "") ? atoi(.@pt1_mult$) : 100; // 100% base
+	.@pt2_max = (.@pt2_max$ != "") ? atoi(.@pt2_max$) : 15;     // 6-15 players
+	.@pt2_mult = (.@pt2_mult$ != "") ? atoi(.@pt2_mult$) : 150; // 150%
+	.@pt3_mult = (.@pt3_mult$ != "") ? atoi(.@pt3_mult$) : 200; // 16+ = 200%
+
+	// Determine multiplier based on active player count
+	if (.@active_players <= .@pt1_max) {
+		.@player_mult = .@pt1_mult;
+	} else if (.@active_players <= .@pt2_max) {
+		.@player_mult = .@pt2_mult;
+	} else {
+		.@player_mult = .@pt3_mult;
+	}
+
+	// Get base monster multiplier from config (can be overridden by GM)
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_monster_multiplier'", .@mult$;
-	.@multiplier = (.@mult$ != "") ? atoi(.@mult$) : 100;
+	.@base_multiplier = (.@mult$ != "") ? atoi(.@mult$) : 100;
+
+	// Combined multiplier: base × player-scaled
+	.@multiplier = (.@base_multiplier * .@player_mult) / 100;
 	if (.@multiplier < 10) .@multiplier = 10;   // Minimum 10%
 	if (.@multiplier > 1000) .@multiplier = 1000; // Maximum 10x
-	debugmes "[TownInvasion] S_SpawnWave - Monster multiplier: " + .@multiplier + "%";
+
+	debugmes "[TownInvasion] S_SpawnWave - Player mult: " + .@player_mult + "%, Base mult: " + .@base_multiplier + "%, Combined: " + .@multiplier + "%";
+
+	// Get separate boss multiplier for miniboss/MVP tiers
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_boss_multiplier'", .@boss_mult$;
+	.@boss_multiplier = (.@boss_mult$ != "") ? atoi(.@boss_mult$) : 100;
+	if (.@boss_multiplier < 10) .@boss_multiplier = 10;   // Minimum 10%
+	if (.@boss_multiplier > 1000) .@boss_multiplier = 1000; // Maximum 10x
+
+	debugmes "[TownInvasion] S_SpawnWave - Monster mult: " + .@multiplier + "%, Boss mult: " + .@boss_multiplier + "%";
 
 	.@total_spawned = 0;
 	.@boss_spawned = 0;    // MVP + miniboss count
 	.@regular_spawned = 0; // Everything else
+	.@miniboss_idx = 0;    // Index for miniboss names array
+	.@mvp_idx = 0;         // Index for MVP names array
 
 	// Calculate spawn area (only walkable cells will be used by areamonster)
 	.@x1 = $@InvasionCenterX - $@InvasionRadius;
@@ -336,12 +420,17 @@ S_SpawnWave:
 	for (.@i = 0; .@i < getarraysize(.@tiers$); .@i++) {
 		.@tier$ = .@tiers$[.@i];
 		.@base_count = .@counts[.@i];
-		// Apply multiplier (100 = 1x, 200 = 2x)
-		.@count = (.@base_count * .@multiplier) / 100;
-		if (.@count < 1 && .@base_count > 0) .@count = 1; // At least 1 if base > 0
 
 		// Track if this tier is a "boss" tier (required kills)
 		.@is_boss_tier = (.@tier$ == "mvp" || .@tier$ == "miniboss");
+
+		// Apply appropriate multiplier - boss multiplier for miniboss/MVP, regular for others
+		if (.@is_boss_tier) {
+			.@count = (.@base_count * .@boss_multiplier) / 100;
+		} else {
+			.@count = (.@base_count * .@multiplier) / 100;
+		}
+		if (.@count < 1 && .@base_count > 0) .@count = 1; // At least 1 if base > 0
 
 		// Get random monsters of this tier from the theme
 		query_sql "SELECT mob_id, mob_name FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND tier = '" + .@tier$ + "' ORDER BY RAND()", .@mob_ids, .@mob_names$;
@@ -371,6 +460,16 @@ S_SpawnWave:
 				// Track boss vs regular spawns
 				if (.@is_boss_tier) {
 					.@boss_spawned += .@spawn_count;
+					// Track boss names and counts for announcements
+					if (.@tier$ == "miniboss") {
+						.@miniboss_names$[.@miniboss_idx] = .@name$;
+						.@miniboss_counts[.@miniboss_idx] = .@spawn_count;
+						.@miniboss_idx++;
+					} else if (.@tier$ == "mvp") {
+						.@mvp_names$[.@mvp_idx] = .@name$;
+						.@mvp_counts[.@mvp_idx] = .@spawn_count;
+						.@mvp_idx++;
+					}
 				} else {
 					.@regular_spawned += .@spawn_count;
 				}
@@ -403,6 +502,47 @@ S_SpawnWave:
 	query_sql "UPDATE event_invasion_instances SET monsters_spawned = " + $@InvasionMonstersSpawned + ", current_wave = " + $@InvasionWave + " WHERE id = " + $@InvasionID;
 
 	announce "[TownInvasion] Wave " + $@InvasionWave + "/" + $@InvasionTotalWaves + " begins! " + .@total_spawned + " monsters spawning in " + $@InvasionTownName$ + "!", bc_all, 0xFFAA00;
+
+	// Announce minibosses with excitement!
+	if (.@miniboss_idx > 0) {
+		.@miniboss_list$ = "";
+		.@total_minibosses = 0;
+		for (.@k = 0; .@k < .@miniboss_idx; .@k++) {
+			if (.@k > 0) .@miniboss_list$ = .@miniboss_list$ + ", ";
+			if (.@miniboss_counts[.@k] > 1) {
+				.@miniboss_list$ = .@miniboss_list$ + .@miniboss_counts[.@k] + "x " + .@miniboss_names$[.@k];
+			} else {
+				.@miniboss_list$ = .@miniboss_list$ + .@miniboss_names$[.@k];
+			}
+			.@total_minibosses += .@miniboss_counts[.@k];
+		}
+		if (.@total_minibosses == 1) {
+			announce "[TownInvasion] << MINIBOSS ALERT >> " + .@miniboss_list$ + " has joined the invasion!", bc_all, 0xFF6600;
+		} else {
+			announce "[TownInvasion] << MINIBOSS ALERT >> " + .@miniboss_list$ + " have joined the invasion!", bc_all, 0xFF6600;
+		}
+	}
+
+	// Announce MVPs with maximum hype!
+	if (.@mvp_idx > 0) {
+		.@mvp_list$ = "";
+		.@total_mvps = 0;
+		for (.@k = 0; .@k < .@mvp_idx; .@k++) {
+			if (.@k > 0) .@mvp_list$ = .@mvp_list$ + ", ";
+			if (.@mvp_counts[.@k] > 1) {
+				.@mvp_list$ = .@mvp_list$ + .@mvp_counts[.@k] + "x " + .@mvp_names$[.@k];
+			} else {
+				.@mvp_list$ = .@mvp_list$ + .@mvp_names$[.@k];
+			}
+			.@total_mvps += .@mvp_counts[.@k];
+		}
+		if (.@total_mvps == 1) {
+			announce "[TownInvasion] !! MVP SIGHTED !! " + .@mvp_list$ + " is leading the assault! HEROES NEEDED!", bc_all, 0xFF0000;
+		} else {
+			announce "[TownInvasion] !!! MULTIPLE MVPs !!! " + .@mvp_list$ + " are leading the assault! ALL HANDS ON DECK!", bc_all, 0xFF0000;
+		}
+	}
+
 	$@InvasionLastAnnounce = gettimetick(2);
 
 	debugmes "[TownInvasion] Spawned wave " + $@InvasionWave + " with " + .@total_spawned + " monsters (made aggressive)";
@@ -423,16 +563,17 @@ OnMonsterKilled:
 	.@char_name$ = strcharinfo(0);
 
 	// Give Hunt Points for kill - scales with monster tier AND threat level
-	// Tier base: weak=1, medium=1, strong=2, elite=3, miniboss=10, boss=15, mvp=50
+	// Tier base (stored as 10x for decimal support): weak=2, medium=2, strong=5, elite=7, miniboss=25, boss=40, mvp=125
+	// These represent 0.2, 0.2, 0.5, 0.7, 2.5, 4, 12.5 actual points (quartered from original)
 	// Threat multiplier: Wolf=1.0, Tiger=1.25, Demon=1.5, Dragon=2.0, God=3.0
 	.@mob_id = killedrid;
-	.@tier_pts = 1;  // default (weak/medium)
+	.@tier_pts = 2;  // default (weak/medium) = 0.2 pts
 	query_sql "SELECT tier FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND mob_id = " + .@mob_id + " LIMIT 1", .@tier$;
-	if (.@tier$ == "strong") .@tier_pts = 2;
-	else if (.@tier$ == "elite") .@tier_pts = 3;
-	else if (.@tier$ == "miniboss") .@tier_pts = 10;
-	else if (.@tier$ == "boss") .@tier_pts = 15;
-	else if (.@tier$ == "mvp") .@tier_pts = 50;
+	if (.@tier$ == "strong") .@tier_pts = 5;       // 0.5 pt
+	else if (.@tier$ == "elite") .@tier_pts = 7;   // 0.7 pts
+	else if (.@tier$ == "miniboss") .@tier_pts = 25;  // 2.5 pts
+	else if (.@tier$ == "boss") .@tier_pts = 40;   // 4 pts
+	else if (.@tier$ == "mvp") .@tier_pts = 125;   // 12.5 pts
 
 	// Track boss vs regular kills for wave clear logic
 	if (.@tier$ == "mvp" || .@tier$ == "miniboss") {
@@ -444,14 +585,26 @@ OnMonsterKilled:
 	// Apply threat multiplier (100=1x, 125=1.25x, etc)
 	setarray .@threat_mult, 100, 125, 150, 200, 300;  // Wolf, Tiger, Demon, Dragon, God
 	.@kill_pts = (.@tier_pts * .@threat_mult[$@InvasionThreat]) / 100;
+
+	// Apply global point multiplier (configurable for easy tuning)
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_point_multiplier'", .@pt_mult$;
+	.@point_mult = (.@pt_mult$ != "") ? atoi(.@pt_mult$) : 100;
+	.@kill_pts = (.@kill_pts * .@point_mult) / 100;
+
 	if (.@kill_pts < 1) .@kill_pts = 1;
 
 	// Track contribution and points earned (NO immediate reward - claimed later)
+	// Points stored as 10x for decimal support
 	query_sql "INSERT INTO event_invasion_contributions (invasion_id, char_id, char_name, kills, waves_participated, points_earned) VALUES (" + $@InvasionID + ", " + .@char_id + ", '" + escape_sql(.@char_name$) + "', 1, 1, " + .@kill_pts + ") ON DUPLICATE KEY UPDATE kills = kills + 1, points_earned = points_earned + " + .@kill_pts;
 
-	// Show pending points (will be claimed after invasion ends)
+	// Show pending points with decimals (stored as 10x)
 	query_sql "SELECT points_earned FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_id, .@pending;
-	dispbottom "[Invasion] +" + .@kill_pts + " Kill Points (Pending: " + .@pending + ")", 0x00CC00;
+	// Format as X.Y for both kill pts and pending
+	.@kill_whole = .@kill_pts / 10;
+	.@kill_dec = .@kill_pts % 10;
+	.@pend_whole = .@pending / 10;
+	.@pend_dec = .@pending % 10;
+	dispbottom "[Invasion] +" + .@kill_whole + "." + .@kill_dec + " pts (Pending: " + .@pend_whole + "." + .@pend_dec + ")", 0x00CC00;
 
 	// Party kill sharing - give credit to nearby party members
 	if (getcharid(1) > 0) {
@@ -500,14 +653,23 @@ OnWaveCleared:
 	killmonsterall $@InvasionMap$;
 
 	// Award wave clear bonus to all participants (deferred to claim)
+	// Base bonus: 50 stored = 5 pts displayed
+	// Apply global point multiplier for consistency
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_point_multiplier'", .@pt_mult$;
+	.@point_mult = (.@pt_mult$ != "") ? atoi(.@pt_mult$) : 100;
+	.@wave_bonus = (50 * .@point_mult) / 100;
+	if (.@wave_bonus < 10) .@wave_bonus = 10;  // Minimum 1 pt displayed
+	.@wave_display = .@wave_bonus / 10;
+
 	// Need account_id for attachrid, char_id for DB updates
 	query_sql "SELECT c.char_id, ch.account_id FROM event_invasion_contributions c JOIN `char` ch ON c.char_id = ch.char_id WHERE c.invasion_id = " + $@InvasionID, .@char_ids, .@acc_ids;
 	for (.@i = 0; .@i < getarraysize(.@char_ids); .@i++) {
-		// Add bonus to DB
-		query_sql "UPDATE event_invasion_contributions SET points_earned = points_earned + 10 WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
+		query_sql "UPDATE event_invasion_contributions SET points_earned = points_earned + " + .@wave_bonus + " WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
 		if (attachrid(.@acc_ids[.@i])) {
 			query_sql "SELECT points_earned FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i], .@pending;
-			dispbottom "[Invasion] Wave Clear: +10 Points (Pending: " + .@pending + ")", 0x00FF00;
+			.@pend_whole = .@pending / 10;
+			.@pend_dec = .@pending % 10;
+			dispbottom "[Invasion] Wave Clear: +" + .@wave_display + " pts (Pending: " + .@pend_whole + "." + .@pend_dec + ")", 0x00FF00;
 			detachrid;
 		}
 	}
@@ -717,36 +879,36 @@ OnGMCancelInvasion:
 	end;
 
 // ============================================================
-// DISTRIBUTE REWARDS (deferred - stores multiplier for claim time)
+// DISTRIBUTE REWARDS (no multipliers - points are what you earned)
 // ============================================================
 S_DistributeRewards:
 	.@victory = getarg(0);
-	.@multiplier = (.@victory) ? 150 : 100;  // 1.5x for victory, 1.0x for fail
 
-	// Store multiplier at invasion level (applied when player claims)
-	query_sql "UPDATE event_invasion_instances SET completion_multiplier = " + .@multiplier + " WHERE id = " + $@InvasionID;
+	// Count defenders for display
+	query_sql "SELECT COUNT(*) FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@defenders;
 
-	// Add flat completion bonus to each participant's points_earned
-	// (Multiplier will be applied to ALL points at claim time)
-	setarray .@base_points, 50, 100, 150, 250, 500; // Wolf, Tiger, Demon, Dragon, God
-	.@base = .@base_points[$@InvasionThreat];
-
-	// Add completion bonus to all participants
-	query_sql "UPDATE event_invasion_contributions SET points_earned = points_earned + " + .@base + " WHERE invasion_id = " + $@InvasionID;
+	// No multipliers - store 1000 (= 1.0x when divided by 1000 at claim)
+	query_sql "UPDATE event_invasion_instances SET completion_multiplier = 1000 WHERE id = " + $@InvasionID;
 
 	// Notify online players about pending rewards
 	query_sql "SELECT c.char_id, c.points_earned, ch.account_id FROM event_invasion_contributions c JOIN `char` ch ON c.char_id = ch.char_id WHERE c.invasion_id = " + $@InvasionID, .@char_ids, .@points, .@acc_ids;
+
 	for (.@i = 0; .@i < getarraysize(.@char_ids); .@i++) {
 		if (attachrid(.@acc_ids[.@i])) {
-			.@final = (.@points[.@i] * .@multiplier) / 100;
+			// Points stored as 10x, so divide by 10 for display
+			.@raw = .@points[.@i];
+			.@final = .@raw / 10;
+			if (.@final < 1 && .@raw > 0) .@final = 1;  // Minimum 1 point
 			if (.@victory) {
-				dispbottom "[Invasion] Victory! " + .@points[.@i] + " pts x1.5 = " + .@final + " Hunt Points ready to claim!", 0x00FF00;
+				dispbottom "[Invasion] Victory! You earned " + .@final + " Hunt Points! (" + .@defenders + " defenders)", 0x00FF00;
 			} else {
-				dispbottom "[Invasion] Defense ended. " + .@points[.@i] + " Hunt Points ready to claim.", 0xFFAA00;
+				dispbottom "[Invasion] Defense ended. You earned " + .@final + " Hunt Points.", 0xFFAA00;
 			}
 			detachrid;
 		}
 	}
+
+	debugmes "[TownInvasion] Rewards: " + .@defenders + " defenders, no multipliers applied";
 	return;
 
 // ============================================================
@@ -805,13 +967,23 @@ S_QueueDiscordEnd:
 	// Count defenders
 	query_sql "SELECT COUNT(*) FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@defenders;
 
+	// Calculate waves cleared based on outcome
+	// Victory: all waves cleared (current wave = total)
+	// Failure: current wave was not cleared (wave - 1)
+	if (.@status$ == "victory") {
+		.@waves_cleared = $@InvasionWave;  // All waves completed
+	} else {
+		.@waves_cleared = $@InvasionWave - 1;  // Current wave failed
+		if (.@waves_cleared < 0) .@waves_cleared = 0;
+	}
+
 	// Build JSON payload
 	.@payload$ = "{";
 	.@payload$ += "\"type\":\"invasion_end\",";
 	.@payload$ += "\"status\":\"" + .@status$ + "\",";
 	.@payload$ += "\"town_name\":\"" + $@InvasionTownName$ + "\",";
 	.@payload$ += "\"theme_name\":\"" + $@InvasionThemeName$ + "\",";
-	.@payload$ += "\"waves_cleared\":" + ($@InvasionWave - 1) + ",";
+	.@payload$ += "\"waves_cleared\":" + .@waves_cleared + ",";
 	.@payload$ += "\"total_waves\":" + $@InvasionTotalWaves + ",";
 	.@payload$ += "\"monsters_killed\":" + $@InvasionMonstersKilled + ",";
 	.@payload$ += "\"defenders\":" + .@defenders + ",";

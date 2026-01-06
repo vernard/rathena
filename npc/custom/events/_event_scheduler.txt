@@ -15,6 +15,10 @@
 	end;
 
 OnInit:
+	// Cleanup stale "active" instances from previous runs
+	// (e.g., server crashed mid-event, instance never completed)
+	callsub S_CleanupStaleInstances;
+
 	// Initialize next_run for all enabled schedules
 	callsub S_InitializeNextRun;
 
@@ -92,14 +96,30 @@ S_InitializeNextRun:
 	return;
 
 // ============================================================
+// Cleanup stale "active" instances on server restart
+// Fixes orphaned instances that block new event triggers
+// ============================================================
+S_CleanupStaleInstances:
+	// Mark old "active" instances as completed if they've been running too long
+	// Happy Hour/EXP Boost: max 8 hours, Invasion: max 2 hours, MOTD: max 12 hours
+	query_sql "UPDATE event_instances ei JOIN event_types et ON ei.event_type_id = et.id SET ei.status = 'completed', ei.actual_end = COALESCE(ei.actual_end, NOW()) WHERE ei.status = 'active' AND (   (et.code = 'happy_hour' AND ei.actual_start < DATE_SUB(NOW(), INTERVAL 8 HOUR))   OR (et.code = 'exp_boost' AND ei.actual_start < DATE_SUB(NOW(), INTERVAL 8 HOUR))   OR (et.code = 'invasion' AND ei.actual_start < DATE_SUB(NOW(), INTERVAL 2 HOUR))   OR (et.code = 'motd' AND ei.actual_start < DATE_SUB(NOW(), INTERVAL 12 HOUR))   OR ei.actual_start IS NULL )";
+
+	// Also clear any stale event_current_state cache entries
+	query_sql "UPDATE event_current_state ecs JOIN event_instances ei ON ecs.instance_id = ei.id SET ecs.is_active = 0, ecs.instance_id = NULL, ecs.cache_data = NULL WHERE ei.status = 'completed'";
+
+	debugmes "[EventScheduler] Cleaned up stale instances";
+	return;
+
+// ============================================================
 // Restore active events after server restart
 // One-time events are now stored in event_instances directly
 // ============================================================
 S_RestoreActiveEvents:
-	// Check for EXP Boost (one-time event in event_instances)
+	// Check for EXP Boost (one-time events in event_instances)
 	// Status can be 'scheduled' (not yet started) or 'active' (was running)
+	// Source (gm/crowdfund) is stored in event_data.source, not trigger_type
 	if (!$@ExpBoostActive) {
-		// Query event_instances for one-time EXP boost within its time window
+		// Query event_instances for EXP boost within its time window
 		query_sql "SELECT ei.id, CAST(JSON_EXTRACT(ei.event_data, '$.multiplier') AS UNSIGNED), TIMESTAMPDIFF(MINUTE, NOW(), ei.scheduled_end), ei.status FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND et.enabled = 1 AND ei.trigger_type = 'one_time' AND ei.status IN ('scheduled', 'active') AND NOW() BETWEEN COALESCE(ei.scheduled_start, ei.actual_start) AND ei.scheduled_end LIMIT 1", .@ei_id, .@eb_mult, .@eb_remaining, .@eb_status$;
 
 		if (.@ei_id > 0 && .@eb_remaining > 0) {
@@ -123,11 +143,22 @@ S_RestoreActiveEvents:
 	// Check for Happy Hour - restore if we're within an active schedule window
 	if (!$@HappyHourActive) {
 		// Find any weekly schedule where we're currently in the time window
-		query_sql "SELECT es.id, es.duration_minutes, es.start_hour, es.start_minute, (es.start_hour * 60 + es.start_minute + es.duration_minutes) - (HOUR(NOW()) * 60 + MINUTE(NOW())) as remaining FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' AND et.enabled = 1 AND es.enabled = 1 AND es.day_of_week = WEEKDAY(NOW()) AND (HOUR(NOW()) * 60 + MINUTE(NOW())) >= (es.start_hour * 60 + es.start_minute) AND (HOUR(NOW()) * 60 + MINUTE(NOW())) < (es.start_hour * 60 + es.start_minute + es.duration_minutes) LIMIT 1", .@hh_sched_id, .@hh_duration, .@hh_hour, .@hh_min, .@hh_remaining;
+		query_sql "SELECT es.id, es.event_type_id, es.duration_minutes, es.start_hour, es.start_minute, (es.start_hour * 60 + es.start_minute + es.duration_minutes) - (HOUR(NOW()) * 60 + MINUTE(NOW())) as remaining FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' AND et.enabled = 1 AND es.enabled = 1 AND es.day_of_week = WEEKDAY(NOW()) AND (HOUR(NOW()) * 60 + MINUTE(NOW())) >= (es.start_hour * 60 + es.start_minute) AND (HOUR(NOW()) * 60 + MINUTE(NOW())) < (es.start_hour * 60 + es.start_minute + es.duration_minutes) LIMIT 1", .@hh_sched_id, .@hh_type_id, .@hh_duration, .@hh_hour, .@hh_min, .@hh_remaining;
 
 		if (.@hh_sched_id > 0 && .@hh_remaining > 0) {
+			// Create event instance for tracking
+			query_sql "INSERT INTO event_instances (event_type_id, event_code, schedule_id, actual_start, status, trigger_type) VALUES ("+.@hh_type_id+", 'happy_hour', "+.@hh_sched_id+", NOW(), 'active', 'scheduled')";
+			query_sql "SELECT LAST_INSERT_ID()", .@hh_instance_id;
+
+			// Update event_current_state cache
+			query_sql "UPDATE event_current_state SET instance_id = "+.@hh_instance_id+", is_active = 1, cache_data = JSON_OBJECT('schedule_id', "+.@hh_sched_id+", 'duration', "+.@hh_remaining+") WHERE event_type_id = "+.@hh_type_id;
+
+			// Update next_run to next week (prevents double-trigger)
+			query_sql "UPDATE event_schedule SET last_run = NOW(), next_run = DATE_ADD(DATE_ADD(CURDATE(), INTERVAL ((WEEKDAY(NOW()) - WEEKDAY(NOW()) + 7) % 7 + 7) DAY), INTERVAL "+.@hh_hour+" * 60 + "+.@hh_min+" MINUTE) WHERE id = "+.@hh_sched_id;
+
 			set $@HappyHourDuration, .@hh_remaining;
 			set $@HappyHourScheduleId, .@hh_sched_id;
+			set $@HappyHourInstanceId, .@hh_instance_id;
 			donpcevent "HappyHour::OnEventStart";
 			debugmes "[EventScheduler] Restored Happy Hour - "+.@hh_remaining+" minutes remaining";
 		}
@@ -405,10 +436,14 @@ S_CheckCondTriggers:
 // ============================================================
 // Evaluate all trigger groups for an event type
 // Groups are evaluated in priority order (OR between groups)
+// Logs results to trigger_check_log for debugging
 // ============================================================
 S_EvaluateTriggerGroups:
 	.@event_type_id = getarg(0);
 	.@event_code$ = getarg(1);
+
+	// Get online player count for logging
+	.@online_count = getusers(1);
 
 	// Get all enabled trigger groups for this event, ordered by priority
 	query_sql "SELECT id, name, check_interval_minutes, last_checked, event_params, last_ended_config_key FROM event_trigger_groups WHERE event_type_id = "+.@event_type_id+" AND enabled = 1 ORDER BY priority DESC", .@group_ids, .@group_names$, .@intervals, .@last_checked$, .@event_params$, .@config_keys$;
@@ -430,21 +465,41 @@ S_EvaluateTriggerGroups:
 		query_sql "UPDATE event_trigger_groups SET last_checked = NOW() WHERE id = "+.@group_id;
 
 		// Evaluate all conditions in this group (AND logic)
+		// Collect results for logging
 		.@group_passed = 1;
+		.@log_json$ = "[";
+		.@first_cond = 1;
 
 		query_sql "SELECT id, condition_type, params, required FROM event_trigger_conditions WHERE group_id = "+.@group_id+" ORDER BY eval_order", .@cond_ids, .@cond_types$, .@cond_params$, .@cond_required;
 
 		for (.@c = 0; .@c < getarraysize(.@cond_ids); .@c++) {
-			// Evaluate condition - result stored in .cond_result (NPC-scoped)
+			// Evaluate condition - result stored in .cond_result and .cond_detail$ (NPC-scoped)
 			.cond_result = 0;
+			.cond_detail$ = "";
 			callsub S_EvaluateCondition, .@cond_types$[.@c], .@cond_params$[.@c], .@event_type_id, .@config_keys$[.@g];
+
+			// Build JSON entry for this condition
+			if (!.@first_cond) .@log_json$ = .@log_json$ + ",";
+			.@first_cond = 0;
+			.@log_json$ = .@log_json$ + "{\"type\":\"" + .@cond_types$[.@c] + "\",\"passed\":" + .cond_result + ",\"required\":" + .@cond_required[.@c];
+			if (.cond_detail$ != "") {
+				.@log_json$ = .@log_json$ + ",\"detail\":\"" + .cond_detail$ + "\"";
+			}
+			.@log_json$ = .@log_json$ + "}";
 
 			if (!.cond_result && .@cond_required[.@c]) {
 				// Required condition failed - group fails
 				.@group_passed = 0;
-				break;
+				// Don't break - evaluate remaining for complete log
 			}
 		}
+		.@log_json$ = .@log_json$ + "]";
+
+		// Log this check to database
+		query_sql "INSERT INTO trigger_check_log (group_id, group_passed, condition_results, online_count) VALUES (" + .@group_id + ", " + .@group_passed + ", '" + escape_sql(.@log_json$) + "', " + .@online_count + ")";
+
+		// Cleanup old logs (keep last 30 per group)
+		query_sql "CALL cleanup_trigger_check_log(" + .@group_id + ", 30)";
 
 		if (.@group_passed) {
 			// All conditions passed - trigger the event!
@@ -458,6 +513,7 @@ S_EvaluateTriggerGroups:
 // ============================================================
 // Evaluate a single condition
 // Sets .cond_result to 1 if condition passes, 0 if fails
+// Sets .cond_detail$ with debugging info (actual values)
 // ============================================================
 S_EvaluateCondition:
 	.@type$ = getarg(0);
@@ -471,34 +527,39 @@ S_EvaluateCondition:
 		.@percent = atoi(.@percent$);
 		if (.@percent <= 0) {
 			.cond_result = 0;
+			.cond_detail$ = "0% chance";
 			return;
 		}
-		.cond_result = (rand(100) < .@percent);
+		.@roll = rand(100);
+		.cond_result = (.@roll < .@percent);
+		.cond_detail$ = "rolled " + .@roll + " vs " + .@percent + "%";
 		return;
 	}
 
 	// Outside WoE - pass if WoE is NOT active
 	if (.@type$ == "outside_woe") {
-		// Check agit flag (WoE active indicator)
-		// agitcheck() returns 1 if WoE is active
-		if (agitcheck() || agitcheck2()) {
+		.@woe1 = agitcheck();
+		.@woe2 = agitcheck2();
+		if (.@woe1 || .@woe2) {
 			.cond_result = 0;
+			.cond_detail$ = "WoE active";
 			return;
 		}
 		.cond_result = 1;
+		.cond_detail$ = "no WoE";
 		return;
 	}
 
 	// No active event - pass if specified events are NOT running
 	if (.@type$ == "no_active_event") {
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.events'))", .@events$;
-		// Parse JSON array - simple approach: check each known event
-		// Format: ["invasion", "exp_boost"]
+		.@blocking$ = "";
 		if (countstr(.@events$, "invasion") > 0) {
 			.@active = 0;
 			query_sql "SELECT 1 FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'invasion' AND ei.status = 'active' LIMIT 1", .@active;
 			if (.@active || $@InvasionActive) {
 				.cond_result = 0;
+				.cond_detail$ = "invasion active";
 				return;
 			}
 		}
@@ -507,6 +568,7 @@ S_EvaluateCondition:
 			query_sql "SELECT 1 FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND ei.status = 'active' LIMIT 1", .@active;
 			if (.@active || $@ExpBoostActive) {
 				.cond_result = 0;
+				.cond_detail$ = "exp_boost active";
 				return;
 			}
 		}
@@ -515,10 +577,12 @@ S_EvaluateCondition:
 			query_sql "SELECT 1 FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'happy_hour' AND ei.status = 'active' LIMIT 1", .@active;
 			if (.@active || $@HappyHourActive) {
 				.cond_result = 0;
+				.cond_detail$ = "happy_hour active";
 				return;
 			}
 		}
 		.cond_result = 1;
+		.cond_detail$ = "no conflicts";
 		return;
 	}
 
@@ -528,23 +592,26 @@ S_EvaluateCondition:
 		.@minutes = atoi(.@minutes$);
 		if (.@minutes <= 0) {
 			.cond_result = 1;
+			.cond_detail$ = "no cooldown";
 			return;
 		}
 
-		// Get last ended timestamp from config
 		if (.@config_key$ == "") {
 			.cond_result = 1;
+			.cond_detail$ = "no config key";
 			return;
 		}
 		query_sql "SELECT config_value FROM event_config WHERE config_key = '"+escape_sql(.@config_key$)+"'", .@last_ended$;
 		.@last_ended = atoi(.@last_ended$);
 		if (.@last_ended == 0) {
 			.cond_result = 1;
+			.cond_detail$ = "never run";
 			return;
 		}
 
 		.@elapsed_min = (gettimetick(2) - .@last_ended) / 60;
 		.cond_result = (.@elapsed_min >= .@minutes);
+		.cond_detail$ = .@elapsed_min + "/" + .@minutes + " min";
 		return;
 	}
 
@@ -553,8 +620,9 @@ S_EvaluateCondition:
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.start_hour')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.end_hour'))", .@start$, .@end$;
 		.@start = atoi(.@start$);
 		.@end = atoi(.@end$);
-		.@hour = gettime(3);  // Current hour (0-23)
+		.@hour = gettime(3);
 		.cond_result = (.@hour >= .@start && .@hour < .@end);
+		.cond_detail$ = "now " + .@hour + "h vs " + .@start + "-" + .@end + "h";
 		return;
 	}
 
@@ -566,13 +634,16 @@ S_EvaluateCondition:
 		.@count = getusers(1);
 		if (.@min > 0 && .@count < .@min) {
 			.cond_result = 0;
+			.cond_detail$ = .@count + " < " + .@min + " min";
 			return;
 		}
 		if (.@max > 0 && .@count > .@max) {
 			.cond_result = 0;
+			.cond_detail$ = .@count + " > " + .@max + " max";
 			return;
 		}
 		.cond_result = 1;
+		.cond_detail$ = .@count + " online";
 		return;
 	}
 
@@ -581,29 +652,29 @@ S_EvaluateCondition:
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.min')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.window_minutes'))", .@min$, .@window$;
 		.@min = atoi(.@min$);
 		.@window = atoi(.@window$);
-		if (.@window <= 0) .@window = 10;  // Default 10 minutes
+		if (.@window <= 0) .@window = 10;
 
 		query_sql "SELECT COUNT(*) FROM player_activity_tracking WHERE position_changed = 1 AND last_seen >= DATE_SUB(NOW(), INTERVAL "+.@window+" MINUTE)", .@active_count;
 		.cond_result = (.@active_count >= .@min);
+		.cond_detail$ = .@active_count + "/" + .@min + " active";
 		return;
 	}
 
 	// Day of week - pass if today is in the list
 	if (.@type$ == "day_of_week") {
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.days'))", .@days$;
-		// gettime(4) returns day of week: 0=Sunday, 1=Monday, ..., 6=Saturday
-		// Convert to 0=Monday format used in our config
 		.@today = gettime(4);
-		.@today_mon = (.@today == 0) ? 6 : (.@today - 1);  // Convert to 0=Mon
+		.@today_mon = (.@today == 0) ? 6 : (.@today - 1);
 
-		// Check if today is in the days array (simple string search)
 		.cond_result = (countstr(.@days$, ""+.@today_mon) > 0);
+		.cond_detail$ = "day " + .@today_mon + " in [" + .@days$ + "]";
 		return;
 	}
 
 	// Unknown condition type
 	debugmes "[ConditionalTrigger] Unknown condition type: "+.@type$;
 	.cond_result = 0;
+	.cond_detail$ = "unknown type";
 	return;
 
 // ============================================================
@@ -766,30 +837,55 @@ OnGenerateMOTDSchedule:
 
 	// Generate slots based on duration (24 / duration = number of slots per day)
 	set .@slots_per_day, 24 / .@duration;
-	set .@tier_index, 0;
-	setarray .@tiers$[0], "medium", "hard";
+	set .@total_slots, .@slots_per_day * 2; // 2 days
 
-	// Generate 2 days worth of schedule (today + tomorrow)
+	// Pre-fetch all monsters at once (much faster than ORDER BY RAND() per slot)
+	if (.@mode$ == "tier_rotation") {
+		// Get pool of medium and hard monsters separately
+		query_sql "SELECT mob_id, mob_name FROM event_motd_monsters WHERE tier = 'medium' AND enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT "+.@total_slots, .@med_ids, .@med_names$;
+		query_sql "SELECT mob_id, mob_name FROM event_motd_monsters WHERE tier = 'hard' AND enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT "+.@total_slots, .@hard_ids, .@hard_names$;
+		set .@med_idx, 0;
+		set .@hard_idx, 0;
+		set .@tier_toggle, 0;
+	} else {
+		// Random mode - get all monsters in one query
+		query_sql "SELECT mob_id, mob_name, tier FROM event_motd_monsters WHERE enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT "+.@total_slots, .@rand_ids, .@rand_names$, .@rand_tiers$;
+		set .@rand_idx, 0;
+	}
+
+	// Generate 2 days worth of schedule using pre-fetched monsters
+	set .@slot_num, 0;
 	for (set .@day, 0; .@day < 2; set .@day, .@day + 1) {
 		for (set .@i, 0; .@i < .@slots_per_day; set .@i, .@i + 1) {
 			set .@hour, .@i * .@duration;
 
 			if (.@mode$ == "tier_rotation") {
 				// Alternate between medium and hard
-				set .@tier$, .@tiers$[.@tier_index % 2];
-				set .@tier_index, .@tier_index + 1;
-
-				// Select random monster from this tier
-				query_sql "SELECT mob_id, mob_name FROM event_motd_monsters WHERE tier = '"+.@tier$+"' AND enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$;
+				if (.@tier_toggle % 2 == 0) {
+					set .@mob_id, .@med_ids[.@med_idx];
+					set .@mob_name$, .@med_names$[.@med_idx];
+					set .@tier$, "medium";
+					set .@med_idx, .@med_idx + 1;
+				} else {
+					set .@mob_id, .@hard_ids[.@hard_idx];
+					set .@mob_name$, .@hard_names$[.@hard_idx];
+					set .@tier$, "hard";
+					set .@hard_idx, .@hard_idx + 1;
+				}
+				set .@tier_toggle, .@tier_toggle + 1;
 			} else {
-				// Random mode - pick any monster
-				query_sql "SELECT mob_id, mob_name, tier FROM event_motd_monsters WHERE enabled = 1 AND mob_level >= "+.@min_level+" ORDER BY RAND() LIMIT 1", .@mob_id, .@mob_name$, .@tier$;
+				// Random mode - use pre-fetched list
+				set .@mob_id, .@rand_ids[.@rand_idx];
+				set .@mob_name$, .@rand_names$[.@rand_idx];
+				set .@tier$, .@rand_tiers$[.@rand_idx];
+				set .@rand_idx, .@rand_idx + 1;
 			}
 
 			if (.@mob_id > 0) {
-				// Insert into schedule (day offset added to CURDATE)
+				// Insert into schedule
 				query_sql "INSERT INTO event_motd_schedule (mob_id, mob_name, start_time, end_time, tier) VALUES ("+.@mob_id+", '"+escape_sql(.@mob_name$)+"', DATE_ADD(DATE_ADD(CURDATE(), INTERVAL "+.@day+" DAY), INTERVAL "+.@hour+" HOUR), DATE_ADD(DATE_ADD(CURDATE(), INTERVAL "+.@day+" DAY), INTERVAL "+(.@hour+.@duration)+" HOUR), '"+.@tier$+"')";
 			}
+			set .@slot_num, .@slot_num + 1;
 		}
 	}
 

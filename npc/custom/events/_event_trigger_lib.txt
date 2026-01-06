@@ -27,6 +27,9 @@ function	script	F_TriggerMenu	{
 	query_sql "SELECT COUNT(*) FROM event_trigger_groups WHERE event_type_id = "+.@event_type_id, .@group_count;
 
 F_TriggerMenu_Loop:
+	// Re-count groups (may have changed)
+	query_sql "SELECT COUNT(*) FROM event_trigger_groups WHERE event_type_id = "+.@event_type_id, .@group_count;
+
 	clear;
 	mes "[Trigger Settings]";
 	mes "^0055FF"+.@event_name$+"^000000";
@@ -36,21 +39,25 @@ F_TriggerMenu_Loop:
 	next;
 
 	switch(select(
-		"View Trigger Groups",
+		"View/Edit Trigger Groups",
+		"Create New Trigger Group",
 		"Test Triggers Now",
 		"View Recent Triggers",
 		"Back"
 	)) {
 	case 1:
-		callfunc "F_TriggerGroups", .@event_type_id, .@event_name$;
+		callfunc "F_TriggerGroups", .@event_type_id, .@event_name$, .@event_code$;
 		goto F_TriggerMenu_Loop;
 	case 2:
-		callfunc "F_TestTriggers", .@event_type_id, .@event_code$;
+		callfunc "F_CreateTriggerGroup", .@event_type_id, .@event_code$;
 		goto F_TriggerMenu_Loop;
 	case 3:
-		callfunc "F_RecentTriggers", .@event_type_id, .@event_name$;
+		callfunc "F_TestTriggers", .@event_type_id, .@event_code$;
 		goto F_TriggerMenu_Loop;
 	case 4:
+		callfunc "F_RecentTriggers", .@event_type_id, .@event_name$;
+		goto F_TriggerMenu_Loop;
+	case 5:
 		return;
 	}
 	return;
@@ -62,6 +69,7 @@ F_TriggerMenu_Loop:
 function	script	F_TriggerGroups	{
 	.@event_type_id = getarg(0);
 	.@event_name$ = getarg(1);
+	.@event_code$ = getarg(2);
 
 F_TriggerGroups_Loop:
 	clear;
@@ -79,7 +87,10 @@ F_TriggerGroups_Loop:
 		mes "^777777Trigger groups define conditions";
 		mes "that can start this event.^000000";
 		next;
-		select("Back");
+		if (select("Create New Group:Back") == 1) {
+			callfunc "F_CreateTriggerGroup", .@event_type_id, .@event_code$;
+			goto F_TriggerGroups_Loop;
+		}
 		return;
 	}
 
@@ -100,7 +111,7 @@ F_TriggerGroups_Loop:
 	if (.@sel >= .@count) return;  // Back selected
 
 	// Show group details
-	callfunc "F_GroupDetail", .@ids[.@sel], .@names$[.@sel], .@enabled[.@sel], .@intervals[.@sel];
+	callfunc "F_GroupDetail", .@ids[.@sel], .@names$[.@sel], .@enabled[.@sel], .@intervals[.@sel], .@event_code$;
 	goto F_TriggerGroups_Loop;
 }
 
@@ -112,14 +123,15 @@ function	script	F_GroupDetail	{
 	.@group_name$ = getarg(1);
 	.@enabled = getarg(2);
 	.@interval = getarg(3);
+	.@event_code$ = getarg(4, "");
 
 F_GroupDetail_Loop:
 	clear;
 	mes "["+.@group_name$+"]";
 	mes " ";
 
-	// Get description
-	query_sql "SELECT description, last_checked FROM event_trigger_groups WHERE id = "+.@group_id, .@desc$, .@last_checked$;
+	// Get description and event_params
+	query_sql "SELECT description, last_checked, event_params FROM event_trigger_groups WHERE id = "+.@group_id, .@desc$, .@last_checked$, .@params$;
 
 	if (.@desc$ != "") {
 		mes "^777777"+.@desc$+"^000000";
@@ -131,6 +143,13 @@ F_GroupDetail_Loop:
 	if (.@last_checked$ != "" && .@last_checked$ != "NULL") {
 		mes "Last Checked: ^777777"+.@last_checked$+"^000000";
 	}
+
+	// Show event params if set
+	if (.@params$ != "" && .@params$ != "null" && .@params$ != "NULL") {
+		mes " ";
+		mes "^0055FFEvent Settings:^000000";
+		callfunc "F_DisplayEventParams", .@event_code$, .@params$;
+	}
 	mes " ";
 
 	// Show conditions summary
@@ -140,8 +159,11 @@ F_GroupDetail_Loop:
 	next;
 	switch(select(
 		((.@enabled) ? "Disable" : "Enable") + " Group",
-		"View Conditions",
+		"Manage Conditions ("+.@cond_count+")",
+		"View Check History",
+		"Edit Event Settings",
 		"Edit Check Interval",
+		"^FF0000Delete Group^000000",
 		"Back"
 	)) {
 	case 1:
@@ -153,13 +175,24 @@ F_GroupDetail_Loop:
 		next;
 		goto F_GroupDetail_Loop;
 	case 2:
-		callfunc "F_ViewConditions", .@group_id, .@group_name$;
+		callfunc "F_ManageConditions", .@group_id, .@group_name$;
 		goto F_GroupDetail_Loop;
 	case 3:
+		callfunc "F_ViewCheckHistory", .@group_id, .@group_name$;
+		goto F_GroupDetail_Loop;
+	case 4:
+		callfunc "F_EditEventParams", .@group_id, .@event_code$;
+		goto F_GroupDetail_Loop;
+	case 5:
 		callfunc "F_EditInterval", .@group_id;
 		query_sql "SELECT check_interval_minutes FROM event_trigger_groups WHERE id = "+.@group_id, .@interval;
 		goto F_GroupDetail_Loop;
-	case 4:
+	case 6:
+		if (callfunc("F_DeleteGroup", .@group_id, .@group_name$)) {
+			return;  // Group deleted, go back to list
+		}
+		goto F_GroupDetail_Loop;
+	case 7:
 		return;
 	}
 	return;
@@ -204,6 +237,7 @@ function	script	F_ViewConditions	{
 
 // ============================================================
 // Get human-readable condition description
+// NOTE: Avoid colons (:) - they break select() menus!
 // ============================================================
 function	script	F_ConditionDesc	{
 	.@type$ = getarg(0);
@@ -211,40 +245,40 @@ function	script	F_ConditionDesc	{
 
 	if (.@type$ == "random_chance") {
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.percent'))", .@pct$;
-		return "Random: ^00AA00"+.@pct$+"%^000000 chance";
+		return "^00AA00"+.@pct$+"%^000000 random chance";
 	}
 	else if (.@type$ == "outside_woe") {
 		return "Outside WoE times";
 	}
 	else if (.@type$ == "cooldown") {
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.minutes'))", .@min$;
-		return "Cooldown: ^00AA00"+.@min$+"^000000 min since last";
+		return "^00AA00"+.@min$+"^000000 min cooldown";
 	}
 	else if (.@type$ == "time_window") {
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.start_hour')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.end_hour'))", .@start$, .@end$;
-		return "Time: ^00AA00"+.@start$+":00 - "+.@end$+":00^000000";
+		return "^00AA00"+.@start$+"h - "+.@end$+"h^000000 time window";
 	}
 	else if (.@type$ == "player_count") {
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.min')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.max'))", .@min$, .@max$;
 		if (.@max$ == "" || .@max$ == "null" || .@max$ == "0") {
-			return "Players: ^00AA00"+.@min$+"+^000000 online";
+			return "^00AA00"+.@min$+"+^000000 players online";
 		}
-		return "Players: ^00AA00"+.@min$+"-"+.@max$+"^000000 online";
+		return "^00AA00"+.@min$+"-"+.@max$+"^000000 players online";
 	}
 	else if (.@type$ == "active_player_count") {
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.min')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.window_minutes'))", .@min$, .@win$;
-		return "Active players: ^00AA00"+.@min$+"+^000000 in "+.@win$+" min";
+		return "^00AA00"+.@min$+"+^000000 active in "+.@win$+" min";
 	}
 	else if (.@type$ == "no_active_event") {
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.events'))", .@events$;
-		return "No conflicts: "+.@events$;
+		return "No conflict with "+.@events$;
 	}
 	else if (.@type$ == "day_of_week") {
 		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.days'))", .@days$;
-		return "Days: "+.@days$;
+		return "Days ["+.@days$+"]";
 	}
 
-	return .@type$+": "+.@params$;
+	return .@type$+" ("+.@params$+")";
 }
 
 // ============================================================
@@ -452,6 +486,1049 @@ function	script	F_RecentTriggers	{
 		for (.@i = 0; .@i < .@count; .@i++) {
 			.@group$ = (.@groups$[.@i] != "") ? .@groups$[.@i] : "Unknown";
 			mes "^0055FF"+.@times$[.@i]+"^000000 - "+.@group$;
+		}
+	}
+
+	next;
+	select("Back");
+	return;
+}
+
+// ============================================================
+// Create New Trigger Group
+// ============================================================
+function	script	F_CreateTriggerGroup	{
+	.@event_type_id = getarg(0);
+	.@event_code$ = getarg(1);
+
+	clear;
+	mes "[Create Trigger Group]";
+	mes " ";
+	mes "Create a new conditional trigger";
+	mes "group for this event.";
+	mes " ";
+	mes "^777777A trigger group is a set of";
+	mes "conditions that must ALL pass";
+	mes "for the event to start.^000000";
+	next;
+
+	// Get group name
+	mes "[Group Name]";
+	mes " ";
+	mes "Enter a name for this trigger group:";
+	mes "^777777(e.g., 'Peak Hours', 'Weekend Rush')^000000";
+	next;
+	input .@name$;
+
+	if (.@name$ == "" || getstrlen(.@name$) < 3) {
+		mes "^FF0000Name must be at least 3 characters.^000000";
+		next;
+		return;
+	}
+
+	// Get description
+	clear;
+	mes "[Description]";
+	mes " ";
+	mes "Enter a brief description:";
+	mes "^777777(optional - press Enter to skip)^000000";
+	next;
+	input .@desc$;
+
+	// Get check interval
+	clear;
+	mes "[Check Interval]";
+	mes " ";
+	mes "How often should conditions be";
+	mes "evaluated?";
+	next;
+
+	switch(select(
+		"Every 1 minute (responsive)",
+		"Every 5 minutes (balanced)",
+		"Every 10 minutes (low load)",
+		"Every 15 minutes",
+		"Cancel"
+	)) {
+	case 1: .@interval = 1; break;
+	case 2: .@interval = 5; break;
+	case 3: .@interval = 10; break;
+	case 4: .@interval = 15; break;
+	case 5: return;
+	}
+
+	// Get cooldown config key
+	.@config_key$ = .@event_code$ + "_last_ended";
+
+	// Insert the group
+	query_sql "INSERT INTO event_trigger_groups (event_type_id, name, description, enabled, check_interval_minutes, last_ended_config_key) VALUES ("+.@event_type_id+", '"+escape_sql(.@name$)+"', '"+escape_sql(.@desc$)+"', 0, "+.@interval+", '"+escape_sql(.@config_key$)+"')";
+
+	// Get the new group ID
+	query_sql "SELECT LAST_INSERT_ID()", .@group_id;
+
+	clear;
+	mes "[Group Created]";
+	mes " ";
+	mes "^00AA00"+.@name$+"^000000 created!";
+	mes " ";
+	mes "The group is ^FF0000disabled^000000 by default.";
+	mes " ";
+	mes "Next steps:";
+	mes "1. Add conditions to the group";
+	mes "2. Configure event settings";
+	mes "3. Enable when ready";
+	next;
+
+	if (select("Add Conditions Now:Done") == 1) {
+		callfunc "F_ManageConditions", .@group_id, .@name$;
+	}
+	return;
+}
+
+// ============================================================
+// Manage Conditions (list with add/edit/delete)
+// ============================================================
+function	script	F_ManageConditions	{
+	.@group_id = getarg(0);
+	.@group_name$ = getarg(1);
+
+F_ManageConditions_Loop:
+	clear;
+	mes "[Conditions]";
+	mes "^0055FF"+.@group_name$+"^000000";
+	mes " ";
+	mes "All conditions must pass (AND logic)";
+	mes "for this trigger to fire.";
+	mes " ";
+
+	// Get conditions
+	query_sql "SELECT id, condition_type, params, required FROM event_trigger_conditions WHERE group_id = "+.@group_id+" ORDER BY eval_order", .@ids, .@types$, .@params$, .@required;
+
+	.@count = getarraysize(.@ids);
+
+	if (.@count == 0) {
+		mes "^777777No conditions yet.^000000";
+	} else {
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@req$ = (.@required[.@i]) ? "" : " ^777777(opt)^000000";
+			.@desc$ = callfunc("F_ConditionDesc", .@types$[.@i], .@params$[.@i]);
+			mes "^0055FF"+(.@i+1)+".^000000 "+.@desc$+.@req$;
+		}
+	}
+	mes " ";
+	next;
+
+	// Build menu
+	.@menu$ = "Add Condition:";
+	if (.@count > 0) {
+		.@menu$ = .@menu$ + "Edit Condition:Delete Condition:";
+	}
+	.@menu$ = .@menu$ + "Back";
+
+	.@sel = select(.@menu$);
+
+	if (.@count == 0) {
+		// Only Add and Back available
+		if (.@sel == 1) {
+			callfunc "F_AddCondition", .@group_id;
+			goto F_ManageConditions_Loop;
+		}
+		return;  // Back
+	}
+
+	switch(.@sel) {
+	case 1:
+		callfunc "F_AddCondition", .@group_id;
+		goto F_ManageConditions_Loop;
+	case 2:
+		// Edit - select which condition
+		clear;
+		mes "[Edit Condition]";
+		mes "Select condition to edit:";
+		next;
+		.@edit_menu$ = "";
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@edit_menu$ = .@edit_menu$ + callfunc("F_ConditionDesc", .@types$[.@i], .@params$[.@i]) + ":";
+		}
+		.@edit_menu$ = .@edit_menu$ + "Cancel";
+		.@edit_sel = select(.@edit_menu$) - 1;
+		if (.@edit_sel < .@count) {
+			callfunc "F_EditCondition", .@ids[.@edit_sel], .@types$[.@edit_sel], .@params$[.@edit_sel];
+		}
+		goto F_ManageConditions_Loop;
+	case 3:
+		// Delete - select which condition
+		clear;
+		mes "[Delete Condition]";
+		mes "Select condition to delete:";
+		next;
+		.@del_menu$ = "";
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@del_menu$ = .@del_menu$ + callfunc("F_ConditionDesc", .@types$[.@i], .@params$[.@i]) + ":";
+		}
+		.@del_menu$ = .@del_menu$ + "Cancel";
+		.@del_sel = select(.@del_menu$) - 1;
+		if (.@del_sel < .@count) {
+			callfunc "F_DeleteCondition", .@ids[.@del_sel], .@types$[.@del_sel];
+		}
+		goto F_ManageConditions_Loop;
+	default:
+		return;  // Back
+	}
+	return;
+}
+
+// ============================================================
+// Add Condition Wizard
+// ============================================================
+function	script	F_AddCondition	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[Add Condition]";
+	mes " ";
+	mes "Select condition type:";
+	next;
+
+	switch(select(
+		"Random Chance (%)",
+		"Time Window (hours)",
+		"Player Count (min/max)",
+		"Active Players (moving)",
+		"Cooldown (minutes)",
+		"Day of Week",
+		"Outside WoE",
+		"No Conflicting Events",
+		"Cancel"
+	)) {
+	case 1: callfunc "F_AddCond_RandomChance", .@group_id; break;
+	case 2: callfunc "F_AddCond_TimeWindow", .@group_id; break;
+	case 3: callfunc "F_AddCond_PlayerCount", .@group_id; break;
+	case 4: callfunc "F_AddCond_ActivePlayers", .@group_id; break;
+	case 5: callfunc "F_AddCond_Cooldown", .@group_id; break;
+	case 6: callfunc "F_AddCond_DayOfWeek", .@group_id; break;
+	case 7: callfunc "F_AddCond_OutsideWoE", .@group_id; break;
+	case 8: callfunc "F_AddCond_NoConflict", .@group_id; break;
+	case 9: return;
+	}
+	return;
+}
+
+// --- Condition Add Helpers ---
+
+function	script	F_AddCond_RandomChance	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[Random Chance]";
+	mes " ";
+	mes "Probability that this trigger fires";
+	mes "each time conditions are checked.";
+	mes " ";
+	mes "Enter percentage (1-100):";
+	mes "^777777e.g., 5 = 5% chance per check^000000";
+	next;
+	input .@pct;
+
+	if (.@pct < 1 || .@pct > 100) {
+		mes "^FF0000Must be 1-100.^000000";
+		next;
+		return;
+	}
+
+	query_sql "INSERT INTO event_trigger_conditions (group_id, condition_type, params, required, eval_order) VALUES ("+.@group_id+", 'random_chance', '{\"percent\": "+.@pct+"}', 1, 1)";
+	mes "^00AA00Added: "+.@pct+"% random chance^000000";
+	next;
+	return;
+}
+
+function	script	F_AddCond_TimeWindow	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[Time Window]";
+	mes " ";
+	mes "Only trigger during certain hours.";
+	mes " ";
+	mes "Enter START hour (0-23):";
+	next;
+	input .@start;
+
+	if (.@start < 0 || .@start > 23) {
+		mes "^FF0000Invalid hour.^000000";
+		next;
+		return;
+	}
+
+	clear;
+	mes "[Time Window]";
+	mes " ";
+	mes "Start: ^0055FF"+.@start+":00^000000";
+	mes " ";
+	mes "Enter END hour (0-23):";
+	next;
+	input .@end;
+
+	if (.@end < 0 || .@end > 23) {
+		mes "^FF0000Invalid hour.^000000";
+		next;
+		return;
+	}
+
+	query_sql "INSERT INTO event_trigger_conditions (group_id, condition_type, params, required, eval_order) VALUES ("+.@group_id+", 'time_window', '{\"start_hour\": "+.@start+", \"end_hour\": "+.@end+"}', 1, 30)";
+	mes "^00AA00Added: "+.@start+":00 - "+.@end+":00^000000";
+	next;
+	return;
+}
+
+function	script	F_AddCond_PlayerCount	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[Player Count]";
+	mes " ";
+	mes "Minimum online players required:";
+	mes "^777777(0 = no minimum)^000000";
+	next;
+	input .@min;
+
+	clear;
+	mes "[Player Count]";
+	mes " ";
+	mes "Minimum: ^0055FF"+.@min+"^000000";
+	mes " ";
+	mes "Maximum online players:";
+	mes "^777777(0 = no maximum)^000000";
+	next;
+	input .@max;
+
+	query_sql "INSERT INTO event_trigger_conditions (group_id, condition_type, params, required, eval_order) VALUES ("+.@group_id+", 'player_count', '{\"min\": "+.@min+", \"max\": "+.@max+"}', 1, 40)";
+
+	.@desc$ = "";
+	if (.@min > 0 && .@max > 0) {
+		.@desc$ = .@min+"-"+.@max+" players";
+	} else if (.@min > 0) {
+		.@desc$ = .@min+"+ players";
+	} else if (.@max > 0) {
+		.@desc$ = "max "+.@max+" players";
+	}
+	mes "^00AA00Added: "+.@desc$+"^000000";
+	next;
+	return;
+}
+
+function	script	F_AddCond_ActivePlayers	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[Active Players]";
+	mes " ";
+	mes "Counts players who have MOVED";
+	mes "recently (not AFK).";
+	mes " ";
+	mes "Minimum active players:";
+	next;
+	input .@min;
+
+	if (.@min < 1) {
+		mes "^FF0000Must be at least 1.^000000";
+		next;
+		return;
+	}
+
+	clear;
+	mes "[Active Players]";
+	mes " ";
+	mes "Min active: ^0055FF"+.@min+"^000000";
+	mes " ";
+	mes "Activity window (minutes):";
+	mes "^777777Players who moved in last X min^000000";
+	next;
+	input .@window;
+
+	if (.@window < 1) .@window = 10;
+
+	query_sql "INSERT INTO event_trigger_conditions (group_id, condition_type, params, required, eval_order) VALUES ("+.@group_id+", 'active_player_count', '{\"min\": "+.@min+", \"window_minutes\": "+.@window+"}', 1, 40)";
+	mes "^00AA00Added: "+.@min+"+ active in "+.@window+" min^000000";
+	next;
+	return;
+}
+
+function	script	F_AddCond_Cooldown	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[Cooldown]";
+	mes " ";
+	mes "Minimum time between triggers";
+	mes "of this event type.";
+	mes " ";
+	mes "Enter cooldown in minutes:";
+	next;
+	input .@mins;
+
+	if (.@mins < 1) {
+		mes "^FF0000Must be at least 1 minute.^000000";
+		next;
+		return;
+	}
+
+	query_sql "INSERT INTO event_trigger_conditions (group_id, condition_type, params, required, eval_order) VALUES ("+.@group_id+", 'cooldown', '{\"minutes\": "+.@mins+"}', 1, 20)";
+	mes "^00AA00Added: "+.@mins+" min cooldown^000000";
+	next;
+	return;
+}
+
+function	script	F_AddCond_DayOfWeek	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[Day of Week]";
+	mes " ";
+	mes "Select days when trigger is active:";
+	mes "^777777(comma-separated, 0=Mon, 6=Sun)^000000";
+	next;
+
+	switch(select(
+		"Weekdays (Mon-Fri)",
+		"Weekends (Sat-Sun)",
+		"All Week",
+		"Custom...",
+		"Cancel"
+	)) {
+	case 1: .@days$ = "0,1,2,3,4"; break;
+	case 2: .@days$ = "5,6"; break;
+	case 3: .@days$ = "0,1,2,3,4,5,6"; break;
+	case 4:
+		clear;
+		mes "[Custom Days]";
+		mes " ";
+		mes "0=Mon, 1=Tue, 2=Wed, 3=Thu";
+		mes "4=Fri, 5=Sat, 6=Sun";
+		mes " ";
+		mes "Enter comma-separated:";
+		mes "^777777e.g., 5,6 for weekends^000000";
+		next;
+		input .@days$;
+		break;
+	case 5: return;
+	}
+
+	query_sql "INSERT INTO event_trigger_conditions (group_id, condition_type, params, required, eval_order) VALUES ("+.@group_id+", 'day_of_week', '{\"days\": \""+escape_sql(.@days$)+"\"}', 1, 25)";
+	mes "^00AA00Added: Days "+.@days$+"^000000";
+	next;
+	return;
+}
+
+function	script	F_AddCond_OutsideWoE	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[Outside WoE]";
+	mes " ";
+	mes "Prevents trigger during War of";
+	mes "Emperium (castle battles).";
+	next;
+
+	if (select("Add This Condition:Cancel") == 2) return;
+
+	query_sql "INSERT INTO event_trigger_conditions (group_id, condition_type, params, required, eval_order) VALUES ("+.@group_id+", 'outside_woe', '{}', 1, 10)";
+	mes "^00AA00Added: Outside WoE^000000";
+	next;
+	return;
+}
+
+function	script	F_AddCond_NoConflict	{
+	.@group_id = getarg(0);
+
+	clear;
+	mes "[No Conflicting Events]";
+	mes " ";
+	mes "Prevents trigger if certain other";
+	mes "events are currently active.";
+	mes " ";
+	mes "Select events to avoid:";
+	next;
+
+	.@events$ = "";
+	.@sel = select("Invasion:EXP Boost:Happy Hour:Done");
+
+	while (.@sel != 4) {
+		switch(.@sel) {
+		case 1:
+			if (countstr(.@events$, "invasion") == 0) {
+				.@events$ = .@events$ + ((.@events$ != "") ? "," : "") + "invasion";
+			}
+			break;
+		case 2:
+			if (countstr(.@events$, "exp_boost") == 0) {
+				.@events$ = .@events$ + ((.@events$ != "") ? "," : "") + "exp_boost";
+			}
+			break;
+		case 3:
+			if (countstr(.@events$, "happy_hour") == 0) {
+				.@events$ = .@events$ + ((.@events$ != "") ? "," : "") + "happy_hour";
+			}
+			break;
+		}
+
+		clear;
+		mes "[No Conflicting Events]";
+		mes " ";
+		mes "Selected: ^0055FF" + ((.@events$ == "") ? "none" : .@events$) + "^000000";
+		mes " ";
+		mes "Add more or Done:";
+		next;
+		.@sel = select("Invasion:EXP Boost:Happy Hour:Done");
+	}
+
+	if (.@events$ == "") {
+		mes "^FF0000No events selected.^000000";
+		next;
+		return;
+	}
+
+	query_sql "INSERT INTO event_trigger_conditions (group_id, condition_type, params, required, eval_order) VALUES ("+.@group_id+", 'no_active_event', '{\"events\": \""+escape_sql(.@events$)+"\"}', 1, 15)";
+	mes "^00AA00Added: No conflict with "+.@events$+"^000000";
+	next;
+	return;
+}
+
+// ============================================================
+// Edit Condition
+// ============================================================
+function	script	F_EditCondition	{
+	.@cond_id = getarg(0);
+	.@type$ = getarg(1);
+	.@params$ = getarg(2);
+
+	clear;
+	mes "[Edit Condition]";
+	mes " ";
+	mes "Current: "+callfunc("F_ConditionDesc", .@type$, .@params$);
+	mes " ";
+
+	// Type-specific editing
+	if (.@type$ == "random_chance") {
+		mes "Enter new percentage (1-100):";
+		next;
+		input .@pct;
+		if (.@pct < 1 || .@pct > 100) {
+			mes "^FF0000Invalid value.^000000";
+			next;
+			return;
+		}
+		query_sql "UPDATE event_trigger_conditions SET params = '{\"percent\": "+.@pct+"}' WHERE id = "+.@cond_id;
+		mes "^00AA00Updated to "+.@pct+"%^000000";
+	}
+	else if (.@type$ == "cooldown") {
+		mes "Enter new cooldown (minutes):";
+		next;
+		input .@mins;
+		if (.@mins < 1) {
+			mes "^FF0000Must be at least 1.^000000";
+			next;
+			return;
+		}
+		query_sql "UPDATE event_trigger_conditions SET params = '{\"minutes\": "+.@mins+"}' WHERE id = "+.@cond_id;
+		mes "^00AA00Updated to "+.@mins+" min^000000";
+	}
+	else if (.@type$ == "time_window") {
+		mes "Enter new START hour (0-23):";
+		next;
+		input .@start;
+		if (.@start < 0 || .@start > 23) {
+			mes "^FF0000Invalid hour.^000000";
+			next;
+			return;
+		}
+		clear;
+		mes "[Edit Time Window]";
+		mes "Start: ^0055FF"+.@start+":00^000000";
+		mes " ";
+		mes "Enter new END hour (0-23):";
+		next;
+		input .@end;
+		if (.@end < 0 || .@end > 23) {
+			mes "^FF0000Invalid hour.^000000";
+			next;
+			return;
+		}
+		query_sql "UPDATE event_trigger_conditions SET params = '{\"start_hour\": "+.@start+", \"end_hour\": "+.@end+"}' WHERE id = "+.@cond_id;
+		mes "^00AA00Updated to "+.@start+":00 - "+.@end+":00^000000";
+	}
+	else if (.@type$ == "player_count") {
+		mes "Enter new minimum (0=none):";
+		next;
+		input .@min;
+		clear;
+		mes "[Edit Player Count]";
+		mes "Min: ^0055FF"+.@min+"^000000";
+		mes " ";
+		mes "Enter new maximum (0=none):";
+		next;
+		input .@max;
+		query_sql "UPDATE event_trigger_conditions SET params = '{\"min\": "+.@min+", \"max\": "+.@max+"}' WHERE id = "+.@cond_id;
+		mes "^00AA00Updated^000000";
+	}
+	else if (.@type$ == "active_player_count") {
+		mes "Enter new minimum active:";
+		next;
+		input .@min;
+		if (.@min < 1) {
+			mes "^FF0000Must be at least 1.^000000";
+			next;
+			return;
+		}
+		clear;
+		mes "[Edit Active Players]";
+		mes "Min: ^0055FF"+.@min+"^000000";
+		mes " ";
+		mes "Enter window (minutes):";
+		next;
+		input .@window;
+		if (.@window < 1) .@window = 10;
+		query_sql "UPDATE event_trigger_conditions SET params = '{\"min\": "+.@min+", \"window_minutes\": "+.@window+"}' WHERE id = "+.@cond_id;
+		mes "^00AA00Updated^000000";
+	}
+	else {
+		mes "^777777This condition type cannot be";
+		mes "edited. Delete and re-add it.^000000";
+	}
+	next;
+	return;
+}
+
+// ============================================================
+// Delete Condition
+// ============================================================
+function	script	F_DeleteCondition	{
+	.@cond_id = getarg(0);
+	.@type$ = getarg(1);
+
+	clear;
+	mes "[Delete Condition]";
+	mes " ";
+	mes "^FF0000Delete this condition?^000000";
+	mes " ";
+	mes "Type: ^0055FF"+.@type$+"^000000";
+	next;
+
+	if (select("Yes, Delete:Cancel") == 1) {
+		query_sql "DELETE FROM event_trigger_conditions WHERE id = "+.@cond_id;
+		mes "^00AA00Condition deleted.^000000";
+		next;
+	}
+	return;
+}
+
+// ============================================================
+// Delete Trigger Group
+// Returns 1 if deleted, 0 if cancelled
+// ============================================================
+function	script	F_DeleteGroup	{
+	.@group_id = getarg(0);
+	.@group_name$ = getarg(1);
+
+	clear;
+	mes "[Delete Group]";
+	mes " ";
+	mes "^FF0000Delete \""+.@group_name$+"\"?^000000";
+	mes " ";
+	mes "This will also delete all";
+	mes "conditions in this group.";
+	mes " ";
+	mes "^FF0000This cannot be undone!^000000";
+	next;
+
+	if (select("Yes, Delete Everything:Cancel") == 1) {
+		// Conditions are deleted via CASCADE
+		query_sql "DELETE FROM event_trigger_groups WHERE id = "+.@group_id;
+		mes "^00AA00Group deleted.^000000";
+		next;
+		return 1;
+	}
+	return 0;
+}
+
+// ============================================================
+// Display Event Params (human-readable)
+// ============================================================
+function	script	F_DisplayEventParams	{
+	.@event_code$ = getarg(0);
+	.@params$ = getarg(1);
+
+	if (.@event_code$ == "invasion") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.threat')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.duration_minutes'))", .@threat$, .@dur$;
+		if (.@threat$ != "" && .@threat$ != "null") {
+			.@threat_name$ = "";
+			if (.@threat$ == "1") .@threat_name$ = "Low";
+			else if (.@threat$ == "2") .@threat_name$ = "Medium";
+			else if (.@threat$ == "3") .@threat_name$ = "High";
+			else if (.@threat$ == "4") .@threat_name$ = "Extreme";
+			else .@threat_name$ = "Random";
+			mes "  Threat: ^00AA00"+.@threat_name$+"^000000";
+		}
+		if (.@dur$ != "" && .@dur$ != "null") {
+			mes "  Duration: ^00AA00"+.@dur$+" min^000000";
+		}
+	}
+	else if (.@event_code$ == "exp_boost") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.multiplier')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.duration_minutes'))", .@mult$, .@dur$;
+		if (.@mult$ != "" && .@mult$ != "null") {
+			.@mult = atoi(.@mult$);
+			.@whole = .@mult / 100;
+			.@dec = (.@mult % 100) / 10;
+			if (.@dec > 0) {
+				mes "  Multiplier: ^00AA00"+.@whole+"."+.@dec+"x^000000";
+			} else {
+				mes "  Multiplier: ^00AA00"+.@whole+"x^000000";
+			}
+		}
+		if (.@dur$ != "" && .@dur$ != "null") {
+			mes "  Duration: ^00AA00"+.@dur$+" min^000000";
+		}
+	}
+	else if (.@event_code$ == "happy_hour") {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@params$)+"', '$.duration_minutes'))", .@dur$;
+		if (.@dur$ != "" && .@dur$ != "null") {
+			mes "  Duration: ^00AA00"+.@dur$+" min^000000";
+		}
+	}
+	else {
+		mes "  ^777777("+.@params$+")^000000";
+	}
+	return;
+}
+
+// ============================================================
+// Edit Event Params
+// ============================================================
+function	script	F_EditEventParams	{
+	.@group_id = getarg(0);
+	.@event_code$ = getarg(1);
+
+	// Get current params
+	query_sql "SELECT event_params FROM event_trigger_groups WHERE id = "+.@group_id, .@current$;
+
+	clear;
+	mes "[Event Settings]";
+	mes " ";
+	mes "Configure what happens when";
+	mes "this trigger fires.";
+	mes " ";
+
+	if (.@event_code$ == "invasion") {
+		// Invasion settings: threat, duration, town, theme
+		mes "Current settings:";
+		if (.@current$ != "" && .@current$ != "null") {
+			callfunc "F_DisplayEventParams", .@event_code$, .@current$;
+		} else {
+			mes "  ^777777(using defaults)^000000";
+		}
+		next;
+
+		switch(select(
+			"Set Threat Level",
+			"Set Duration",
+			"Clear All (use defaults)",
+			"Back"
+		)) {
+		case 1:
+			clear;
+			mes "[Threat Level]";
+			mes " ";
+			mes "Select invasion threat:";
+			next;
+			switch(select("Random:Low:Medium:High:Extreme:Cancel")) {
+			case 1: .@threat = 0; break;
+			case 2: .@threat = 1; break;
+			case 3: .@threat = 2; break;
+			case 4: .@threat = 3; break;
+			case 5: .@threat = 4; break;
+			case 6: return;
+			}
+			// Update or create params
+			if (.@current$ == "" || .@current$ == "null") {
+				query_sql "UPDATE event_trigger_groups SET event_params = JSON_OBJECT('threat', "+.@threat+") WHERE id = "+.@group_id;
+			} else {
+				query_sql "UPDATE event_trigger_groups SET event_params = JSON_SET(event_params, '$.threat', "+.@threat+") WHERE id = "+.@group_id;
+			}
+			mes "^00AA00Threat level set.^000000";
+			next;
+			break;
+		case 2:
+			clear;
+			mes "[Duration]";
+			mes " ";
+			mes "Enter invasion duration (minutes):";
+			mes "^777777Default: 45^000000";
+			next;
+			input .@dur;
+			if (.@dur < 5 || .@dur > 180) {
+				mes "^FF0000Must be 5-180 minutes.^000000";
+				next;
+				return;
+			}
+			if (.@current$ == "" || .@current$ == "null") {
+				query_sql "UPDATE event_trigger_groups SET event_params = JSON_OBJECT('duration_minutes', "+.@dur+") WHERE id = "+.@group_id;
+			} else {
+				query_sql "UPDATE event_trigger_groups SET event_params = JSON_SET(event_params, '$.duration_minutes', "+.@dur+") WHERE id = "+.@group_id;
+			}
+			mes "^00AA00Duration set to "+.@dur+" min.^000000";
+			next;
+			break;
+		case 3:
+			query_sql "UPDATE event_trigger_groups SET event_params = NULL WHERE id = "+.@group_id;
+			mes "^00AA00Settings cleared.^000000";
+			next;
+			break;
+		case 4:
+			return;
+		}
+	}
+	else if (.@event_code$ == "exp_boost") {
+		// EXP Boost settings: multiplier, duration
+		mes "Current settings:";
+		if (.@current$ != "" && .@current$ != "null") {
+			callfunc "F_DisplayEventParams", .@event_code$, .@current$;
+		} else {
+			mes "  ^777777(using defaults)^000000";
+		}
+		next;
+
+		switch(select(
+			"Set Multiplier",
+			"Set Duration",
+			"Clear All (use defaults)",
+			"Back"
+		)) {
+		case 1:
+			clear;
+			mes "[Multiplier]";
+			mes " ";
+			mes "Select EXP multiplier:";
+			next;
+			switch(select("1.5x:2x:2.5x:3x:Custom:Cancel")) {
+			case 1: .@mult = 150; break;
+			case 2: .@mult = 200; break;
+			case 3: .@mult = 250; break;
+			case 4: .@mult = 300; break;
+			case 5:
+				clear;
+				mes "[Custom Multiplier]";
+				mes " ";
+				mes "Enter as percentage:";
+				mes "^777777(150 = 1.5x, 200 = 2x)^000000";
+				next;
+				input .@mult;
+				if (.@mult < 110 || .@mult > 500) {
+					mes "^FF0000Must be 110-500.^000000";
+					next;
+					return;
+				}
+				break;
+			case 6: return;
+			}
+			if (.@current$ == "" || .@current$ == "null") {
+				query_sql "UPDATE event_trigger_groups SET event_params = JSON_OBJECT('multiplier', "+.@mult+") WHERE id = "+.@group_id;
+			} else {
+				query_sql "UPDATE event_trigger_groups SET event_params = JSON_SET(event_params, '$.multiplier', "+.@mult+") WHERE id = "+.@group_id;
+			}
+			mes "^00AA00Multiplier set.^000000";
+			next;
+			break;
+		case 2:
+			clear;
+			mes "[Duration]";
+			mes " ";
+			mes "Enter boost duration (minutes):";
+			mes "^777777Default: 60^000000";
+			next;
+			input .@dur;
+			if (.@dur < 5 || .@dur > 480) {
+				mes "^FF0000Must be 5-480 minutes.^000000";
+				next;
+				return;
+			}
+			if (.@current$ == "" || .@current$ == "null") {
+				query_sql "UPDATE event_trigger_groups SET event_params = JSON_OBJECT('duration_minutes', "+.@dur+") WHERE id = "+.@group_id;
+			} else {
+				query_sql "UPDATE event_trigger_groups SET event_params = JSON_SET(event_params, '$.duration_minutes', "+.@dur+") WHERE id = "+.@group_id;
+			}
+			mes "^00AA00Duration set to "+.@dur+" min.^000000";
+			next;
+			break;
+		case 3:
+			query_sql "UPDATE event_trigger_groups SET event_params = NULL WHERE id = "+.@group_id;
+			mes "^00AA00Settings cleared.^000000";
+			next;
+			break;
+		case 4:
+			return;
+		}
+	}
+	else if (.@event_code$ == "happy_hour") {
+		// Happy Hour settings: duration only
+		mes "Current settings:";
+		if (.@current$ != "" && .@current$ != "null") {
+			callfunc "F_DisplayEventParams", .@event_code$, .@current$;
+		} else {
+			mes "  ^777777(using defaults)^000000";
+		}
+		next;
+
+		switch(select(
+			"Set Duration",
+			"Clear (use default)",
+			"Back"
+		)) {
+		case 1:
+			clear;
+			mes "[Duration]";
+			mes " ";
+			mes "Enter happy hour duration (minutes):";
+			mes "^777777Default: 120^000000";
+			next;
+			input .@dur;
+			if (.@dur < 5 || .@dur > 480) {
+				mes "^FF0000Must be 5-480 minutes.^000000";
+				next;
+				return;
+			}
+			query_sql "UPDATE event_trigger_groups SET event_params = JSON_OBJECT('duration_minutes', "+.@dur+") WHERE id = "+.@group_id;
+			mes "^00AA00Duration set to "+.@dur+" min.^000000";
+			next;
+			break;
+		case 2:
+			query_sql "UPDATE event_trigger_groups SET event_params = NULL WHERE id = "+.@group_id;
+			mes "^00AA00Settings cleared.^000000";
+			next;
+			break;
+		case 3:
+			return;
+		}
+	}
+	else {
+		mes "^777777No configurable settings for";
+		mes "this event type.^000000";
+		next;
+		select("Back");
+	}
+	return;
+}
+
+// ============================================================
+// View Check History (debug log)
+// Shows last N evaluations of this trigger group
+// ============================================================
+function	script	F_ViewCheckHistory	{
+	.@group_id = getarg(0);
+	.@group_name$ = getarg(1);
+
+F_CheckHistory_Loop:
+	clear;
+	mes "[Check History]";
+	mes "^0055FF"+.@group_name$+"^000000";
+	mes " ";
+
+	// Get last 10 checks (use 'h' instead of ':' in time to avoid menu breaking)
+	query_sql "SELECT DATE_FORMAT(checked_at, '%m/%d %Hh%i'), group_passed, condition_results, online_count FROM trigger_check_log WHERE group_id = "+.@group_id+" ORDER BY checked_at DESC LIMIT 10", .@times$, .@passed, .@results$, .@online;
+
+	.@count = getarraysize(.@times$);
+	if (.@count == 0) {
+		mes "No check history yet.";
+		mes " ";
+		mes "^777777Checks are logged each time";
+		mes "this trigger group is evaluated.^000000";
+		next;
+		select("Back");
+		return;
+	}
+
+	mes "Last "+.@count+" checks:";
+	mes " ";
+
+	// Pre-compute fail reasons for display
+	for (.@i = 0; .@i < .@count; .@i++) {
+		if (.@passed[.@i]) {
+			.@reason$[.@i] = "all passed";
+		} else {
+			// Find first failing required condition
+			.@reason$[.@i] = "";
+			query_sql "SELECT JSON_LENGTH('"+escape_sql(.@results$[.@i])+"')", .@num_conds;
+			for (.@c = 0; .@c < .@num_conds && .@reason$[.@i] == ""; .@c++) {
+				query_sql "SELECT JSON_EXTRACT('"+escape_sql(.@results$[.@i])+"', '$["+.@c+"].passed'), JSON_EXTRACT('"+escape_sql(.@results$[.@i])+"', '$["+.@c+"].required'), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@results$[.@i])+"', '$["+.@c+"].type')), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@results$[.@i])+"', '$["+.@c+"].detail'))", .@c_passed$, .@c_req$, .@c_type$, .@c_detail$;
+				if (.@c_passed$ == "0" && .@c_req$ == "1") {
+					if (.@c_detail$ != "" && .@c_detail$ != "null") {
+						.@reason$[.@i] = .@c_detail$;
+					} else {
+						.@reason$[.@i] = .@c_type$ + " failed";
+					}
+				}
+			}
+			if (.@reason$[.@i] == "") .@reason$[.@i] = "unknown";
+		}
+	}
+
+	for (.@i = 0; .@i < .@count && .@i < 5; .@i++) {
+		.@status$ = (.@passed[.@i]) ? "^00AA00PASS^000000" : "^FF0000FAIL^000000";
+		mes .@times$[.@i] + " " + .@status$ + " (" + .@reason$[.@i] + ")";
+	}
+
+	next;
+	// Build menu for detail view
+	.@menu$ = "";
+	for (.@i = 0; .@i < .@count; .@i++) {
+		.@status$ = (.@passed[.@i]) ? "PASS" : "FAIL";
+		.@menu$ = .@menu$ + .@times$[.@i] + " " + .@status$ + ":";
+	}
+	.@menu$ = .@menu$ + "Back";
+
+	.@sel = select(.@menu$) - 1;
+	if (.@sel >= .@count) return;
+
+	// Show detail for selected check
+	callfunc "F_ShowCheckDetail", .@times$[.@sel], .@passed[.@sel], .@results$[.@sel], .@online[.@sel];
+	goto F_CheckHistory_Loop;
+}
+
+// ============================================================
+// Show detail of a single check
+// ============================================================
+function	script	F_ShowCheckDetail	{
+	.@time$ = getarg(0);
+	.@passed = getarg(1);
+	.@results$ = getarg(2);
+	.@online = getarg(3);
+
+	clear;
+	mes "[Check Detail]";
+	mes "^0055FF"+.@time$+"^000000";
+	mes " ";
+	mes "Result: " + ((.@passed) ? "^00AA00PASSED^000000" : "^FF0000FAILED^000000");
+	mes "Online: ^0055FF"+.@online+"^000000 players";
+	mes " ";
+	mes "Conditions:";
+
+	// Parse JSON array of condition results
+	// Format: [{"type":"random_chance","passed":0,"detail":"rolled 45 vs 5%"},...]
+	// Use SQL to parse JSON array elements
+	query_sql "SELECT JSON_LENGTH('"+escape_sql(.@results$)+"')", .@num_conds;
+
+	for (.@i = 0; .@i < .@num_conds; .@i++) {
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@results$)+"', '$["+.@i+"].type')), JSON_EXTRACT('"+escape_sql(.@results$)+"', '$["+.@i+"].passed'), JSON_UNQUOTE(JSON_EXTRACT('"+escape_sql(.@results$)+"', '$["+.@i+"].detail')), JSON_EXTRACT('"+escape_sql(.@results$)+"', '$["+.@i+"].required')", .@type$, .@cond_passed$, .@detail$, .@required$;
+
+		.@cond_passed = atoi(.@cond_passed$);
+		.@required = atoi(.@required$);
+
+		.@status$ = (.@cond_passed) ? "^00AA00OK^000000" : "^FF0000X^000000";
+		.@req$ = (.@required) ? "" : " ^777777(opt)^000000";
+
+		if (.@detail$ != "" && .@detail$ != "null") {
+			mes .@status$ + " " + .@type$ + " - " + .@detail$ + .@req$;
+		} else {
+			mes .@status$ + " " + .@type$ + .@req$;
 		}
 	}
 

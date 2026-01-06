@@ -31,6 +31,20 @@ prontera,152,193,4	script	Event Patron	4_F_JOB_HUNTER,{
 		mes "currently disabled.";
 		mes " ";
 		mes "Check back later!";
+
+		// Allow GMs to still access management
+		if (getgmlevel() >= 80) {
+			next;
+			mes "[Event Patron]";
+			mes "^FF8800[GM Access]^000000";
+			mes "Crowdfund is disabled but you";
+			mes "can manage events from here.";
+			next;
+			switch(select("^FF8800[GM] Manage EXP Boost^000000:^FF8800[GM] Manage Happy Hour^000000:Close")) {
+				case 1: goto L_GM_ExpBoostMenu;
+				case 2: goto L_GM_HappyHourMenu;
+			}
+		}
 		close;
 	}
 
@@ -187,8 +201,8 @@ L_MainMenu:
 		.@menu$ = .@menu$ + ":^888888(Activation pending...)^000000";
 	}
 	.@menu$ = .@menu$ + ":View Tier Rewards:Hall of Patrons";
-	if (getgmlevel() >= 60) {
-		.@menu$ = .@menu$ + ":^FF0000[GM] Settings^000000";
+	if (getgmlevel() >= 80) {
+		.@menu$ = .@menu$ + ":^FF8800[GM] Manage EXP Boost^000000:^FF8800[GM] Manage Happy Hour^000000";
 	}
 	.@menu$ = .@menu$ + ":Close";
 
@@ -223,8 +237,13 @@ L_MainMenu:
 	if (.@choice == .@menu_offset + 2) {
 		goto L_Leaderboards;
 	}
-	if (getgmlevel() >= 60 && .@choice == .@menu_offset + 3) {
-		goto L_GMSettings;
+	if (getgmlevel() >= 80) {
+		if (.@choice == .@menu_offset + 3) {
+			goto L_GM_ExpBoostMenu;
+		}
+		if (.@choice == .@menu_offset + 4) {
+			goto L_GM_HappyHourMenu;
+		}
 	}
 	close;
 
@@ -701,31 +720,528 @@ L_Leaderboards:
 	end;
 
 // ============================================================
-// GM Settings
+// GM: EXP Boost Management Menu
 // ============================================================
-L_GMSettings:
-	mes "[GM Settings]";
-	mes "Configure EXP Boost sponsorship.";
+L_GM_ExpBoostMenu:
+	mes "[Event Patron]";
+	mes "^FF8800[GM] Manage EXP Boost^000000";
+	mes " ";
+
+	// Show current status with source info
+	if ($@ExpBoostActive) {
+		.@mult$ = ($@ExpBoostMultiplier / 100) + "." + (($@ExpBoostMultiplier % 100) / 10) + "x";
+		.@remaining = ($@ExpBoostEndTime - gettimetick(2)) / 60;
+		mes "^00AA00Status: ACTIVE^000000";
+		mes "  Multiplier: " + .@mult$;
+		mes "  Time left: " + .@remaining + " min";
+
+		// Get source info from event_instances
+		query_sql "SELECT JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.source')) FROM event_instances WHERE id = " + $@ExpBoostInstanceId, .@source$;
+		if (.@source$ == "gm") {
+			mes "  Source: ^FF8800GM-triggered^000000";
+		} else if (.@source$ == "crowdfund") {
+			mes "  Source: ^0055FFCrowdfund^000000";
+		} else {
+			mes "  Source: ^888888Scheduled^000000";
+		}
+	} else {
+		mes "^888888Status: Inactive^000000";
+	}
+	mes " ";
+
+	// Show crowdfund pool status
+	query_sql "SELECT total_amount, current_tier, activation_pending FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pool_total, .@pool_tier, .@pending;
+	mes "Pool: ^0000FF" + callfunc("F_InsertComma", .@pool_total) + "z^000000 (Tier " + .@pool_tier + ")";
+	if (.@pending) {
+		mes "^FF6600Activation pending!^000000";
+	}
 	next;
 
-	switch(select("Edit Tier Thresholds:Activation Timing:Toggle Feature:Reset Current Pool:Cancel Pending Activation:Back")) {
-		case 1:
-			goto L_GM_EditTiers;
-		case 2:
-			goto L_GM_Timing;
-		case 3:
-			query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_enabled'", .@enabled$;
-			.@new_val = (.@enabled$ == "1") ? "0" : "1";
-			query_sql "UPDATE event_config SET config_value = '" + .@new_val + "' WHERE config_key = 'crowdfund_exp_enabled'";
-			mes "EXP Boost sponsorship " + (.@new_val == "1" ? "enabled" : "disabled") + "!";
-			next;
-			goto L_GMSettings;
-		case 4:
-			goto L_GM_ResetPool;
-		case 5:
-			goto L_GM_CancelPending;
+	switch(select("Start Event:Stop Event:View Scheduled:Manage Triggers:Configure Crowdfund:Reset Pool:Cancel Pending:Back")) {
+		case 1: goto L_GM_ExpStart;
+		case 2: goto L_GM_ExpStop;
+		case 3: goto L_GM_ExpViewSched;
+		case 4: goto L_GM_ExpTriggers;
+		case 5: goto L_GM_Config;
+		case 6: goto L_GM_ResetPool;
+		case 7: goto L_GM_CancelPending;
+		case 8: goto L_MainMenu;
+	}
+	end;
+
+// ============================================================
+// GM: Happy Hour Management Menu
+// ============================================================
+L_GM_HappyHourMenu:
+	mes "[Event Patron]";
+	mes "^FF8800[GM] Manage Happy Hour^000000";
+	mes " ";
+
+	// Check if Happy Hour feature is enabled
+	query_sql "SELECT enabled FROM event_types WHERE code = 'happy_hour'", .@hh_enabled;
+
+	// Show current status
+	if (!.@hh_enabled) {
+		mes "^FF0000Feature: DISABLED^000000";
+	} else if ($@HappyHourActive) {
+		.@hh_remaining = ($@HappyHourEndTime - gettimetick(2)) / 60;
+		mes "^00AA00Status: ACTIVE^000000 (" + .@hh_remaining + "m left)";
+	} else {
+		mes "^888888Status: Inactive^000000";
+	}
+	mes " ";
+
+	// Show scheduled Happy Hours
+	query_sql "SELECT es.id, DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour, es.start_minute, es.duration_minutes, es.enabled FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' ORDER BY es.day_of_week, es.start_hour LIMIT 5", .@ids, .@days$, .@hours, .@mins, .@durations, .@enabled;
+
+	if (getarraysize(.@ids) == 0) {
+		mes "^888888No schedules configured.^000000";
+	} else {
+		mes "^0055FFSchedules:^000000";
+		for (.@i = 0; .@i < getarraysize(.@ids); .@i++) {
+			.@status$ = (.@enabled[.@i] ? "^00AA00ON^000000" : "^FF0000OFF^000000");
+			mes "[" + .@ids[.@i] + "] " + .@days$[.@i] + " " + .@hours[.@i] + ":" + ((.@mins[.@i] < 10) ? "0" : "") + .@mins[.@i] + " " + .@status$;
+		}
+	}
+	next;
+
+	// Build menu based on state
+	.@toggle_text$ = (.@hh_enabled) ? "Disable Happy Hour" : "Enable Happy Hour";
+
+	if ($@HappyHourActive) {
+		switch(select("Start Now:Stop Event:Add Schedule:Toggle Schedule:Remove Schedule:" + .@toggle_text$ + ":Manage Triggers:Back")) {
+			case 1: goto L_GM_HH_StartNow;
+			case 2: goto L_GM_HH_Stop;
+			case 3: goto L_GM_HH_Add;
+			case 4: goto L_GM_HH_Toggle;
+			case 5: goto L_GM_HH_Remove;
+			case 6: goto L_GM_HH_EnableToggle;
+			case 7: goto L_GM_HH_Triggers;
+			case 8: goto L_MainMenu;
+		}
+	} else {
+		switch(select("Start Now:Add Schedule:Toggle Schedule:Remove Schedule:" + .@toggle_text$ + ":Manage Triggers:Back")) {
+			case 1: goto L_GM_HH_StartNow;
+			case 2: goto L_GM_HH_Add;
+			case 3: goto L_GM_HH_Toggle;
+			case 4: goto L_GM_HH_Remove;
+			case 5: goto L_GM_HH_EnableToggle;
+			case 6: goto L_GM_HH_Triggers;
+			case 7: goto L_MainMenu;
+		}
+	}
+	end;
+
+L_GM_HH_EnableToggle:
+	query_sql "SELECT enabled FROM event_types WHERE code = 'happy_hour'", .@cur_enabled;
+	.@new_enabled = !.@cur_enabled;
+	query_sql "UPDATE event_types SET enabled = " + .@new_enabled + " WHERE code = 'happy_hour'";
+
+	if (.@new_enabled) {
+		mes "[Event Patron]";
+		mes "^00AA00Happy Hour Enabled!^000000";
+		mes " ";
+		mes "Scheduled Happy Hours will now";
+		mes "trigger automatically.";
+
+		// Check if we're currently in a schedule window
+		query_sql "SELECT es.id, es.duration_minutes, (es.start_hour * 60 + es.start_minute + es.duration_minutes) - (HOUR(NOW()) * 60 + MINUTE(NOW())) as remaining FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' AND es.enabled = 1 AND es.day_of_week = WEEKDAY(NOW()) AND (HOUR(NOW()) * 60 + MINUTE(NOW())) >= (es.start_hour * 60 + es.start_minute) AND (HOUR(NOW()) * 60 + MINUTE(NOW())) < (es.start_hour * 60 + es.start_minute + es.duration_minutes) LIMIT 1", .@sched_id, .@duration, .@remaining;
+
+		if (.@sched_id > 0 && .@remaining > 0 && !$@HappyHourActive) {
+			set $@HappyHourDuration, .@remaining;
+			set $@HappyHourScheduleId, .@sched_id;
+			donpcevent "HappyHour::OnEventStart";
+			mes " ";
+			mes "^FF6600Started immediately!^000000";
+			mes "(Currently in schedule window)";
+		}
+	} else {
+		mes "[Event Patron]";
+		mes "^FF0000Happy Hour Disabled!^000000";
+		mes " ";
+		mes "Scheduled Happy Hours will not";
+		mes "trigger until re-enabled.";
+
+		if ($@HappyHourActive) {
+			donpcevent "HappyHour::OnManualStop";
+			mes " ";
+			mes "Active Happy Hour stopped.";
+			announce "[Event] Happy Hour has been disabled.", bc_all, 0xFF6600;
+		}
+	}
+	close;
+
+L_GM_HH_StartNow:
+	if ($@HappyHourActive) {
+		mes "[Event Patron]";
+		mes "^FF0000Happy Hour is already active!^000000";
+		close;
+	}
+	mes "[Start Happy Hour]";
+	mes "Select duration:";
+	next;
+	switch(select("30 minutes:1 hour:2 hours:3 hours:Cancel")) {
+		case 1: .@dur = 30; break;
+		case 2: .@dur = 60; break;
+		case 3: .@dur = 120; break;
+		case 4: .@dur = 180; break;
+		case 5: goto L_GM_HappyHourMenu;
+	}
+
+	set $@HappyHourDuration, .@dur;
+	set $@HappyHourScheduleId, 0; // GM triggered, no schedule
+	donpcevent "HappyHour::OnEventStart";
+
+	mes "[Event Patron]";
+	mes "^00FF00Happy Hour started!^000000";
+	mes .@dur + " minutes of 2x EXP!";
+	close;
+
+L_GM_HH_Stop:
+	if (!$@HappyHourActive) {
+		mes "[Event Patron]";
+		mes "^888888Happy Hour is not active.^000000";
+		close;
+	}
+	donpcevent "HappyHour::OnManualStop";
+	mes "[Event Patron]";
+	mes "Happy Hour stopped.";
+	close;
+
+// ============================================================
+// GM: EXP Boost Sub-menus
+// ============================================================
+L_GM_ExpStart:
+	if ($@ExpBoostActive) {
+		mes "[Start EXP Boost]";
+		mes "^FF0000An EXP Boost is already active!^000000";
+		mes " ";
+		mes "Wait for it to end or stop it";
+		mes "before starting a new one.";
+		close;
+	}
+
+	mes "[Start EXP Boost]";
+	mes "How would you like to start?";
+	next;
+
+	switch(select("Now:Schedule (One-Time):Back")) {
+		case 1: goto L_GM_ExpNow;
+		case 2: goto L_GM_SchedExpBoost;
+		case 3: goto L_GM_ExpBoostMenu;
+	}
+	end;
+
+L_GM_ExpStop:
+	if (!$@ExpBoostActive) {
+		mes "[Stop EXP Boost]";
+		mes "^888888No EXP Boost is currently active.^000000";
+		close;
+	}
+
+	.@mult$ = ($@ExpBoostMultiplier / 100) + "." + (($@ExpBoostMultiplier % 100) / 10) + "x";
+	.@remaining = ($@ExpBoostEndTime - gettimetick(2)) / 60;
+	mes "[Stop EXP Boost]";
+	mes "Current: " + .@mult$ + " (" + .@remaining + " min left)";
+	mes " ";
+	mes "Stop the EXP Boost now?";
+	next;
+
+	if (select("Yes, stop:No, keep running") == 1) {
+		donpcevent "ExpBoost::OnEventEnd";
+		mes "[Event Patron]";
+		mes "EXP Boost stopped.";
+	}
+	close;
+
+L_GM_ExpViewSched:
+	mes "[Scheduled EXP Boosts]";
+
+	query_sql "SELECT ei.id, DATE_FORMAT(ei.scheduled_start, '%m/%d %H:%i'), TIMESTAMPDIFF(MINUTE, ei.scheduled_start, ei.scheduled_end), CAST(JSON_EXTRACT(ei.event_data, '$.multiplier') AS UNSIGNED) FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND ei.trigger_type = 'one_time' AND ei.status = 'scheduled' AND ei.scheduled_start > NOW() ORDER BY ei.scheduled_start LIMIT 10", .@sched_ids, .@sched_starts$, .@sched_durs, .@sched_mults;
+
+	if (getarraysize(.@sched_ids) == 0) {
+		mes "^888888No EXP Boosts scheduled.^000000";
+		close;
+	}
+
+	for (.@i = 0; .@i < getarraysize(.@sched_ids); .@i++) {
+		.@m$ = (.@sched_mults[.@i] / 100) + "." + ((.@sched_mults[.@i] % 100) / 10) + "x";
+		mes "[" + .@sched_ids[.@i] + "] " + .@sched_starts$[.@i] + " - " + .@m$ + " (" + .@sched_durs[.@i] + "m)";
+	}
+	next;
+
+	mes "Enter ID to cancel (0 = back):";
+	input .@cancel_id;
+	if (.@cancel_id == 0) goto L_GM_ExpBoostMenu;
+
+	query_sql "DELETE FROM event_instances WHERE id = " + .@cancel_id + " AND status = 'scheduled'";
+	mes "[Event Patron]";
+	mes "Schedule " + .@cancel_id + " cancelled.";
+	close;
+
+L_GM_ExpNow:
+	mes "[Start EXP Boost Now]";
+	mes "Enter multiplier (150 = 1.5x):";
+	input .@mult;
+	if (.@mult < 100) .@mult = 100;
+	if (.@mult > 500) .@mult = 500;
+
+	mes "Enter duration in minutes:";
+	input .@dur;
+	if (.@dur < 5) .@dur = 5;
+	if (.@dur > 480) .@dur = 480;
+
+	.@mult_str$ = (.@mult / 100) + "." + ((.@mult % 100) / 10) + "x";
+	mes " ";
+	mes "Start ^0000FF" + .@mult_str$ + "^000000 boost for ^0000FF" + .@dur + "^000000 min?";
+	next;
+
+	if (select("Start Now:Cancel") == 2) goto L_GM_ExpBoostMenu;
+
+	// Start immediately
+	query_sql "SELECT id FROM event_types WHERE code = 'exp_boost'", .@event_type_id;
+	query_sql "INSERT INTO event_instances (event_type_id, event_code, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'exp_boost', 'one_time', " + getcharid(3) + ", NOW(), DATE_ADD(NOW(), INTERVAL " + .@dur + " MINUTE), 'scheduled', JSON_OBJECT('multiplier', " + .@mult + ", 'source', 'gm'))";
+
+	donpcevent "EventScheduler::OnCheckEvents";
+	mes "[Event Patron]";
+	mes "^00FF00EXP Boost started!^000000";
+	close;
+
+L_GM_SchedExpBoost:
+	mes "[Schedule EXP Boost]";
+	mes "Enter start date/time:";
+	mes "^888888Format: YYYY-MM-DD HH:MM^000000";
+	input .@start_dt$;
+	next;
+
+	if (.@start_dt$ == "") {
+		mes "No date entered. Cancelled.";
+		close;
+	}
+
+	mes "Enter multiplier (150 = 1.5x):";
+	input .@mult;
+	if (.@mult < 100) .@mult = 100;
+	if (.@mult > 500) .@mult = 500;
+
+	mes "Enter duration in minutes:";
+	input .@dur;
+	if (.@dur < 5) .@dur = 5;
+	if (.@dur > 480) .@dur = 480;
+
+	.@mult_str$ = (.@mult / 100) + "." + ((.@mult % 100) / 10) + "x";
+	mes " ";
+	mes "Schedule ^0000FF" + .@mult_str$ + "^000000 boost for ^0000FF" + .@dur + "^000000 min";
+	mes "starting at ^0000FF" + .@start_dt$ + "^000000?";
+	next;
+
+	if (select("Schedule:Cancel") == 2) goto L_GM_ExpBoostMenu;
+
+	query_sql "SELECT id FROM event_types WHERE code = 'exp_boost'", .@event_type_id;
+	query_sql "INSERT INTO event_instances (event_type_id, event_code, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'exp_boost', 'one_time', " + getcharid(3) + ", '" + .@start_dt$ + "', DATE_ADD('" + .@start_dt$ + "', INTERVAL " + .@dur + " MINUTE), 'scheduled', JSON_OBJECT('multiplier', " + .@mult + ", 'source', 'gm'))";
+
+	mes "[Event Patron]";
+	mes "^00FF00EXP Boost scheduled!^000000";
+	close;
+
+L_GM_ExpTriggers:
+	callfunc "F_TriggerMenu", "exp_boost";
+	goto L_GM_ExpBoostMenu;
+
+// ============================================================
+// GM: Happy Hour Sub-menus
+// ============================================================
+L_GM_HH_Add:
+	mes "[Add Happy Hour]";
+	mes "Select day:";
+	next;
+	.@day = select("Monday:Tuesday:Wednesday:Thursday:Friday:Saturday:Sunday") - 1;
+
+	mes "Select start time:";
+	next;
+	.@time_choice = select("9 AM:12 PM:3 PM:6 PM:9 PM:Custom");
+	switch(.@time_choice) {
+		case 1: .@hour = 9; .@minute = 0; break;
+		case 2: .@hour = 12; .@minute = 0; break;
+		case 3: .@hour = 15; .@minute = 0; break;
+		case 4: .@hour = 18; .@minute = 0; break;
+		case 5: .@hour = 21; .@minute = 0; break;
 		case 6:
-			goto L_MainMenu;
+			mes "Enter hour (0-23):";
+			input .@hour;
+			if (.@hour < 0 || .@hour > 23) { mes "Invalid hour."; close; }
+			mes "Enter minute (0-59):";
+			input .@minute;
+			if (.@minute < 0 || .@minute > 59) { mes "Invalid minute."; close; }
+			break;
+	}
+
+	mes "Select duration:";
+	next;
+	switch(select("30 minutes:1 hour:2 hours:3 hours")) {
+		case 1: .@dur = 30; break;
+		case 2: .@dur = 60; break;
+		case 3: .@dur = 120; break;
+		case 4: .@dur = 180; break;
+	}
+
+	query_sql "SELECT id FROM event_types WHERE code = 'happy_hour'", .@event_type_id;
+	query_sql "INSERT INTO event_schedule (event_type_id, event_code, schedule_type, start_hour, start_minute, day_of_week, duration_minutes, enabled) VALUES (" + .@event_type_id + ", 'happy_hour', 'weekly', " + .@hour + ", " + .@minute + ", " + .@day + ", " + .@dur + ", 1)";
+
+	explode(.@day_arr$, "Mon:Tue:Wed:Thu:Fri:Sat:Sun", ":");
+	mes "[Event Patron]";
+	mes "Happy Hour scheduled!";
+	mes .@day_arr$[.@day] + " at " + .@hour + ":" + ((.@minute < 10) ? "0" : "") + .@minute;
+	mes "Duration: " + .@dur + " minutes";
+	close;
+
+L_GM_HH_Toggle:
+	mes "[Toggle Schedule]";
+	mes "Enter schedule ID to toggle:";
+	input .@toggle_id;
+
+	query_sql "SELECT enabled, day_of_week, start_hour, start_minute, duration_minutes FROM event_schedule WHERE id = " + .@toggle_id + " AND event_code = 'happy_hour'", .@cur_enabled, .@dow, .@hour, .@min, .@duration;
+	if (getarraysize(.@cur_enabled) == 0) {
+		mes "Invalid ID.";
+		close;
+	}
+
+	.@new_enabled = !.@cur_enabled[0];
+	query_sql "UPDATE event_schedule SET enabled = " + .@new_enabled + " WHERE id = " + .@toggle_id;
+
+	if (.@new_enabled) {
+		// Enabling - check if we're currently in this schedule's time window
+		// Check: same day of week AND current time within start..start+duration
+		query_sql "SELECT WEEKDAY(NOW()), HOUR(NOW()) * 60 + MINUTE(NOW())", .@today_dow, .@cur_mins;
+		.@start_mins = .@hour * 60 + .@min;
+		.@end_mins = .@start_mins + .@duration;
+
+		if (.@today_dow == .@dow && .@cur_mins >= .@start_mins && .@cur_mins < .@end_mins && !$@HappyHourActive) {
+			// We're in the window - start Happy Hour!
+			.@remaining = .@end_mins - .@cur_mins;
+			set $@HappyHourDuration, .@remaining;
+			set $@HappyHourScheduleId, .@toggle_id;
+			donpcevent "HappyHour::OnEventStart";
+
+			mes "[Event Patron]";
+			mes "^00FF00Schedule enabled & Happy Hour started!^000000";
+			mes " ";
+			mes "Currently within scheduled window.";
+			mes .@remaining + " minutes remaining.";
+		} else {
+			mes "[Event Patron]";
+			mes "^00FF00Schedule enabled!^000000";
+			mes " ";
+			mes "Happy Hour will start at the";
+			mes "next scheduled time.";
+		}
+	} else {
+		// Disabling - stop Happy Hour if it was triggered by this schedule
+		if ($@HappyHourActive && $@HappyHourScheduleId == .@toggle_id) {
+			donpcevent "HappyHour::OnManualStop";
+			mes "[Event Patron]";
+			mes "^FF6600Schedule disabled.^000000";
+			mes " ";
+			mes "Active Happy Hour stopped.";
+			announce "[Event] Happy Hour has been cancelled.", bc_all, 0xFF6600;
+		} else {
+			mes "[Event Patron]";
+			mes "^FF6600Schedule disabled.^000000";
+		}
+	}
+	close;
+
+L_GM_HH_Remove:
+	mes "[Remove Schedule]";
+	mes "Enter schedule ID to remove:";
+	input .@remove_id;
+
+	query_sql "SELECT id FROM event_schedule WHERE id = " + .@remove_id + " AND event_code = 'happy_hour'", .@found;
+	if (getarraysize(.@found) == 0) {
+		mes "Invalid ID.";
+		close;
+	}
+
+	query_sql "DELETE FROM event_schedule WHERE id = " + .@remove_id;
+	mes "[Event Patron]";
+	mes "Schedule removed!";
+	close;
+
+L_GM_HH_Triggers:
+	callfunc "F_TriggerMenu", "happy_hour";
+	goto L_GM_HappyHourMenu;
+
+// ============================================================
+// GM: Consolidated Configuration
+// ============================================================
+L_GM_Config:
+	mes "[Configuration]";
+
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_enabled'", .@enabled$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_cooldown'", .@cooldown$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_activation_delay'", .@delay$;
+	.@cooldown = atoi(.@cooldown$) / 60;
+	.@delay = atoi(.@delay$) / 60;
+
+	mes "Crowdfund: " + ((.@enabled$ == "1") ? "^00AA00Enabled^000000" : "^FF0000Disabled^000000");
+	mes "Cooldown: " + .@cooldown + " min";
+	mes "Activation Delay: " + .@delay + " min";
+	next;
+
+	// Dynamic menu text for enable/disable
+	.@toggle_text$ = (.@enabled$ == "1") ? "Disable Crowdfund" : "Enable Crowdfund";
+	switch(select(.@toggle_text$ + ":Edit Tier Thresholds:Activation Timing:Back")) {
+		case 1:
+			.@new_val$ = (.@enabled$ == "1") ? "0" : "1";
+			query_sql "UPDATE event_config SET config_value = '" + .@new_val$ + "' WHERE config_key = 'crowdfund_exp_enabled'";
+
+			if (.@new_val$ == "1") {
+				// Enabling - check for pending activations
+				mes "[Event Patron]";
+				mes "^00AA00Crowdfund Enabled!^000000";
+				mes " ";
+				mes "Players can now contribute to";
+				mes "the EXP Boost pool.";
+
+				// Check if there's a pending activation
+				query_sql "SELECT activation_pending FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pending;
+				if (.@pending) {
+					mes " ";
+					mes "^FF8800Note: An activation is pending!^000000";
+				}
+			} else {
+				// Disabling - stop active boost if crowdfund-triggered
+				mes "[Event Patron]";
+				mes "^FF0000Crowdfund Disabled!^000000";
+				mes " ";
+
+				if ($@ExpBoostActive) {
+					mes "^FF8800Stopping active EXP Boost...^000000";
+					donpcevent "ExpBoost::OnEventEnd";
+					mes "EXP Boost stopped.";
+					announce "[Event] EXP Boost has been cancelled by GM.", bc_all, 0xFF6600;
+				} else {
+					mes "No active EXP Boost.";
+				}
+
+				// Cancel any pending activation
+				query_sql "SELECT id, activation_pending FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pool_id, .@pending;
+				if (.@pending) {
+					query_sql "UPDATE event_crowdfund_pool SET activation_pending = 0 WHERE id = " + .@pool_id;
+					mes "Pending activation cancelled.";
+				}
+
+				mes " ";
+				mes "Crowdfund contributions disabled";
+				mes "until re-enabled.";
+			}
+			close;
+		case 2:
+			goto L_GM_EditTiers;
+		case 3:
+			goto L_GM_Timing;
+		case 4:
+			goto L_GM_ExpBoostMenu;
 	}
 	end;
 
@@ -767,7 +1283,7 @@ L_GM_Timing:
 			next;
 			goto L_GM_Timing;
 		case 3:
-			goto L_GMSettings;
+			goto L_GM_Config;
 	}
 	end;
 
@@ -779,7 +1295,7 @@ L_GM_CancelPending:
 		mes "[Cancel Pending]";
 		mes "No activation is pending.";
 		next;
-		goto L_GMSettings;
+		goto L_GM_ExpBoostMenu;
 	}
 
 	mes "[Cancel Pending]";
@@ -790,7 +1306,7 @@ L_GM_CancelPending:
 	next;
 
 	if (select("Yes, cancel:No, keep it") == 2) {
-		goto L_GMSettings;
+		goto L_GM_ExpBoostMenu;
 	}
 
 	// Cancel pending activation
@@ -815,7 +1331,7 @@ L_GM_CancelPending:
 
 	mes "^00FF00Pending activation cancelled!^000000";
 	next;
-	goto L_GMSettings;
+	goto L_GM_ExpBoostMenu;
 
 L_GM_EditTiers:
 	mes "[Edit Tier]";
@@ -823,7 +1339,7 @@ L_GM_EditTiers:
 	next;
 
 	.@tier = select("Tier 1:Tier 2:Tier 3:Tier 4:Back");
-	if (.@tier == 5) goto L_GMSettings;
+	if (.@tier == 5) goto L_GM_Config;
 
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_amount'", .@cur_amt$;
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_tier_" + .@tier + "_duration'", .@cur_dur$;
@@ -853,8 +1369,7 @@ L_GM_EditTiers:
 	}
 
 	mes "^00FF00Settings saved!^000000";
-	next;
-	goto L_GMSettings;
+	close;
 
 L_GM_ResetPool:
 	query_sql "SELECT id, total_amount FROM event_crowdfund_pool WHERE event_type = 'exp_boost' AND status = 'collecting' ORDER BY id DESC LIMIT 1", .@pool_id, .@pool_total;
@@ -866,7 +1381,7 @@ L_GM_ResetPool:
 	next;
 
 	if (select("Yes, reset:Cancel") == 2) {
-		goto L_GMSettings;
+		goto L_GM_ExpBoostMenu;
 	}
 
 	query_sql "UPDATE event_crowdfund_pool SET status = 'activated' WHERE id = " + .@pool_id;
@@ -874,7 +1389,7 @@ L_GM_ResetPool:
 
 	mes "Pool reset!";
 	next;
-	goto L_GMSettings;
+	goto L_GM_ExpBoostMenu;
 
 // ============================================================
 // OnInit - Resume pending countdown after server restart

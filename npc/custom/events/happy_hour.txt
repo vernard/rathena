@@ -25,8 +25,12 @@ OnEventStart:
 		end;
 	}
 
-	// Get duration (default 120 minutes if not set)
-	if ($@HappyHourDuration <= 0) set $@HappyHourDuration, 120;
+	// Sanity check duration - must be positive and reasonable (max 8 hours)
+	// Catches stale/corrupted values from server restarts
+	if ($@HappyHourDuration <= 0 || $@HappyHourDuration > 480) {
+		debugmes "[HappyHour] Invalid duration "+$@HappyHourDuration+", defaulting to 120";
+		set $@HappyHourDuration, 120;
+	}
 
 	// Store original rates
 	set $@HH_OrigBaseExp, getbattleflag("base_exp_rate");

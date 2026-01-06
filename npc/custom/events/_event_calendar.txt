@@ -298,7 +298,15 @@ L_HappyHour:
 		mes "^0055FFScheduled:^000000";
 		for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
 			set .@status$, (.@enabled[.@i] ? "^00AA00ON^000000" : "^FF0000OFF^000000");
-			mes "["+.@ids[.@i]+"] "+.@days$[.@i]+" "+.@hours[.@i]+":"+(.@mins[.@i] < 10 ? "0" : "")+.@mins[.@i]+" ("+.@durations[.@i]+"m) "+.@status$;
+			// Format duration as hours (e.g., "3h" instead of "180m")
+			if (.@durations[.@i] >= 60 && .@durations[.@i] % 60 == 0) {
+				set .@dur$, (.@durations[.@i] / 60) + "h";
+			} else if (.@durations[.@i] >= 60) {
+				set .@dur$, (.@durations[.@i] / 60) + "h" + (.@durations[.@i] % 60) + "m";
+			} else {
+				set .@dur$, .@durations[.@i] + "m";
+			}
+			mes "["+.@ids[.@i]+"] "+.@days$[.@i]+" "+.@hours[.@i]+":"+(.@mins[.@i] < 10 ? "0" : "")+.@mins[.@i]+" ("+.@dur$+") "+.@status$;
 		}
 	}
 	next;
@@ -1173,7 +1181,7 @@ L_Inv_Start:
 		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
 		.@duration = (.@duration$ != "") ? atoi(.@duration$) : 45;
 
-		query_sql "INSERT INTO event_instances (event_type_id, event_code, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'invasion', 'gm', " + getcharid(3) + ", NOW(), DATE_ADD(NOW(), INTERVAL " + .@duration + " MINUTE), 'scheduled', JSON_OBJECT('threat', " + .@threat + ", 'town_id', " + .@town_id + ", 'theme_id', " + .@theme_id + "))";
+		query_sql "INSERT INTO event_instances (event_type_id, event_code, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'invasion', 'manual', " + getcharid(3) + ", NOW(), DATE_ADD(NOW(), INTERVAL " + .@duration + " MINUTE), 'active', JSON_OBJECT('threat', " + .@threat + ", 'town_id', " + .@town_id + ", 'theme_id', " + .@theme_id + "))";
 
 		// Set pending values and trigger
 		$@InvasionPendingThreat = .@threat;
@@ -1460,114 +1468,17 @@ L_Inv_DeleteOneTime:
 
 L_Inv_Config:
 	mes "[Invasion Configuration]";
-
-	// Get current config
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_enabled'", .@enabled$;
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_cooldown_minutes'", .@cooldown$;
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_wait_hours'", .@max_wait$;
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_players'", .@min_players$;
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_threat'", .@max_threat$;
-	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_monster_multiplier'", .@multiplier$;
-	if (.@multiplier$ == "") .@multiplier$ = "100";
-
-	mes "Enabled: " + (.@enabled$ == "1" ? "^00AA00Yes^000000" : "^FF0000No^000000");
-	mes "Duration: " + .@duration$ + " min";
-	mes "Monster mult: ^0000FF" + .@multiplier$ + "%^000000 (" + (atoi(.@multiplier$) / 100) + "." + ((atoi(.@multiplier$) % 100) / 10) + "x)";
-	mes "Cooldown: " + .@cooldown$ + " min";
-	mes "Max wait: " + .@max_wait$ + " hours";
-	mes "Min players: " + .@min_players$;
+	mes " ";
+	mes "^FF0000Note:^000000 Invasion configuration has";
+	mes "moved to the ^0055FFDefense Coordinator^000000";
+	mes "NPC in Prontera.";
+	mes " ";
+	mes "Trigger conditions (cooldown, time,";
+	mes "player count) are now managed via";
+	mes "the ^0055FFTriggers^000000 menu.";
 	next;
-
-	switch(select("Toggle Enabled:Set Duration:Set Monster Multiplier:Set Cooldown:Set Max Wait:Set Min Players:Set Max Threat:Back")) {
-		case 1:
-			.@new_val$ = (.@enabled$ == "1") ? "0" : "1";
-			query_sql "UPDATE event_config SET config_value = '" + .@new_val$ + "' WHERE config_key = 'invasion_enabled'";
-			mes "[Events Manager]";
-			mes "Auto-invasion " + (.@new_val$ == "1" ? "enabled" : "disabled") + ".";
-			close;
-		case 2:
-			mes "[Set Duration]";
-			mes "Current: " + .@duration$ + " min";
-			mes "Enter new duration (15-120):";
-			next;
-			input .@val;
-			if (.@val < 15) .@val = 15;
-			if (.@val > 120) .@val = 120;
-			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_duration_minutes'";
-			mes "[Events Manager]";
-			mes "Duration set to " + .@val + " min.";
-			close;
-		case 3:
-			mes "[Set Monster Multiplier]";
-			mes "Current: " + .@multiplier$ + "%";
-			mes " ";
-			mes "^888888100 = 1x (normal)";
-			mes "200 = 2x monsters";
-			mes "50 = 0.5x monsters^000000";
-			mes " ";
-			mes "Enter multiplier (10-1000):";
-			next;
-			input .@val;
-			if (.@val < 10) .@val = 10;
-			if (.@val > 1000) .@val = 1000;
-			query_sql "REPLACE INTO event_config (config_key, config_value) VALUES ('invasion_monster_multiplier', '" + .@val + "')";
-			mes "[Events Manager]";
-			mes "Monster multiplier set to " + .@val + "%.";
-			mes "(" + (.@val / 100) + "." + ((.@val % 100) / 10) + "x monsters)";
-			close;
-		case 4:
-			mes "[Set Cooldown]";
-			mes "Current: " + .@cooldown$ + " min";
-			mes "Enter new cooldown (30-480):";
-			next;
-			input .@val;
-			if (.@val < 30) .@val = 30;
-			if (.@val > 480) .@val = 480;
-			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_cooldown_minutes'";
-			mes "[Events Manager]";
-			mes "Cooldown set to " + .@val + " min.";
-			close;
-		case 5:
-			mes "[Set Max Wait]";
-			mes "Current: " + .@max_wait$ + " hours";
-			mes "Enter new max wait (1-24):";
-			next;
-			input .@val;
-			if (.@val < 1) .@val = 1;
-			if (.@val > 24) .@val = 24;
-			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_max_wait_hours'";
-			mes "[Events Manager]";
-			mes "Max wait set to " + .@val + " hours.";
-			close;
-		case 6:
-			mes "[Set Min Players]";
-			mes "Current: " + .@min_players$;
-			mes "Enter minimum players (1-20):";
-			next;
-			input .@val;
-			if (.@val < 1) .@val = 1;
-			if (.@val > 20) .@val = 20;
-			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_min_players'";
-			mes "[Events Manager]";
-			mes "Min players set to " + .@val + ".";
-			close;
-		case 7:
-			mes "[Set Max Threat]";
-			mes "Current: " + .@max_threat$ + " (0=Wolf, 3=Dragon)";
-			mes "Enter max threat for auto (0-3):";
-			next;
-			input .@val;
-			if (.@val < 0) .@val = 0;
-			if (.@val > 3) .@val = 3;
-			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_max_threat'";
-			mes "[Events Manager]";
-			mes "Max threat set to " + .@val + ".";
-			close;
-		case 8:
-			goto L_GMMenu;
-	}
-	end;
+	select("OK");
+	goto L_GM_Invasion;
 
 L_Inv_Triggers:
 	callfunc "F_TriggerMenu", "invasion";

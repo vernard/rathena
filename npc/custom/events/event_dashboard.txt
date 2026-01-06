@@ -1,0 +1,123 @@
+//===== rAthena Script =======================================
+//= Event Dashboard
+//= Simple overview of all server events
+//===== Description: =========================================
+//= Shows active/upcoming events and directs players to
+//= the appropriate NPCs for each event type.
+//=
+//= GM controls have been moved to individual NPCs:
+//= - Town Invasion: Defense Coordinator (Prontera 149,193)
+//= - EXP Boost/Happy Hour: Event Patron (Prontera 152,193)
+//= - Monster of the Day: Monster Hunter Board (Prontera 164,175)
+//============================================================
+
+prontera,157,197,4	script	Event Board	4_BOARD3,{
+	mes "[Event Board]";
+	mes "^0055FFServer Events Dashboard^000000";
+	mes "See what's happening!";
+	next;
+
+	// Check active events
+	.@active_count = 0;
+
+	// Town Invasion
+	if ($@InvasionActive) {
+		.@threat_name$ = callfunc("GetInvasionThreatName", $@InvasionThreat);
+		.@inv_remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
+		mes "^FF0000[ACTIVE] Town Invasion^000000";
+		mes "  " + .@threat_name$ + " in " + $@InvasionTownName$;
+		mes "  Wave " + $@InvasionWave + "/" + $@InvasionTotalWaves + " - " + .@inv_remaining + "m left";
+		mes " ";
+		.@active_count++;
+	}
+
+	// Happy Hour
+	if ($@HappyHourActive) {
+		.@hh_remaining = ($@HappyHourEndTime - gettimetick(2)) / 60;
+		mes "^FFD700[ACTIVE] Happy Hour^000000";
+		mes "  2x EXP rates!";
+		mes "  " + .@hh_remaining + " minutes left";
+		mes " ";
+		.@active_count++;
+	}
+
+	// EXP Boost
+	if ($@ExpBoostActive) {
+		.@eb_mult$ = ($@ExpBoostMultiplier / 100) + "." + (($@ExpBoostMultiplier % 100) / 10) + "x";
+		.@eb_remaining = ($@ExpBoostEndTime - gettimetick(2)) / 60;
+		mes "^00FF00[ACTIVE] EXP Boost^000000";
+		mes "  " + .@eb_mult$ + " EXP rates!";
+		mes "  " + .@eb_remaining + " minutes left";
+		mes " ";
+		.@active_count++;
+	}
+
+	// Monster of the Day
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_enabled'", .@motd_enabled$;
+	if (.@motd_enabled$ == "1") {
+		query_sql "SELECT mob_name, TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time LIMIT 1", .@motd_mob$, .@motd_mins;
+		if (.@motd_mob$ != "") {
+			mes "^FF8800[ACTIVE] Monster of the Day^000000";
+			mes "  " + .@motd_mob$ + " (3x bonuses!)";
+			mes "  " + .@motd_mins + " minutes left";
+			mes " ";
+			.@active_count++;
+		}
+	}
+
+	if (.@active_count == 0) {
+		mes "^888888No events currently active.^000000";
+		mes " ";
+	}
+
+	// Show upcoming events
+	mes "^0055FFUpcoming Events:^000000";
+
+	// Next Happy Hour
+	query_sql "SELECT CONCAT(DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), ' ', es.start_hour, ':00') FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'happy_hour' AND es.enabled = 1 ORDER BY (es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7 LIMIT 1", .@next_hh$;
+	if (.@next_hh$ != "") {
+		mes "  Happy Hour: " + .@next_hh$;
+	}
+
+	// Next scheduled invasion
+	query_sql "SELECT DATE_FORMAT(ei.scheduled_start, '%m/%d %H:%i') FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'invasion' AND ei.status = 'scheduled' ORDER BY ei.scheduled_start LIMIT 1", .@next_inv$;
+	if (.@next_inv$ != "") {
+		mes "  Invasion: " + .@next_inv$;
+	}
+
+	// Next scheduled EXP boost
+	query_sql "SELECT DATE_FORMAT(ei.scheduled_start, '%m/%d %H:%i') FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'exp_boost' AND ei.status = 'scheduled' ORDER BY ei.scheduled_start LIMIT 1", .@next_eb$;
+	if (.@next_eb$ != "") {
+		mes "  EXP Boost: " + .@next_eb$;
+	}
+
+	if (.@next_hh$ == "" && .@next_inv$ == "" && .@next_eb$ == "") {
+		mes "  ^888888None scheduled^000000";
+	}
+	next;
+
+	mes "[Event Board]";
+	mes "For more information, visit:";
+	mes " ";
+	mes "^0055FFDefense Coordinator^000000";
+	mes "  Town Invasions, warp & rewards";
+	mes " ";
+	mes "^0055FFEvent Patron^000000";
+	mes "  EXP Boost, Happy Hour";
+	mes " ";
+	mes "^0055FFMonster Hunter Board^000000";
+	mes "  Monster of the Day";
+
+	if (getgmlevel() >= 80) {
+		next;
+		mes "[Event Board]";
+		mes "^FF8800[GM Note]^000000";
+		mes "Event management has moved";
+		mes "to individual NPCs. Visit:";
+		mes " ";
+		mes "^0055FFDefense Coordinator^000000 for Invasion";
+		mes "^0055FFEvent Patron^000000 for EXP/Happy Hour";
+		mes "^0055FFMonster Board^000000 for MOTD";
+	}
+	close;
+}
