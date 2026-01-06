@@ -684,7 +684,8 @@ S_TriggerCondEvent:
 	.@event_type_id = getarg(0);
 	.@event_code$ = getarg(1);
 	.@group_id = getarg(2);
-	.@event_params$ = getarg(3, "");
+	.@event_params$ = getarg(3, "{}");
+	if (.@event_params$ == "") .@event_params$ = "{}";  // Ensure valid JSON for constraint
 
 	debugmes "[ConditionalTrigger] Triggering "+.@event_code$+" via group "+.@group_id;
 
