@@ -1,0 +1,809 @@
+//===== rAthena Script =======================================
+//= Town Invasion Event System
+//= Themed monster invasions with OPM-inspired threat levels
+//===== Description: =========================================
+//= Dynamic event where monsters invade towns:
+//= - 16 themed invasions (race, element, special)
+//= - 5 threat levels (Wolf → God)
+//= - Wave-based progression with escalating difficulty
+//= - Hunt Points rewards + bonus EXP
+//= - Discord webhook notifications
+//============================================================
+
+-	script	TownInvasion	FAKE_NPC,{
+	end;
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+OnInit:
+	// Global state variables
+	$@InvasionActive = 0;
+	$@InvasionID = 0;
+	$@InvasionMap$ = "";
+	$@InvasionTheme = 0;
+	$@InvasionThreat = 0;
+	$@InvasionWave = 0;
+	$@InvasionTotalWaves = 0;
+	$@InvasionMonstersSpawned = 0;
+	$@InvasionMonstersKilled = 0;
+	$@InvasionStartTime = 0;
+	$@InvasionEndTime = 0;
+	$@InvasionLastAnnounce = 0;
+	$@InvasionNextWaveTime = 0;
+	$@InvasionEventInstanceID = 0;
+
+	// Cancel any active invasions from before server restart
+	// (We don't restore mid-invasion state - GMs can manually restart if needed)
+	query_sql "UPDATE event_invasion_instances SET status = 'cancelled', ended_at = NOW() WHERE status = 'active'";
+
+	// Also cancel in event_instances (unified event history)
+	// Using subquery because rAthena query_sql may not support UPDATE with JOIN
+	query_sql "UPDATE event_instances SET status = 'cancelled', actual_end = NOW() WHERE status = 'active' AND event_type_id = (SELECT id FROM event_types WHERE code = 'invasion')";
+
+	// Cancel scheduled invasions that are past their start time (missed due to downtime)
+	query_sql "UPDATE event_instances SET status = 'cancelled', actual_end = NOW() WHERE status = 'scheduled' AND scheduled_start < NOW() AND event_type_id = (SELECT id FROM event_types WHERE code = 'invasion')";
+
+	debugmes "[TownInvasion] Initialized";
+	end;
+
+// NPC Timer - polls every 10 seconds to check timeout/wave spawn/reminders
+// Using polling instead of addtimer because addtimer requires player attachment
+OnTimer10000:
+	if (!$@InvasionActive) {
+		stopnpctimer;
+		end;
+	}
+
+	// Check for pending wave spawn
+	if ($@InvasionNextWaveTime > 0 && gettimetick(2) >= $@InvasionNextWaveTime) {
+		$@InvasionNextWaveTime = 0;
+		callsub S_SpawnWave;
+	}
+
+	// Check for timeout
+	if (gettimetick(2) >= $@InvasionEndTime) {
+		stopnpctimer;
+		donpcevent "TownInvasion::OnInvasionTimeout";
+		end;
+	}
+
+	// Check for periodic reminder (every 5 min, if no recent announcement)
+	if (gettimetick(2) - $@InvasionLastAnnounce >= 300) {
+		.@remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
+		if (.@remaining > 0) {
+			announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + $@InvasionMonstersKilled + " killed!", bc_all, 0xFF8800;
+			$@InvasionLastAnnounce = gettimetick(2);
+		}
+	}
+
+	// Continue polling
+	initnpctimer;
+	end;
+
+// ============================================================
+// SCHEDULED INVASION (called by EventScheduler)
+// Can be triggered by:
+// - Random auto trigger (S_CheckInvasionTrigger) - respects cooldown/time window/players
+// - Scheduled trigger (S_CheckScheduledEvents) - bypasses cooldown/time window/players
+// ============================================================
+OnScheduledInvasion:
+	// Check if already active
+	if ($@InvasionActive) {
+		debugmes "[TownInvasion] Scheduled trigger skipped - invasion already active";
+		end;
+	}
+
+	// Check if enabled
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_enabled'", .@enabled$;
+	if (.@enabled$ != "1") {
+		debugmes "[TownInvasion] Scheduled trigger skipped - disabled";
+		end;
+	}
+
+	// Determine trigger type - "gm", "scheduled", or empty (random auto)
+	// GM and scheduled triggers bypass time window/player checks
+	.@trigger$ = $@InvasionTriggerType$;
+	.@bypass_checks = (.@trigger$ == "gm" || .@trigger$ == "scheduled");
+	debugmes "[TownInvasion] Trigger type: " + .@trigger$ + " (bypass_checks=" + .@bypass_checks + ")";
+
+	// For random auto triggers only, check time window and players
+	if (!.@bypass_checks) {
+		// Check minimum players
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_players'", .@min$;
+		.@min_players = (.@min$ != "") ? atoi(.@min$) : 1;
+		if (getusers(1) < .@min_players) {
+			debugmes "[TownInvasion] Random trigger skipped - only " + getusers(1) + " players online (need " + .@min_players + ")";
+			end;
+		}
+
+		// Check time window
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_hour'", .@min_hour$;
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_hour'", .@max_hour$;
+		.@hour = gettime(GETTIME_HOUR);
+		.@min_h = (.@min_hour$ != "") ? atoi(.@min_hour$) : 9;
+		.@max_h = (.@max_hour$ != "") ? atoi(.@max_hour$) : 22;
+		if (.@hour < .@min_h || .@hour >= .@max_h) {
+			debugmes "[TownInvasion] Random trigger skipped - outside time window (" + .@hour + "h, window " + .@min_h + "-" + .@max_h + ")";
+			end;
+		}
+		// For random, use "auto" in DB
+		.@trigger$ = "auto";
+	}
+
+	// For GM/scheduled triggers with pre-set parameters, use them
+	// For random triggers, select random values
+	if (.@bypass_checks && $@InvasionPendingTown > 0) {
+		// Use parameters set by GM menu or scheduler
+		.@threat = $@InvasionPendingThreat;
+		.@town_id = $@InvasionPendingTown;
+		.@theme_id = $@InvasionPendingTheme;
+		debugmes "[TownInvasion] Using preset params - Threat:" + .@threat + " Town:" + .@town_id + " Theme:" + .@theme_id;
+
+		// If threat/theme is 0, use random
+		if (.@threat < 0 || .@threat > 4) {
+			.@threat = rand(0, 2);
+		}
+		if (.@theme_id < 1) {
+			query_sql "SELECT id FROM event_invasion_themes ORDER BY RAND() LIMIT 1", .@theme_id;
+		}
+	} else {
+		// Random selection for auto triggers
+		// Select random threat level (0-3, God=4 is GM-only)
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_threat'", .@max_threat$;
+		.@max = (.@max_threat$ != "") ? atoi(.@max_threat$) : 3;
+		if (.@max > 3) .@max = 3; // Cap at Dragon for auto
+		.@threat = rand(0, .@max);
+
+		// Select random town
+		query_sql "SELECT id FROM event_invasion_towns WHERE enabled = 1 ORDER BY RAND() LIMIT 1", .@town_id;
+
+		// Select random theme
+		query_sql "SELECT id FROM event_invasion_themes ORDER BY RAND() LIMIT 1", .@theme_id;
+	}
+
+	if (.@town_id == 0) {
+		debugmes "[TownInvasion] No enabled towns found!";
+		end;
+	}
+
+	// Actually start it
+	callsub S_BeginInvasion, .@threat, .@town_id, .@theme_id, .@trigger$;
+	end;
+
+// ============================================================
+// GM MANUAL TRIGGER (routes through OnScheduledInvasion)
+// ============================================================
+OnGMStartInvasion:
+	// GM sets $@InvasionPendingThreat, $@InvasionPendingTown, $@InvasionPendingTheme
+	// Then routes through the common path with "gm" trigger type
+	$@InvasionTriggerType$ = "gm";
+	donpcevent "TownInvasion::OnScheduledInvasion";
+	end;
+
+// ============================================================
+// BEGIN INVASION
+// ============================================================
+S_BeginInvasion:
+	.@threat = getarg(0);
+	.@town_id = getarg(1);
+	.@theme_id = getarg(2);
+	.@trigger$ = getarg(3, "auto");
+
+	debugmes "[TownInvasion] S_BeginInvasion - threat:" + .@threat + " town_id:" + .@town_id + " theme_id:" + .@theme_id + " trigger:" + .@trigger$;
+
+	// Get wave count for this threat level
+	query_sql "SELECT MAX(wave_num) FROM event_invasion_wave_config WHERE threat_level = " + .@threat, .@total_waves;
+
+	// Create invasion instance in DB
+	query_sql "INSERT INTO event_invasion_instances (theme_id, town_id, threat_level, status, current_wave, total_waves, started_at, triggered_by) VALUES (" + .@theme_id + ", " + .@town_id + ", " + .@threat + ", 'active', 1, " + .@total_waves + ", NOW(), '" + .@trigger$ + "')";
+
+	debugmes "[TownInvasion] S_BeginInvasion - Created DB record, loading invasion data...";
+
+	// Load and start the invasion
+	callsub S_LoadAndStartInvasion;
+
+	// Set up timers AFTER returning from nested callsub (addtimer fails in nested calls)
+	debugmes "[TownInvasion] S_BeginInvasion - Setting up timers";
+	callsub S_SetupTimers;
+	debugmes "[TownInvasion] S_BeginInvasion - Complete";
+	return;
+
+// ============================================================
+// LOAD AND START INVASION
+// ============================================================
+S_LoadAndStartInvasion:
+	// Load active invasion from database
+	query_sql "SELECT i.id, t.map_name, i.theme_id, i.threat_level, i.current_wave, i.total_waves, i.monsters_spawned, i.monsters_killed, UNIX_TIMESTAMP(i.started_at), UNIX_TIMESTAMP(DATE_ADD(i.started_at, INTERVAL (SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes') MINUTE)), t.center_x, t.center_y, t.spawn_radius, t.safe_x, t.safe_y, t.display_name, th.name, th.icon FROM event_invasion_instances i JOIN event_invasion_towns t ON i.town_id = t.id JOIN event_invasion_themes th ON i.theme_id = th.id WHERE i.status = 'active' ORDER BY i.id DESC LIMIT 1", .@id, .@map$, .@theme, .@threat, .@wave, .@total, .@spawned, .@killed, .@start, .@end, .@cx, .@cy, .@radius, .@safe_x, .@safe_y, .@town_name$, .@theme_name$, .@theme_icon$;
+
+	if (.@id == 0) {
+		debugmes "[TownInvasion] S_LoadAndStartInvasion - No active invasion found in DB!";
+		return;
+	}
+
+	debugmes "[TownInvasion] S_LoadAndStartInvasion - Loaded invasion " + .@id + " from DB";
+	debugmes "[TownInvasion] S_LoadAndStartInvasion - Map:" + .@map$ + " Center:" + .@cx + "," + .@cy + " Radius:" + .@radius;
+
+	// Set global state
+	$@InvasionActive = 1;
+	$@InvasionID = .@id;
+	$@InvasionMap$ = .@map$;
+	$@InvasionTheme = .@theme;
+	$@InvasionThreat = .@threat;
+	$@InvasionWave = .@wave;
+	$@InvasionTotalWaves = .@total;
+	$@InvasionMonstersSpawned = .@spawned;
+	$@InvasionMonstersKilled = .@killed;
+	$@InvasionStartTime = .@start;
+	$@InvasionEndTime = .@end;
+	$@InvasionLastAnnounce = gettimetick(2);
+	$@InvasionCenterX = .@cx;
+	$@InvasionCenterY = .@cy;
+	$@InvasionRadius = .@radius;
+	$@InvasionSafeX = .@safe_x;
+	$@InvasionSafeY = .@safe_y;
+	$@InvasionTownName$ = .@town_name$;
+	$@InvasionThemeName$ = .@theme_name$;
+	$@InvasionThemeIcon$ = .@theme_icon$;
+
+	debugmes "[TownInvasion] S_LoadAndStartInvasion - Globals set, setting mapflag...";
+
+	// Set no-penalty mapflag
+	setmapflag $@InvasionMap$, mf_nopenalty;
+
+	// Get duration for announcements
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
+	.@duration = (.@duration$ != "") ? atoi(.@duration$) : 45;
+
+	// Announce invasion start
+	.@threat_name$ = callsub(S_GetThreatName, .@threat);
+	announce "[TownInvasion] " + .@threat_name$ + " threat! " + .@theme_name$ + " attacking " + .@town_name$ + "!", bc_all, 0xFF4444;
+	announce "[TownInvasion] Defend for " + .@duration + " minutes! No EXP loss during invasion!", bc_all, 0xFF8800;
+
+	// Queue Discord webhook
+	callsub S_QueueDiscordStart;
+
+	debugmes "[TownInvasion] Started invasion " + $@InvasionID + " in " + .@town_name$;
+
+	// Update event_instances status to 'active'
+	// Use pending instance ID if passed from scheduler, otherwise find the most recent scheduled record
+	if ($@InvasionPendingInstanceId > 0) {
+		.@ei_id = $@InvasionPendingInstanceId;
+		$@InvasionPendingInstanceId = 0;  // Clear for next time
+	} else {
+		query_sql "SELECT ei.id FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'invasion' AND ei.status = 'scheduled' ORDER BY ei.id DESC LIMIT 1", .@ei_id;
+	}
+	if (.@ei_id > 0) {
+		query_sql "UPDATE event_instances SET status = 'active', actual_start = NOW() WHERE id = " + .@ei_id;
+		$@InvasionEventInstanceID = .@ei_id;
+		debugmes "[TownInvasion] Updated event_instances " + .@ei_id + " to active";
+	}
+
+	// Schedule first wave with 15 second countdown (gives players time to prepare)
+	$@InvasionNextWaveTime = gettimetick(2) + 15;
+	announce "[TownInvasion] Wave 1 spawning in 15 seconds! Get ready!", bc_all, 0xFFAA00;
+	debugmes "[TownInvasion] First wave scheduled at " + $@InvasionNextWaveTime;
+	return;
+
+// ============================================================
+// SET UP TIMERS (starts NPC timer polling)
+// ============================================================
+S_SetupTimers:
+	// Start the NPC timer for polling (OnTimer10000 checks timeout/wave spawn/reminders)
+	initnpctimer;
+	debugmes "[TownInvasion] NPC timer started for polling";
+	return;
+
+// ============================================================
+// SPAWN WAVE
+// ============================================================
+S_SpawnWave:
+	debugmes "[TownInvasion] S_SpawnWave called - Active:" + $@InvasionActive + " Map:" + $@InvasionMap$ + " Wave:" + $@InvasionWave;
+	debugmes "[TownInvasion] S_SpawnWave - Center:" + $@InvasionCenterX + "," + $@InvasionCenterY + " Radius:" + $@InvasionRadius + " Theme:" + $@InvasionTheme + " Threat:" + $@InvasionThreat;
+
+	if (!$@InvasionActive) {
+		debugmes "[TownInvasion] S_SpawnWave - NOT ACTIVE, returning";
+		return;
+	}
+
+	// Get wave configuration
+	query_sql "SELECT tier, count FROM event_invasion_wave_config WHERE threat_level = " + $@InvasionThreat + " AND wave_num = " + $@InvasionWave, .@tiers$, .@counts;
+	debugmes "[TownInvasion] S_SpawnWave - Wave config tiers:" + getarraysize(.@tiers$);
+
+	// Get monster multiplier (100 = 1x, 200 = 2x, etc.)
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_monster_multiplier'", .@mult$;
+	.@multiplier = (.@mult$ != "") ? atoi(.@mult$) : 100;
+	if (.@multiplier < 10) .@multiplier = 10;   // Minimum 10%
+	if (.@multiplier > 1000) .@multiplier = 1000; // Maximum 10x
+	debugmes "[TownInvasion] S_SpawnWave - Monster multiplier: " + .@multiplier + "%";
+
+	.@total_spawned = 0;
+
+	// Calculate spawn area (only walkable cells will be used by areamonster)
+	.@x1 = $@InvasionCenterX - $@InvasionRadius;
+	.@y1 = $@InvasionCenterY - $@InvasionRadius;
+	.@x2 = $@InvasionCenterX + $@InvasionRadius;
+	.@y2 = $@InvasionCenterY + $@InvasionRadius;
+	debugmes "[TownInvasion] S_SpawnWave - Spawn area: (" + .@x1 + "," + .@y1 + ") to (" + .@x2 + "," + .@y2 + ")";
+
+	for (.@i = 0; .@i < getarraysize(.@tiers$); .@i++) {
+		.@tier$ = .@tiers$[.@i];
+		.@base_count = .@counts[.@i];
+		// Apply multiplier (100 = 1x, 200 = 2x)
+		.@count = (.@base_count * .@multiplier) / 100;
+		if (.@count < 1 && .@base_count > 0) .@count = 1; // At least 1 if base > 0
+
+		// Get random monsters of this tier from the theme
+		query_sql "SELECT mob_id, mob_name FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND tier = '" + .@tier$ + "' ORDER BY RAND()", .@mob_ids, .@mob_names$;
+
+		if (getarraysize(.@mob_ids) == 0) {
+			debugmes "[TownInvasion] Warning: No monsters found for tier " + .@tier$ + " in theme " + $@InvasionTheme;
+			continue;
+		}
+
+		// Distribute spawns across available monsters of this tier
+		// Use areamonster to ensure monsters spawn on WALKABLE cells only
+		.@num_types = getarraysize(.@mob_ids);
+		.@per_type = .@count / .@num_types;
+		.@remainder = .@count % .@num_types;
+
+		for (.@j = 0; .@j < .@num_types; .@j++) {
+			.@mob = .@mob_ids[.@j];
+			.@name$ = .@mob_names$[.@j];
+			.@spawn_count = .@per_type;
+			if (.@j < .@remainder) .@spawn_count++;
+
+			if (.@spawn_count > 0) {
+				// areamonster spawns on walkable cells only, preventing stuck monsters
+				areamonster $@InvasionMap$, .@x1, .@y1, .@x2, .@y2, .@name$, .@mob, .@spawn_count, "TownInvasion::OnMonsterKilled";
+				.@total_spawned += .@spawn_count;
+			}
+		}
+	}
+
+	$@InvasionMonstersSpawned += .@total_spawned;
+	$@InvasionWaveMonsters = .@total_spawned;
+	$@InvasionWaveKills = 0;
+
+	// Make all spawned monsters aggressive using getmapunits
+	// Mode flags: MD_CANMOVE(0x1) + MD_AGGRESSIVE(0x4) + MD_CANATTACK(0x80) + MD_CASTSENSOR_IDLE(0x10)
+	// = 0x95 = basic aggressive monster that moves, attacks, and detects players
+	// Note: getmapunits requires array[0] syntax
+	.@mob_count = getmapunits(BL_MOB, $@InvasionMap$, .@gids[0]);
+	debugmes "[TownInvasion] Found " + .@mob_count + " monsters on map, making aggressive";
+	for (.@k = 0; .@k < .@mob_count; .@k++) {
+		// Set mode directly - 0x95 = can move + aggressive + can attack + cast sensor
+		setunitdata .@gids[.@k], UMOB_MODE, 0x95;
+	}
+
+	// Update database
+	query_sql "UPDATE event_invasion_instances SET monsters_spawned = " + $@InvasionMonstersSpawned + ", current_wave = " + $@InvasionWave + " WHERE id = " + $@InvasionID;
+
+	announce "[TownInvasion] Wave " + $@InvasionWave + "/" + $@InvasionTotalWaves + " begins! " + .@total_spawned + " monsters spawning in " + $@InvasionTownName$ + "!", bc_all, 0xFFAA00;
+	$@InvasionLastAnnounce = gettimetick(2);
+
+	debugmes "[TownInvasion] Spawned wave " + $@InvasionWave + " with " + .@total_spawned + " monsters (made aggressive)";
+	return;
+
+// ============================================================
+// MONSTER KILLED CALLBACK
+// ============================================================
+OnMonsterKilled:
+	if (!$@InvasionActive) end;
+	if (strcharinfo(3) != $@InvasionMap$) end;
+
+	$@InvasionMonstersKilled++;
+	$@InvasionWaveKills++;
+
+	// Track player contribution
+	.@char_id = getcharid(0);
+	.@char_name$ = strcharinfo(0);
+
+	query_sql "INSERT INTO event_invasion_contributions (invasion_id, char_id, char_name, kills, waves_participated) VALUES (" + $@InvasionID + ", " + .@char_id + ", '" + escape_sql(.@char_name$) + "', 1, 1) ON DUPLICATE KEY UPDATE kills = kills + 1";
+
+	// Give Hunt Points for kill (scales with threat level)
+	// Wolf=1, Tiger=2, Demon=3, Dragon=4, God=5
+	.@kill_pts = $@InvasionThreat + 1;
+	#HUNT_POINTS += .@kill_pts;
+	dispbottom "[Invasion] +" + .@kill_pts + " Hunt Points (Total: " + #HUNT_POINTS + ")", 0x00CC00;
+
+	// Party kill sharing - give credit to nearby party members
+	if (getcharid(1) > 0) {
+		// Get party members on same map within range
+		getpartymember getcharid(1), 0;
+		getpartymember getcharid(1), 1;
+		getpartymember getcharid(1), 2;
+		for (.@i = 0; .@i < $@partymembercount; .@i++) {
+			if ($@partymemberaid[.@i] != getcharid(3) && isloggedin($@partymemberaid[.@i])) {
+				// Check if on same map
+				if (attachrid($@partymemberaid[.@i])) {
+					if (strcharinfo(3) == $@InvasionMap$) {
+						// Check distance (within 15 cells)
+						// Note: We can't easily check distance, so just give credit if on map
+						query_sql "INSERT INTO event_invasion_contributions (invasion_id, char_id, char_name, kills, waves_participated) VALUES (" + $@InvasionID + ", " + getcharid(0) + ", '" + escape_sql(strcharinfo(0)) + "', 0, 1) ON DUPLICATE KEY UPDATE waves_participated = GREATEST(waves_participated, 1)";
+					}
+					detachrid;
+				}
+			}
+		}
+	}
+
+	// Check wave clear (90% threshold)
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_wave_clear_percent'", .@threshold$;
+	.@threshold = (.@threshold$ != "") ? atoi(.@threshold$) : 90;
+	.@needed = ($@InvasionWaveMonsters * .@threshold) / 100;
+
+	if ($@InvasionWaveKills >= .@needed) {
+		donpcevent "TownInvasion::OnWaveCleared";
+	}
+	end;
+
+// ============================================================
+// WAVE CLEARED
+// ============================================================
+OnWaveCleared:
+	if (!$@InvasionActive) end;
+
+	// Clean up remaining monsters from this wave (both methods for robustness)
+	killmonster $@InvasionMap$, "TownInvasion::OnMonsterKilled";
+	killmonsterall $@InvasionMap$;
+
+	// Award wave clear bonus to all participants
+	query_sql "SELECT char_id FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@char_ids;
+	for (.@i = 0; .@i < getarraysize(.@char_ids); .@i++) {
+		if (attachrid(.@char_ids[.@i])) {
+			#HUNT_POINTS += 10; // Wave clear bonus
+			dispbottom "[Invasion] Wave Clear Bonus: +10 Hunt Points! (Total: " + #HUNT_POINTS + ")", 0x00FF00;
+			detachrid;
+		}
+	}
+
+	announce "[TownInvasion] Wave " + $@InvasionWave + " cleared!", bc_all, 0x00FF00;
+	$@InvasionLastAnnounce = gettimetick(2);
+
+	// Check if all waves complete
+	if ($@InvasionWave >= $@InvasionTotalWaves) {
+		donpcevent "TownInvasion::OnInvasionVictory";
+		end;
+	}
+
+	// Start next wave after delay (using polling, not addtimer)
+	$@InvasionWave++;
+	$@InvasionNextWaveTime = gettimetick(2) + 15;
+	announce "[TownInvasion] Wave " + $@InvasionWave + "/" + $@InvasionTotalWaves + " starting in 15 seconds...", bc_all, 0xFFAA00;
+	debugmes "[TownInvasion] OnWaveCleared - next wave scheduled at " + $@InvasionNextWaveTime;
+	end;
+
+OnNextWave:
+	debugmes "[TownInvasion] OnNextWave triggered - Active:" + $@InvasionActive;
+	if (!$@InvasionActive) {
+		debugmes "[TownInvasion] OnNextWave aborted - invasion not active";
+		end;
+	}
+	debugmes "[TownInvasion] OnNextWave calling S_SpawnWave";
+	callsub S_SpawnWave;
+	debugmes "[TownInvasion] OnNextWave complete";
+	end;
+
+// ============================================================
+// INVASION VICTORY
+// ============================================================
+OnInvasionVictory:
+	if (!$@InvasionActive) end;
+
+	// Store map before any cleanup
+	.@map$ = $@InvasionMap$;
+
+	// Stop NPC timer and clear pending wave
+	stopnpctimer;
+	$@InvasionNextWaveTime = 0;
+
+	// Kill any remaining monsters (both methods for robustness)
+	killmonster .@map$, "TownInvasion::OnMonsterKilled";
+	killmonsterall .@map$;
+
+	// Calculate and distribute rewards
+	callsub S_DistributeRewards, 1; // 1 = victory
+
+	// Update database
+	query_sql "UPDATE event_invasion_instances SET status = 'victory', ended_at = NOW(), monsters_killed = " + $@InvasionMonstersKilled + " WHERE id = " + $@InvasionID;
+
+	// Update last ended time for cooldown
+	query_sql "UPDATE event_config SET config_value = UNIX_TIMESTAMP() WHERE config_key = 'invasion_last_ended'";
+
+	// Store values before reset
+	.@town$ = $@InvasionTownName$;
+	.@total = $@InvasionTotalWaves;
+	.@id = $@InvasionID;
+
+	// Announce victory
+	announce "[TownInvasion] VICTORY! " + .@town$ + " DEFENDED! All " + .@total + " waves cleared!", bc_all, 0x00FF00;
+	announce "[TownInvasion] Rewards distributed! Thank you brave defenders!", bc_all, 0x00FF00;
+
+	// Queue Discord webhook
+	callsub S_QueueDiscordEnd, "victory";
+
+	// Update event_instances status
+	if ($@InvasionEventInstanceID > 0) {
+		query_sql "UPDATE event_instances SET status = 'completed', actual_end = NOW() WHERE id = " + $@InvasionEventInstanceID;
+	}
+
+	// Remove mapflag
+	removemapflag .@map$, mf_nopenalty;
+
+	// Reset state
+	callsub S_ResetState;
+
+	debugmes "[TownInvasion] Invasion " + .@id + " ended in victory";
+	end;
+
+// ============================================================
+// INVASION TIMEOUT (FAILURE)
+// ============================================================
+OnInvasionTimeout:
+	if (!$@InvasionActive) end;
+
+	// Store values before cleanup
+	.@map$ = $@InvasionMap$;
+	.@town$ = $@InvasionTownName$;
+	.@theme$ = $@InvasionThemeName$;
+	.@killed = $@InvasionMonstersKilled;
+	.@id = $@InvasionID;
+
+	// Stop NPC timer and clear pending wave
+	stopnpctimer;
+	$@InvasionNextWaveTime = 0;
+
+	// Kill remaining monsters (both methods for robustness)
+	killmonster .@map$, "TownInvasion::OnMonsterKilled";
+	killmonsterall .@map$;
+
+	// Distribute partial rewards (no defense bonus)
+	callsub S_DistributeRewards, 0; // 0 = failure
+
+	// Update database
+	query_sql "UPDATE event_invasion_instances SET status = 'failed', ended_at = NOW(), monsters_killed = " + .@killed + " WHERE id = " + .@id;
+
+	// Update last ended time
+	query_sql "UPDATE event_config SET config_value = UNIX_TIMESTAMP() WHERE config_key = 'invasion_last_ended'";
+
+	// Announce failure
+	announce "[TownInvasion] DEFEAT! " + .@town$ + " was overwhelmed by " + .@theme$ + "...", bc_all, 0xFF4444;
+	announce "[TownInvasion] Partial rewards distributed. The city will recover!", bc_all, 0xFF8800;
+
+	// Queue Discord webhook
+	callsub S_QueueDiscordEnd, "failed";
+
+	// Update event_instances status
+	if ($@InvasionEventInstanceID > 0) {
+		query_sql "UPDATE event_instances SET status = 'failed', actual_end = NOW() WHERE id = " + $@InvasionEventInstanceID;
+	}
+
+	// Remove mapflag
+	removemapflag .@map$, mf_nopenalty;
+
+	// Reset state
+	callsub S_ResetState;
+
+	debugmes "[TownInvasion] Invasion " + .@id + " timed out (failed)";
+	end;
+
+// ============================================================
+// GM CANCEL INVASION
+// ============================================================
+OnGMCancelInvasion:
+	debugmes "[TownInvasion] GM cancel triggered, $@InvasionActive=" + $@InvasionActive + ", $@InvasionID=" + $@InvasionID;
+
+	// IMMEDIATELY set inactive to prevent race conditions with timeout handler
+	// Store values first, then disable
+	.@was_active = $@InvasionActive;
+	.@map$ = $@InvasionMap$;
+	.@id = $@InvasionID;
+	.@town$ = $@InvasionTownName$;
+
+	// Disable FIRST to prevent timeout from firing during cancel
+	$@InvasionActive = 0;
+
+	// Check both memory state and database for active invasion
+	if (!.@was_active) {
+		// Fallback: check database for any active invasion
+		query_sql "SELECT i.id, t.map_name, t.display_name FROM event_invasion_instances i JOIN event_invasion_towns t ON i.town_id = t.id WHERE i.status = 'active' LIMIT 1", .@db_id, .@db_map$, .@db_town$;
+		if (.@db_id > 0) {
+			debugmes "[TownInvasion] GM cancel: memory state was stale, found active invasion " + .@db_id + " in database";
+			.@map$ = .@db_map$;
+			.@id = .@db_id;
+			.@town$ = .@db_town$;
+		} else {
+			debugmes "[TownInvasion] GM cancel failed - no active invasion in memory or database";
+			end;
+		}
+	}
+
+	debugmes "[TownInvasion] GM cancelling invasion " + .@id + " in " + .@map$;
+
+	// Note: We already set $@InvasionActive = 0 above, so timer handlers will exit early
+	// deltimer/stopnpctimer cause issues, so we skip them
+	debugmes "[TownInvasion] State disabled, proceeding with cleanup";
+
+	// Kill monsters - try callback-specific first, then fallback to all
+	debugmes "[TownInvasion] Killing monsters on " + .@map$;
+	killmonster .@map$, "TownInvasion::OnMonsterKilled";
+	// Fallback: kill ALL monsters on the map (catches any that slipped through)
+	killmonsterall .@map$;
+	debugmes "[TownInvasion] Monsters killed";
+
+	// Update database - mark as cancelled
+	debugmes "[TownInvasion] Updating database status to cancelled for ID " + .@id;
+	query_sql "UPDATE event_invasion_instances SET status = 'cancelled', ended_at = NOW() WHERE id = " + .@id;
+	// Also mark any other active invasions as cancelled (cleanup)
+	query_sql "UPDATE event_invasion_instances SET status = 'cancelled', ended_at = NOW() WHERE status = 'active'";
+
+	// Update last ended time for cooldown
+	query_sql "UPDATE event_config SET config_value = UNIX_TIMESTAMP() WHERE config_key = 'invasion_last_ended'";
+
+	// Announce cancellation
+	announce "[TownInvasion] Event in " + .@town$ + " cancelled by a GM.", bc_all, 0xFFFF00;
+
+	// Update event_instances status
+	if ($@InvasionEventInstanceID > 0) {
+		query_sql "UPDATE event_instances SET status = 'cancelled', actual_end = NOW() WHERE id = " + $@InvasionEventInstanceID;
+	}
+
+	// Remove mapflag
+	removemapflag .@map$, mf_nopenalty;
+
+	// Reset state
+	callsub S_ResetState;
+
+	debugmes "[TownInvasion] Invasion " + .@id + " cancelled by GM successfully";
+	end;
+
+// ============================================================
+// DISTRIBUTE REWARDS
+// ============================================================
+S_DistributeRewards:
+	.@victory = getarg(0);
+
+	// Base completion bonus by threat level (awarded at end)
+	setarray .@base_points, 50, 100, 150, 250, 500; // Wolf, Tiger, Demon, Dragon, God
+	.@base = .@base_points[$@InvasionThreat];
+
+	// Points per kill already awarded during invasion (threat + 1)
+	.@pts_per_kill = $@InvasionThreat + 1;
+
+	// Get all contributors
+	query_sql "SELECT char_id, kills, waves_participated FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@char_ids, .@kills, .@waves;
+
+	for (.@i = 0; .@i < getarraysize(.@char_ids); .@i++) {
+		// Calculate end-of-invasion bonus (NOT including already-awarded kill/wave points)
+		.@bonus = .@base; // Threat-based completion bonus
+
+		// Defense bonus for victory (+50% on the base bonus)
+		if (.@victory) {
+			.@bonus = (.@bonus * 150) / 100;
+		}
+
+		// Calculate total for display (already awarded + new bonus)
+		.@already_awarded = (.@kills[.@i] * .@pts_per_kill) + (.@waves[.@i] * 10);
+		.@total = .@already_awarded + .@bonus;
+
+		// Award bonus points
+		if (attachrid(.@char_ids[.@i])) {
+			#HUNT_POINTS += .@bonus;
+			if (.@victory) {
+				dispbottom "[Invasion] Victory Bonus: +" + .@bonus + " Hunt Points! (Total earned: " + .@total + ")", 0x00FF00;
+			} else {
+				dispbottom "[Invasion] Participation Bonus: +" + .@bonus + " Hunt Points (Total earned: " + .@total + ")", 0xFFAA00;
+			}
+
+			// Update database
+			query_sql "UPDATE event_invasion_contributions SET points_earned = " + .@total + ", claimed = 1 WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
+			detachrid;
+		} else {
+			// Player offline - mark unclaimed (they already got kill/wave points, just missing bonus)
+			query_sql "UPDATE event_invasion_contributions SET points_earned = " + .@total + " WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
+		}
+	}
+	return;
+
+// ============================================================
+// RESET STATE
+// ============================================================
+S_ResetState:
+	$@InvasionActive = 0;
+	$@InvasionID = 0;
+	$@InvasionMap$ = "";
+	$@InvasionTheme = 0;
+	$@InvasionThreat = 0;
+	$@InvasionWave = 0;
+	$@InvasionTotalWaves = 0;
+	$@InvasionMonstersSpawned = 0;
+	$@InvasionMonstersKilled = 0;
+	$@InvasionStartTime = 0;
+	$@InvasionEndTime = 0;
+	$@InvasionNextWaveTime = 0;
+	$@InvasionEventInstanceID = 0;
+	return;
+
+// ============================================================
+// DISCORD WEBHOOK - INVASION START
+// ============================================================
+S_QueueDiscordStart:
+	.@threat_name$ = callsub(S_GetThreatName, $@InvasionThreat);
+	.@threat_icon$ = callsub(S_GetThreatIcon, $@InvasionThreat);
+
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
+	.@duration = (.@duration$ != "") ? atoi(.@duration$) : 45;
+
+	// Build JSON payload
+	.@payload$ = "{";
+	.@payload$ += "\"type\":\"invasion_start\",";
+	.@payload$ += "\"threat_level\":" + $@InvasionThreat + ",";
+	.@payload$ += "\"threat_name\":\"" + .@threat_name$ + "\",";
+	.@payload$ += "\"threat_icon\":\"" + .@threat_icon$ + "\",";
+	.@payload$ += "\"theme_name\":\"" + $@InvasionThemeName$ + "\",";
+	.@payload$ += "\"theme_icon\":\"" + $@InvasionThemeIcon$ + "\",";
+	.@payload$ += "\"town_name\":\"" + $@InvasionTownName$ + "\",";
+	.@payload$ += "\"duration\":" + .@duration;
+	.@payload$ += "}";
+
+	query_sql "INSERT INTO discord_webhook_queue (webhook_type, payload, created_at) VALUES ('invasion', '" + escape_sql(.@payload$) + "', NOW())";
+	return;
+
+// ============================================================
+// DISCORD WEBHOOK - INVASION END
+// ============================================================
+S_QueueDiscordEnd:
+	.@status$ = getarg(0);
+
+	// Get top contributor
+	query_sql "SELECT char_name, kills FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID + " ORDER BY kills DESC LIMIT 1", .@top_name$, .@top_kills;
+
+	// Count defenders
+	query_sql "SELECT COUNT(*) FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@defenders;
+
+	// Build JSON payload
+	.@payload$ = "{";
+	.@payload$ += "\"type\":\"invasion_end\",";
+	.@payload$ += "\"status\":\"" + .@status$ + "\",";
+	.@payload$ += "\"town_name\":\"" + $@InvasionTownName$ + "\",";
+	.@payload$ += "\"theme_name\":\"" + $@InvasionThemeName$ + "\",";
+	.@payload$ += "\"waves_cleared\":" + ($@InvasionWave - 1) + ",";
+	.@payload$ += "\"total_waves\":" + $@InvasionTotalWaves + ",";
+	.@payload$ += "\"monsters_killed\":" + $@InvasionMonstersKilled + ",";
+	.@payload$ += "\"defenders\":" + .@defenders + ",";
+	.@payload$ += "\"top_defender\":\"" + escape_sql(.@top_name$) + "\",";
+	.@payload$ += "\"top_kills\":" + .@top_kills;
+	.@payload$ += "}";
+
+	query_sql "INSERT INTO discord_webhook_queue (webhook_type, payload, created_at) VALUES ('invasion', '" + escape_sql(.@payload$) + "', NOW())";
+	return;
+
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
+S_GetThreatName:
+	switch(getarg(0)) {
+		case 0: return "WOLF";
+		case 1: return "TIGER";
+		case 2: return "DEMON";
+		case 3: return "DRAGON";
+		case 4: return "GOD";
+	}
+	return "UNKNOWN";
+
+S_GetThreatIcon:
+	switch(getarg(0)) {
+		case 0: return "[WOLF]";
+		case 1: return "[TIGER]";
+		case 2: return "[DEMON]";
+		case 3: return "[DRAGON]";
+		case 4: return "[GOD]";
+	}
+	return "[?]";
+
+S_GetTownName:
+	query_sql "SELECT display_name FROM event_invasion_towns WHERE map_name = '" + escape_sql(getarg(0)) + "'", .@name$;
+	return .@name$;
+
+}

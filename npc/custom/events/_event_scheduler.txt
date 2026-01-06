@@ -39,6 +39,9 @@ OnTimer60000:
 
 	// Check if MOTD needs rotation announcement
 	callsub S_CheckMOTDRotation;
+
+	// Check if town invasion should trigger
+	callsub S_CheckInvasionTrigger;
 	end;
 
 // ============================================================
@@ -150,6 +153,8 @@ S_CheckScheduledEvents:
 		set .@duration, .@durations[.@i];
 
 		// Check if this event type is already active (prevent overlap)
+		// Must clear variable first - query_sql doesn't clear it if no rows returned
+		.@already_active = 0;
 		query_sql "SELECT 1 FROM event_instances WHERE event_type_id = "+.@type_ids[.@i]+" AND status = 'active' LIMIT 1", .@already_active;
 		if (.@already_active) {
 			debugmes "[EventScheduler] Skipping "+.@event_code$+" - already active (overlap prevention)";
@@ -187,6 +192,25 @@ S_CheckScheduledEvents:
 			// MOTD is handled separately by S_CheckMOTDRotation
 			// This just marks the schedule as triggered
 		}
+		else if (.@event_code$ == "invasion") {
+			// Town Invasion - read params from event_params JSON
+			query_sql "SELECT event_params FROM event_schedule WHERE id = "+.@schedule_id, .@params$;
+			if (.@params$ != "") {
+				// Parse JSON params: {"threat":1,"town":1,"theme":1}
+				.@threat = atoi(replacestr(replacestr(replacestr(.@params$, "{", ""), "}", ""), "\"threat\":", ""));
+				// Default to random if not specified
+				if (.@threat < 0 || .@threat > 4) .@threat = rand(0, 2);
+			} else {
+				.@threat = rand(0, 2); // Random easy-medium-hard
+			}
+			// Set trigger type and pending params for scheduled invasions
+			// "scheduled" bypasses cooldown, time window, and player checks
+			$@InvasionTriggerType$ = "scheduled";
+			$@InvasionPendingThreat = .@threat;
+			$@InvasionPendingTown = 0; // 0 = random selection
+			$@InvasionPendingTheme = 0; // 0 = random selection
+			donpcevent "TownInvasion::OnScheduledInvasion";
+		}
 		else {
 			// Generic event - try to call OnEventStart
 			donpcevent .@event_code$+"::OnEventStart";
@@ -205,19 +229,31 @@ S_CheckScheduledEvents:
 		set .@duration, .@ot_durations[.@j];
 
 		// Check if this event type is already active (prevent overlap)
+		// Must clear variable first - query_sql doesn't clear it if no rows returned
+		.@already_active = 0;
 		query_sql "SELECT 1 FROM event_instances WHERE event_type_id = "+.@ot_type_ids[.@j]+" AND status = 'active' AND id != "+.@instance_id+" LIMIT 1", .@already_active;
 		if (.@already_active) {
 			debugmes "[EventScheduler] Skipping one-time "+.@event_code$+" - another instance active";
 			continue;
 		}
 
+		// For invasions, also check the global variable (invasion might be running without DB update)
+		if (.@event_code$ == "invasion" && $@InvasionActive) {
+			debugmes "[EventScheduler] Skipping one-time invasion - $@InvasionActive is true";
+			continue;
+		}
+
 		debugmes "[EventScheduler] Triggering one-time event: "+.@event_code$+" (instance "+.@instance_id+")";
 
-		// Update instance to active
-		query_sql "UPDATE event_instances SET actual_start = NOW(), status = 'active' WHERE id = "+.@instance_id;
+		// For invasions, don't mark as 'active' yet - TownInvasion will handle it
+		// This prevents orphaned 'active' records if the invasion fails to start
+		if (.@event_code$ != "invasion") {
+			// Update instance to active
+			query_sql "UPDATE event_instances SET actual_start = NOW(), status = 'active' WHERE id = "+.@instance_id;
 
-		// Update event_current_state cache
-		query_sql "UPDATE event_current_state SET instance_id = "+.@instance_id+", is_active = 1, cache_data = JSON_OBJECT('multiplier', "+.@ot_mults[.@j]+", 'duration', "+.@duration+") WHERE event_type_id = "+.@ot_type_ids[.@j];
+			// Update event_current_state cache
+			query_sql "UPDATE event_current_state SET instance_id = "+.@instance_id+", is_active = 1, cache_data = JSON_OBJECT('multiplier', "+.@ot_mults[.@j]+", 'duration', "+.@duration+") WHERE event_type_id = "+.@ot_type_ids[.@j];
+		}
 
 		// Trigger the event NPC
 		if (.@event_code$ == "exp_boost") {
@@ -225,6 +261,20 @@ S_CheckScheduledEvents:
 			set $@ExpBoostDuration, .@duration;
 			set $@ExpBoostInstanceId, .@instance_id;
 			donpcevent "ExpBoost::OnEventStart";
+		}
+		else if (.@event_code$ == "invasion") {
+			// One-time scheduled invasion - read params from event_data JSON
+			query_sql "SELECT CAST(JSON_EXTRACT(event_data, '$.threat') AS UNSIGNED), CAST(JSON_EXTRACT(event_data, '$.town_id') AS UNSIGNED), CAST(JSON_EXTRACT(event_data, '$.theme_id') AS UNSIGNED) FROM event_instances WHERE id = "+.@instance_id, .@inv_threat, .@inv_town, .@inv_theme;
+			// Default to random if not specified
+			if (.@inv_threat < 0 || .@inv_threat > 4) .@inv_threat = rand(0, 2);
+			if (.@inv_town < 1) .@inv_town = 0; // 0 = random
+			if (.@inv_theme < 1) .@inv_theme = 0; // 0 = random
+			$@InvasionPendingThreat = .@inv_threat;
+			$@InvasionPendingTown = .@inv_town;
+			$@InvasionPendingTheme = .@inv_theme;
+			$@InvasionPendingInstanceId = .@instance_id;  // Pass instance ID for status update
+			$@InvasionTriggerType$ = "scheduled";
+			donpcevent "TownInvasion::OnScheduledInvasion";
 		}
 		else {
 			// Generic one-time event
@@ -266,13 +316,13 @@ S_CalculateNextRun:
 		query_sql "SELECT DATE_ADD(NOW(), INTERVAL 14 DAY)", .@next$;
 	}
 	else if (.@type$ == "once") {
-		// One-time event - clear next_run, mark schedule as completed
-		query_sql "UPDATE event_schedule SET next_run = NULL, status = 'completed' WHERE id = "+.@schedule_id;
+		// One-time event - disable schedule (it's done)
+		query_sql "UPDATE event_schedule SET next_run = NULL, enabled = 0 WHERE id = "+.@schedule_id;
 		return;
 	}
 
 	if (.@next$ != "") {
-		query_sql "UPDATE event_schedule SET next_run = '"+.@next$+"', status = 'scheduled' WHERE id = "+.@schedule_id;
+		query_sql "UPDATE event_schedule SET next_run = '"+.@next$+"' WHERE id = "+.@schedule_id;
 		debugmes "[EventScheduler] Next run for schedule "+.@schedule_id+": "+.@next$;
 	}
 	return;
@@ -324,6 +374,69 @@ S_CheckMOTDRotation:
 		}
 
 		debugmes "[EventScheduler] MOTD rotated to: "+.@mob_name$+" ("+.@mob_id+")";
+	}
+	return;
+
+// ============================================================
+// Check if Town Invasion should trigger
+// Uses cooldown + max wait window system
+// ============================================================
+S_CheckInvasionTrigger:
+	// Skip if invasion already active
+	if ($@InvasionActive) return;
+
+	// Check if enabled
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_enabled'", .@enabled$;
+	if (.@enabled$ != "1") return;
+
+	// Check minimum players
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_players'", .@min$;
+	.@min_players = (.@min$ != "") ? atoi(.@min$) : 1;
+	if (getusers(1) < .@min_players) return;
+
+	// Check time window (only trigger during valid hours)
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_hour'", .@min_hour$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_hour'", .@max_hour$;
+	.@hour = gettime(GETTIME_HOUR);
+	.@min_h = (.@min_hour$ != "") ? atoi(.@min_hour$) : 9;
+	.@max_h = (.@max_hour$ != "") ? atoi(.@max_hour$) : 22;
+	if (.@hour < .@min_h || .@hour >= .@max_h) return;
+
+	// Check cooldown
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_last_ended'", .@last$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_cooldown_minutes'", .@cooldown$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_wait_hours'", .@max_wait$;
+
+	.@last_ended = (.@last$ != "") ? atoi(.@last$) : 0;
+	.@cooldown = (.@cooldown$ != "") ? atoi(.@cooldown$) : 120;
+	.@max_wait = (.@max_wait$ != "") ? atoi(.@max_wait$) : 12;
+
+	.@now = gettimetick(2);
+	.@elapsed_min = (.@now - .@last_ended) / 60;
+
+	// Still in cooldown period
+	if (.@elapsed_min < .@cooldown) return;
+
+	// Calculate time since cooldown ended
+	.@since_cooldown_min = .@elapsed_min - .@cooldown;
+	.@max_wait_min = .@max_wait * 60;
+
+	// Force trigger if past max wait
+	if (.@since_cooldown_min >= .@max_wait_min) {
+		debugmes "[EventScheduler] Invasion: max wait reached, forcing trigger";
+		donpcevent "TownInvasion::OnScheduledInvasion";
+		return;
+	}
+
+	// Random chance trigger (check every minute, 25% base chance adjusted)
+	// Increase chance as we approach max wait
+	.@progress = (.@since_cooldown_min * 100) / .@max_wait_min; // 0-100%
+	.@base_chance = 5; // 5% per minute check
+	.@chance = .@base_chance + (.@progress / 10); // Up to +10% as time progresses
+
+	if (rand(100) < .@chance) {
+		debugmes "[EventScheduler] Invasion: random trigger (chance=" + .@chance + "%, progress=" + .@progress + "%)";
+		donpcevent "TownInvasion::OnScheduledInvasion";
 	}
 	return;
 

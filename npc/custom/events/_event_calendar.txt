@@ -104,6 +104,43 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 	mes "^00FF00Monster of the Day:^000000";
 	mes "   Rotates every 3 hours";
 	mes "   Check the Monster Hunter Board!";
+
+	// Get scheduled Town Invasions (one-time with details from event_data)
+	mes " ";
+	query_sql "SELECT DATE_FORMAT(ei.scheduled_start, '%m/%d %H:%i'), CAST(JSON_EXTRACT(ei.event_data, '$.threat') AS UNSIGNED), CAST(JSON_EXTRACT(ei.event_data, '$.town_id') AS UNSIGNED) FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'invasion' AND ei.status = 'scheduled' AND ei.scheduled_start > NOW() ORDER BY ei.scheduled_start LIMIT 3", .@inv_times_fmt$, .@inv_threats, .@inv_town_ids;
+
+	// Get recurring schedules
+	query_sql "SELECT DAYNAME(DATE_ADD(CURDATE(), INTERVAL ((es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7) DAY)), es.start_hour, es.start_minute FROM event_schedule es JOIN event_types et ON es.event_type_id = et.id WHERE et.code = 'invasion' AND es.enabled = 1 ORDER BY (es.day_of_week - WEEKDAY(CURDATE()) + 7) % 7 LIMIT 3", .@inv_days$, .@inv_hours, .@inv_mins;
+
+	if (getarraysize(.@inv_times_fmt$) > 0 || getarraysize(.@inv_days$) > 0) {
+		mes "^FF4444Town Invasions:^000000";
+		// Show one-time scheduled with threat and town
+		for (.@i = 0; .@i < getarraysize(.@inv_times_fmt$); .@i++) {
+			// Get threat name
+			switch(.@inv_threats[.@i]) {
+				case 0: .@threat$ = "Wolf"; break;
+				case 1: .@threat$ = "Tiger"; break;
+				case 2: .@threat$ = "Demon"; break;
+				case 3: .@threat$ = "Dragon"; break;
+				case 4: .@threat$ = "God"; break;
+				default: .@threat$ = "Random"; break;
+			}
+			// Get town name
+			.@town$ = "";
+			if (.@inv_town_ids[.@i] > 0) {
+				query_sql "SELECT display_name FROM event_invasion_towns WHERE id = "+.@inv_town_ids[.@i], .@town$;
+			}
+			if (.@town$ == "") .@town$ = "Random";
+			mes "   "+.@inv_times_fmt$[.@i]+" ["+.@threat$+"] "+.@town$;
+		}
+		// Show recurring (only if no one-time, to avoid clutter)
+		if (getarraysize(.@inv_times_fmt$) == 0) {
+			for (.@i = 0; .@i < getarraysize(.@inv_days$); .@i++) {
+				.@time$ = (.@inv_hours[.@i] < 10 ? "0" : "") + .@inv_hours[.@i] + ":" + (.@inv_mins[.@i] < 10 ? "0" : "") + .@inv_mins[.@i];
+				mes "   " + .@inv_days$[.@i] + " at " + .@time$;
+			}
+		}
+	}
 	next;
 
 	// ========================================
@@ -225,12 +262,13 @@ L_GMMenu:
 	mes "What would you like to manage?";
 	next;
 
-	switch(select("Happy Hour:EXP Boost:Monster of the Day:Event History:Back")) {
+	switch(select("Happy Hour:EXP Boost:Monster of the Day:Town Invasion:Event History:Back")) {
 		case 1: goto L_HappyHour;
 		case 2: goto L_ExpBoost;
 		case 3: goto L_MOTD;
-		case 4: goto L_History;
-		case 5: close;
+		case 4: goto L_Invasion;
+		case 5: goto L_History;
+		case 6: close;
 	}
 	end;
 
@@ -928,15 +966,637 @@ L_EditMOTDSchedule:
 	close;
 
 // ============================================================
-// Event History (from event_instances)
+// Town Invasion Management
 // ============================================================
-L_History:
-	mes "[Event History]";
-	// Query from event_instances using JOIN with event_types
-	query_sql "SELECT ei.id, et.code, DATE_FORMAT(COALESCE(ei.actual_start, ei.scheduled_start), '%m/%d %H:%i'), DATE_FORMAT(ei.actual_end, '%H:%i'), ei.status, JSON_UNQUOTE(JSON_EXTRACT(ei.event_data, '$.mob_name')) FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id ORDER BY FIELD(ei.status, 'active', 'scheduled', 'completed', 'cancelled', 'failed'), ei.id DESC LIMIT 15", .@ids, .@codes$, .@starts$, .@ends$, .@status$, .@extra$;
+L_Invasion:
+	mes "[Town Invasion]";
+	mes "^888888Monster waves attack towns^000000";
+	mes " ";
+
+	// Show current status
+	if ($@InvasionActive) {
+		.@threat_name$ = callfunc("GetInvasionThreatName", $@InvasionThreat);
+		.@threat_icon$ = callfunc("GetInvasionThreatIcon", $@InvasionThreat);
+		.@remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
+
+		mes "^FF0000INVASION ACTIVE^000000";
+		mes .@threat_icon$ + " " + .@threat_name$ + " - " + $@InvasionThemeName$;
+		mes "Location: " + $@InvasionTownName$;
+		mes "Wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
+		mes "Time left: " + .@remaining + " min";
+		mes "Kills: " + $@InvasionMonstersKilled;
+	} else {
+		mes "^00AA00Status: No active invasion^000000";
+
+		// Check cooldown
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_last_ended'", .@last$;
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_cooldown_minutes'", .@cooldown$;
+		.@last = (.@last$ != "") ? atoi(.@last$) : 0;
+		.@cooldown = (.@cooldown$ != "") ? atoi(.@cooldown$) : 120;
+
+		if (.@last > 0) {
+			.@elapsed = (gettimetick(2) - .@last) / 60;
+			.@until_ready = .@cooldown - .@elapsed;
+			if (.@until_ready > 0) {
+				mes "Cooldown: " + .@until_ready + " min remaining";
+			} else {
+				mes "Cooldown: ^00AA00Ready^000000";
+			}
+		}
+	}
+	next;
+
+	// Menu options
+	if ($@InvasionActive) {
+		switch(select("View Details:Force Wave Clear:Cancel Invasion:Configure:Back")) {
+			case 1: goto L_Inv_Details;
+			case 2: goto L_Inv_ForceWave;
+			case 3: goto L_Inv_Cancel;
+			case 4: goto L_Inv_Config;
+			case 5: goto L_GMMenu;
+		}
+	} else {
+		switch(select("Start Now:Schedule Invasion:View Schedules:Configure:Invasion History:Back")) {
+			case 1: goto L_Inv_Start;
+			case 2: goto L_Inv_Schedule;
+			case 3: goto L_Inv_ViewSchedules;
+			case 4: goto L_Inv_Config;
+			case 5: goto L_Inv_History;
+			case 6: goto L_GMMenu;
+		}
+	}
+	end;
+
+L_Inv_Details:
+	mes "[Invasion Details]";
+	mes "ID: " + $@InvasionID;
+	mes "Map: " + $@InvasionMap$;
+	mes "Theme ID: " + $@InvasionTheme;
+	mes "Threat: " + $@InvasionThreat;
+	mes "Spawned: " + $@InvasionMonstersSpawned;
+	mes "Killed: " + $@InvasionMonstersKilled;
+
+	// Get participant count
+	query_sql "SELECT COUNT(*), SUM(kills) FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@defenders, .@total_kills;
+	mes "Defenders: " + .@defenders;
+	mes "Total kills: " + .@total_kills;
+	close;
+
+L_Inv_Cancel:
+	debugmes "[EventsManager] L_Inv_Cancel reached";
+	mes "[Cancel Invasion]";
+	mes "Are you sure you want to";
+	mes "cancel the current invasion?";
+	mes " ";
+	mes "^FF0000Players will NOT receive";
+	mes "rewards for this invasion.^000000";
+	next;
+
+	if (select("Yes, cancel:No, keep running") == 1) {
+		debugmes "[EventsManager] User selected YES - calling donpcevent TownInvasion::OnGMCancelInvasion";
+		donpcevent "TownInvasion::OnGMCancelInvasion";
+		debugmes "[EventsManager] donpcevent called, showing confirmation";
+		mes "[Events Manager]";
+		mes "Invasion cancelled.";
+	} else {
+		debugmes "[EventsManager] User selected NO";
+		mes "[Events Manager]";
+		mes "Invasion continues.";
+	}
+	close;
+
+L_Inv_ForceWave:
+	mes "[Force Wave Clear]";
+	mes "Current wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
+	mes "Wave kills: " + $@InvasionWaveKills + "/" + $@InvasionWaveMonsters;
+	mes " ";
+	mes "This will immediately clear";
+	mes "the current wave, awarding";
+	mes "points and advancing to the";
+	mes "next wave.";
+	next;
+
+	if (select("Clear Wave Now:Cancel") == 1) {
+		mes "[Events Manager]";
+		mes "Wave cleared!";
+		mes "Next wave will spawn shortly.";
+		donpcevent "TownInvasion::OnWaveCleared";
+	} else {
+		mes "[Events Manager]";
+		mes "Cancelled.";
+	}
+	close;
+
+L_Inv_Start:
+	mes "[Start Invasion]";
+	mes "Select threat level:";
+	next;
+
+	.@threat = select("Wolf (Easy):Tiger (Medium):Demon (Hard):Dragon (Very Hard):God (Extreme):Cancel") - 1;
+	if (.@threat == 5) {
+		goto L_GMMenu;
+	}
+
+	mes "[Start Invasion]";
+	mes "Select town:";
+	next;
+
+	// Get available towns
+	query_sql "SELECT id, display_name FROM event_invasion_towns WHERE enabled = 1 ORDER BY display_name", .@town_ids, .@town_names$;
+
+	.@menu$ = "";
+	for (.@i = 0; .@i < getarraysize(.@town_ids); .@i++) {
+		.@menu$ = .@menu$ + .@town_names$[.@i] + ":";
+	}
+	.@menu$ = .@menu$ + "Cancel";
+
+	.@town_choice = select(.@menu$);
+	if (.@town_choice > getarraysize(.@town_ids)) {
+		goto L_GMMenu;
+	}
+	.@town_id = .@town_ids[.@town_choice - 1];
+
+	mes "[Start Invasion]";
+	mes "Select theme:";
+	next;
+
+	// Get available themes
+	query_sql "SELECT id, name, icon FROM event_invasion_themes ORDER BY id", .@theme_ids, .@theme_names$, .@theme_icons$;
+
+	.@menu$ = "";
+	for (.@i = 0; .@i < getarraysize(.@theme_ids); .@i++) {
+		.@menu$ = .@menu$ + .@theme_icons$[.@i] + " " + .@theme_names$[.@i] + ":";
+	}
+	.@menu$ = .@menu$ + "Random:Cancel";
+
+	.@theme_choice = select(.@menu$);
+	if (.@theme_choice > getarraysize(.@theme_ids) + 1) {
+		goto L_GMMenu;
+	}
+
+	if (.@theme_choice == getarraysize(.@theme_ids) + 1) {
+		// Random theme
+		query_sql "SELECT id FROM event_invasion_themes ORDER BY RAND() LIMIT 1", .@theme_id;
+	} else {
+		.@theme_id = .@theme_ids[.@theme_choice - 1];
+	}
+
+	// Confirm
+	query_sql "SELECT display_name FROM event_invasion_towns WHERE id = " + .@town_id, .@town_name$;
+	query_sql "SELECT name, icon FROM event_invasion_themes WHERE id = " + .@theme_id, .@theme_name$, .@theme_icon$;
+	.@threat_name$ = callfunc("GetInvasionThreatName", .@threat);
+	.@threat_icon$ = callfunc("GetInvasionThreatIcon", .@threat);
+
+	mes "[Confirm Invasion]";
+	mes "Threat: " + .@threat_icon$ + " " + .@threat_name$;
+	mes "Town: " + .@town_name$;
+	mes "Theme: " + .@theme_icon$ + " " + .@theme_name$;
+	next;
+
+	if (select("Start Invasion:Cancel") == 1) {
+		// Create event_instances record for tracking
+		query_sql "SELECT id FROM event_types WHERE code = 'invasion'", .@event_type_id;
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
+		.@duration = (.@duration$ != "") ? atoi(.@duration$) : 45;
+
+		query_sql "INSERT INTO event_instances (event_type_id, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'gm', " + getcharid(3) + ", NOW(), DATE_ADD(NOW(), INTERVAL " + .@duration + " MINUTE), 'scheduled', JSON_OBJECT('threat', " + .@threat + ", 'town_id', " + .@town_id + ", 'theme_id', " + .@theme_id + "))";
+
+		// Set pending values and trigger
+		$@InvasionPendingThreat = .@threat;
+		$@InvasionPendingTown = .@town_id;
+		$@InvasionPendingTheme = .@theme_id;
+		donpcevent "TownInvasion::OnGMStartInvasion";
+		mes "[Events Manager]";
+		mes "Invasion started!";
+	} else {
+		mes "[Events Manager]";
+		mes "Invasion cancelled.";
+	}
+	close;
+
+L_Inv_Schedule:
+	mes "[Schedule Invasion]";
+	mes "Create a scheduled invasion.";
+	mes " ";
+	mes "Choose schedule type:";
+	next;
+
+	switch(select("One-Time (specific date/time):Recurring (weekly):Cancel")) {
+		case 1: goto L_Inv_Schedule_OneTime;
+		case 2: goto L_Inv_Schedule_Recurring;
+		case 3: goto L_Invasion;
+	}
+	end;
+
+L_Inv_Schedule_OneTime:
+	mes "[Schedule One-Time Invasion]";
+	mes "Enter start date/time:";
+	mes "^888888Format: YYYY-MM-DD HH:MM^000000";
+	mes "^888888(e.g., 2026-01-15 18:00)^000000";
+	input .@start_dt$;
+	next;
+
+	// Validate input is not empty
+	if (.@start_dt$ == "") {
+		mes "No date entered. Cancelled.";
+		close;
+	}
+
+	mes "[Schedule Invasion]";
+	mes "Select threat level:";
+	next;
+
+	.@threat = select("Wolf (Easy):Tiger (Medium):Demon (Hard):Dragon (Very Hard):God (Extreme):Random:Cancel") - 1;
+	if (.@threat == 6) goto L_Invasion;
+	if (.@threat == 5) .@threat = -1; // Random
+
+	mes "[Schedule Invasion]";
+	mes "Select town:";
+	next;
+
+	query_sql "SELECT id, display_name FROM event_invasion_towns WHERE enabled = 1 ORDER BY display_name", .@town_ids, .@town_names$;
+	.@menu$ = "Random:";
+	for (.@i = 0; .@i < getarraysize(.@town_ids); .@i++) {
+		.@menu$ = .@menu$ + .@town_names$[.@i] + ":";
+	}
+	.@menu$ = .@menu$ + "Cancel";
+
+	.@town_choice = select(.@menu$);
+	if (.@town_choice > getarraysize(.@town_ids) + 1) goto L_Invasion;
+	if (.@town_choice == 1) {
+		.@town_id = 0; // Random
+	} else {
+		.@town_id = .@town_ids[.@town_choice - 2];
+	}
+
+	mes "[Schedule Invasion]";
+	mes "Select theme:";
+	next;
+
+	query_sql "SELECT id, name, icon FROM event_invasion_themes ORDER BY id", .@theme_ids, .@theme_names$, .@theme_icons$;
+	.@menu$ = "Random:";
+	for (.@i = 0; .@i < getarraysize(.@theme_ids); .@i++) {
+		.@menu$ = .@menu$ + .@theme_icons$[.@i] + " " + .@theme_names$[.@i] + ":";
+	}
+	.@menu$ = .@menu$ + "Cancel";
+
+	.@theme_choice = select(.@menu$);
+	if (.@theme_choice > getarraysize(.@theme_ids) + 1) goto L_Invasion;
+	if (.@theme_choice == 1) {
+		.@theme_id = 0; // Random
+	} else {
+		.@theme_id = .@theme_ids[.@theme_choice - 2];
+	}
+
+	// Get duration from config
+	query_sql "SELECT id FROM event_types WHERE code = 'invasion'", .@event_type_id;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
+	.@duration = (.@duration$ != "") ? atoi(.@duration$) : 45;
+
+	// Create event_instances record for scheduled invasion
+	query_sql "INSERT INTO event_instances (event_type_id, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'one_time', " + getcharid(3) + ", '" + .@start_dt$ + "', DATE_ADD('" + .@start_dt$ + "', INTERVAL " + .@duration + " MINUTE), 'scheduled', JSON_OBJECT('threat', " + .@threat + ", 'town_id', " + .@town_id + ", 'theme_id', " + .@theme_id + "))";
+
+	mes "[Events Manager]";
+	mes "Invasion scheduled!";
+	mes "Start: " + .@start_dt$;
+	mes "Duration: " + .@duration + " minutes";
+	close;
+
+L_Inv_Schedule_Recurring:
+	mes "[Recurring Invasion]";
+	mes "Create a weekly invasion schedule.";
+	mes " ";
+	mes "Select day of week:";
+	next;
+
+	.@dow = select("Sunday:Monday:Tuesday:Wednesday:Thursday:Friday:Saturday:Cancel") - 1;
+	if (.@dow == 7) goto L_Invasion;
+
+	mes "[Recurring Invasion]";
+	mes "Select hour (server time):";
+	next;
+
+	.@hour = select("12 PM (Noon):2 PM:4 PM:6 PM:8 PM:10 PM:Custom:Cancel") - 1;
+	if (.@hour == 7) goto L_Invasion;
+
+	switch(.@hour) {
+		case 0: .@start_hour = 12; break;
+		case 1: .@start_hour = 14; break;
+		case 2: .@start_hour = 16; break;
+		case 3: .@start_hour = 18; break;
+		case 4: .@start_hour = 20; break;
+		case 5: .@start_hour = 22; break;
+		case 6:
+			mes "Enter hour (0-23):";
+			input .@start_hour;
+			if (.@start_hour < 0 || .@start_hour > 23) {
+				mes "Invalid hour.";
+				close;
+			}
+			break;
+	}
+
+	mes "[Recurring Invasion]";
+	mes "Select threat level:";
+	next;
+
+	.@threat = select("Wolf (Easy):Tiger (Medium):Demon (Hard):Random each time:Cancel") - 1;
+	if (.@threat == 4) goto L_Invasion;
+	if (.@threat == 3) .@threat = -1; // Random
+
+	// Get duration
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
+	.@duration = (.@duration$ != "") ? atoi(.@duration$) : 45;
+
+	// Create the recurring schedule
+	query_sql "SELECT id FROM event_types WHERE code = 'invasion'", .@event_type_id;
+
+	explode(.@day_arr$, "Sunday:Monday:Tuesday:Wednesday:Thursday:Friday:Saturday", ":");
+	.@day_name$ = .@day_arr$[.@dow];
+
+	query_sql "INSERT INTO event_schedule (event_type_id, event_code, schedule_type, start_hour, start_minute, day_of_week, duration_minutes, event_params, description, enabled) VALUES (" + .@event_type_id + ", 'invasion', 'weekly', " + .@start_hour + ", 0, " + .@dow + ", " + .@duration + ", JSON_OBJECT('threat', " + .@threat + "), 'Weekly Invasion - " + .@day_name$ + "', 1)";
+
+	// Set next_run
+	query_sql "SELECT LAST_INSERT_ID()", .@sched_id;
+	if (.@dow == gettime(GETTIME_DAYOFWEEK) && gettime(GETTIME_HOUR) < .@start_hour) {
+		// Today, later
+		query_sql "UPDATE event_schedule SET next_run = DATE_ADD(CURDATE(), INTERVAL " + .@start_hour + " HOUR) WHERE id = " + .@sched_id;
+	} else {
+		// Next week
+		.@days_until = (.@dow - gettime(GETTIME_DAYOFWEEK) + 7) % 7;
+		if (.@days_until == 0) .@days_until = 7;
+		query_sql "UPDATE event_schedule SET next_run = DATE_ADD(DATE_ADD(CURDATE(), INTERVAL " + .@days_until + " DAY), INTERVAL " + .@start_hour + " HOUR) WHERE id = " + .@sched_id;
+	}
+
+	mes "[Events Manager]";
+	mes "Weekly invasion scheduled!";
+	mes "Every " + .@day_name$ + " at " + .@start_hour + ":00";
+	close;
+
+L_Inv_ViewSchedules:
+	mes "[Scheduled Invasions]";
+	mes " ";
+
+	// Show recurring schedules
+	query_sql "SELECT id, day_of_week, start_hour, enabled, next_run FROM event_schedule WHERE event_code = 'invasion' ORDER BY day_of_week, start_hour", .@sched_ids, .@dows, .@hours, .@enabled, .@nexts$;
+
+	if (getarraysize(.@sched_ids) > 0) {
+		mes "^0000FFRecurring Schedules:^000000";
+		explode(.@day_arr$, "Sun:Mon:Tue:Wed:Thu:Fri:Sat", ":");
+		for (.@i = 0; .@i < getarraysize(.@sched_ids); .@i++) {
+			.@day$ = .@day_arr$[.@dows[.@i]];
+			.@status$ = (.@enabled[.@i]) ? "^00AA00ON^000000" : "^FF0000OFF^000000";
+			mes .@day$ + " " + .@hours[.@i] + ":00 [" + .@status$ + "]";
+		}
+	} else {
+		mes "^888888No recurring schedules^000000";
+	}
+
+	mes " ";
+
+	// Show upcoming one-time
+	query_sql "SELECT id, scheduled_start FROM event_instances WHERE event_type_id = (SELECT id FROM event_types WHERE code = 'invasion') AND status = 'scheduled' AND trigger_type = 'one_time' ORDER BY scheduled_start LIMIT 5", .@ot_ids, .@ot_times$;
+
+	if (getarraysize(.@ot_ids) > 0) {
+		mes "^0000FFUpcoming One-Time:^000000";
+		for (.@i = 0; .@i < getarraysize(.@ot_ids); .@i++) {
+			mes "- " + .@ot_times$[.@i];
+		}
+	} else {
+		mes "^888888No one-time scheduled^000000";
+	}
+
+	next;
+
+	switch(select("Delete a Schedule:Back")) {
+		case 1: goto L_Inv_DeleteSchedule;
+		case 2: goto L_Invasion;
+	}
+	end;
+
+L_Inv_DeleteSchedule:
+	mes "[Delete Schedule]";
+	mes "What type of schedule?";
+	next;
+
+	switch(select("Recurring (weekly):One-Time Scheduled:Cancel")) {
+		case 1: goto L_Inv_DeleteRecurring;
+		case 2: goto L_Inv_DeleteOneTime;
+		case 3: goto L_Invasion;
+	}
+	end;
+
+L_Inv_DeleteRecurring:
+	mes "[Delete Recurring]";
+	mes "Select schedule to delete:";
+	next;
+
+	// Get recurring schedules from event_schedule
+	query_sql "SELECT id, CONCAT(CASE day_of_week WHEN 0 THEN 'Sun' WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue' WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri' WHEN 6 THEN 'Sat' END, ' ', start_hour, ':00') FROM event_schedule WHERE event_code = 'invasion'", .@ids, .@labels$;
 
 	if (getarraysize(.@ids) == 0) {
-		mes "No event history found.";
+		mes "No recurring schedules.";
+		close;
+	}
+
+	.@menu$ = "";
+	for (.@i = 0; .@i < getarraysize(.@ids); .@i++) {
+		.@menu$ = .@menu$ + .@labels$[.@i] + ":";
+	}
+	.@menu$ = .@menu$ + "Cancel";
+
+	.@choice = select(.@menu$);
+	if (.@choice > getarraysize(.@ids)) goto L_Invasion;
+
+	.@del_id = .@ids[.@choice - 1];
+	query_sql "DELETE FROM event_schedule WHERE id = " + .@del_id;
+
+	mes "[Events Manager]";
+	mes "Recurring schedule deleted.";
+	close;
+
+L_Inv_DeleteOneTime:
+	mes "[Delete One-Time]";
+	mes "Select scheduled invasion:";
+	next;
+
+	// Get one-time scheduled from event_instances
+	query_sql "SELECT ei.id, DATE_FORMAT(ei.scheduled_start, '%Y-%m-%d %H:%i') FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id WHERE et.code = 'invasion' AND ei.trigger_type = 'one_time' AND ei.status = 'scheduled' ORDER BY ei.scheduled_start", .@ids, .@labels$;
+
+	if (getarraysize(.@ids) == 0) {
+		mes "No scheduled invasions.";
+		close;
+	}
+
+	.@menu$ = "";
+	for (.@i = 0; .@i < getarraysize(.@ids); .@i++) {
+		.@menu$ = .@menu$ + .@labels$[.@i] + ":";
+	}
+	.@menu$ = .@menu$ + "Cancel";
+
+	.@choice = select(.@menu$);
+	if (.@choice > getarraysize(.@ids)) goto L_Invasion;
+
+	.@del_id = .@ids[.@choice - 1];
+	query_sql "DELETE FROM event_instances WHERE id = " + .@del_id;
+
+	mes "[Events Manager]";
+	mes "Scheduled invasion deleted.";
+	close;
+
+L_Inv_Config:
+	mes "[Invasion Configuration]";
+
+	// Get current config
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_enabled'", .@enabled$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_cooldown_minutes'", .@cooldown$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_wait_hours'", .@max_wait$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_players'", .@min_players$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_threat'", .@max_threat$;
+	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_monster_multiplier'", .@multiplier$;
+	if (.@multiplier$ == "") .@multiplier$ = "100";
+
+	mes "Enabled: " + (.@enabled$ == "1" ? "^00AA00Yes^000000" : "^FF0000No^000000");
+	mes "Duration: " + .@duration$ + " min";
+	mes "Monster mult: ^0000FF" + .@multiplier$ + "%^000000 (" + (atoi(.@multiplier$) / 100) + "." + ((atoi(.@multiplier$) % 100) / 10) + "x)";
+	mes "Cooldown: " + .@cooldown$ + " min";
+	mes "Max wait: " + .@max_wait$ + " hours";
+	mes "Min players: " + .@min_players$;
+	next;
+
+	switch(select("Toggle Enabled:Set Duration:Set Monster Multiplier:Set Cooldown:Set Max Wait:Set Min Players:Set Max Threat:Back")) {
+		case 1:
+			.@new_val$ = (.@enabled$ == "1") ? "0" : "1";
+			query_sql "UPDATE event_config SET config_value = '" + .@new_val$ + "' WHERE config_key = 'invasion_enabled'";
+			mes "[Events Manager]";
+			mes "Auto-invasion " + (.@new_val$ == "1" ? "enabled" : "disabled") + ".";
+			close;
+		case 2:
+			mes "[Set Duration]";
+			mes "Current: " + .@duration$ + " min";
+			mes "Enter new duration (15-120):";
+			next;
+			input .@val;
+			if (.@val < 15) .@val = 15;
+			if (.@val > 120) .@val = 120;
+			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_duration_minutes'";
+			mes "[Events Manager]";
+			mes "Duration set to " + .@val + " min.";
+			close;
+		case 3:
+			mes "[Set Monster Multiplier]";
+			mes "Current: " + .@multiplier$ + "%";
+			mes " ";
+			mes "^888888100 = 1x (normal)";
+			mes "200 = 2x monsters";
+			mes "50 = 0.5x monsters^000000";
+			mes " ";
+			mes "Enter multiplier (10-1000):";
+			next;
+			input .@val;
+			if (.@val < 10) .@val = 10;
+			if (.@val > 1000) .@val = 1000;
+			query_sql "REPLACE INTO event_config (config_key, config_value) VALUES ('invasion_monster_multiplier', '" + .@val + "')";
+			mes "[Events Manager]";
+			mes "Monster multiplier set to " + .@val + "%.";
+			mes "(" + (.@val / 100) + "." + ((.@val % 100) / 10) + "x monsters)";
+			close;
+		case 4:
+			mes "[Set Cooldown]";
+			mes "Current: " + .@cooldown$ + " min";
+			mes "Enter new cooldown (30-480):";
+			next;
+			input .@val;
+			if (.@val < 30) .@val = 30;
+			if (.@val > 480) .@val = 480;
+			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_cooldown_minutes'";
+			mes "[Events Manager]";
+			mes "Cooldown set to " + .@val + " min.";
+			close;
+		case 5:
+			mes "[Set Max Wait]";
+			mes "Current: " + .@max_wait$ + " hours";
+			mes "Enter new max wait (1-24):";
+			next;
+			input .@val;
+			if (.@val < 1) .@val = 1;
+			if (.@val > 24) .@val = 24;
+			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_max_wait_hours'";
+			mes "[Events Manager]";
+			mes "Max wait set to " + .@val + " hours.";
+			close;
+		case 6:
+			mes "[Set Min Players]";
+			mes "Current: " + .@min_players$;
+			mes "Enter minimum players (1-20):";
+			next;
+			input .@val;
+			if (.@val < 1) .@val = 1;
+			if (.@val > 20) .@val = 20;
+			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_min_players'";
+			mes "[Events Manager]";
+			mes "Min players set to " + .@val + ".";
+			close;
+		case 7:
+			mes "[Set Max Threat]";
+			mes "Current: " + .@max_threat$ + " (0=Wolf, 3=Dragon)";
+			mes "Enter max threat for auto (0-3):";
+			next;
+			input .@val;
+			if (.@val < 0) .@val = 0;
+			if (.@val > 3) .@val = 3;
+			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'invasion_max_threat'";
+			mes "[Events Manager]";
+			mes "Max threat set to " + .@val + ".";
+			close;
+		case 8:
+			goto L_GMMenu;
+	}
+	end;
+
+L_Inv_History:
+	mes "[Invasion History]";
+
+	query_sql "SELECT t.display_name, th.name, i.threat_level, i.status, i.monsters_killed, DATE_FORMAT(i.started_at, '%m/%d %H:%i') FROM event_invasion_instances i JOIN event_invasion_towns t ON i.town_id = t.id JOIN event_invasion_themes th ON i.theme_id = th.id ORDER BY i.started_at DESC LIMIT 10", .@towns$, .@themes$, .@threats, .@statuses$, .@kills, .@dates$;
+
+	if (getarraysize(.@towns$) == 0) {
+		mes "No invasion records yet.";
+		close;
+	}
+
+	for (.@i = 0; .@i < getarraysize(.@towns$); .@i++) {
+		.@threat_icon$ = callfunc("GetInvasionThreatIcon", .@threats[.@i]);
+		.@status_color$ = (.@statuses$[.@i] == "victory") ? "00FF00" : (.@statuses$[.@i] == "failed") ? "FF0000" : "888888";
+		mes .@threat_icon$ + " " + .@towns$[.@i] + " - " + .@themes$[.@i];
+		mes "   [^" + .@status_color$ + .@statuses$[.@i] + "^000000] " + .@kills[.@i] + " kills - " + .@dates$[.@i];
+	}
+	close;
+
+// ============================================================
+// Event History (from event_instances) - with pagination
+// ============================================================
+L_History:
+	// Initialize page if not set
+	if (.@history_page < 1) .@history_page = 1;
+
+L_HistoryDisplay:
+	mes "[Event History - Page "+.@history_page+"]";
+
+	// Pagination: 10 events per page, max 30 total (3 pages)
+	.@per_page = 10;
+	.@max_events = 30;
+	.@offset = (.@history_page - 1) * .@per_page;
+
+	// Query with pagination - get extra data for invasions
+	query_sql "SELECT ei.id, et.code, DATE_FORMAT(COALESCE(ei.actual_start, ei.scheduled_start), '%m/%d %H:%i'), DATE_FORMAT(ei.actual_end, '%H:%i'), ei.status, ei.event_data FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id ORDER BY (ei.status = 'active') DESC, ei.id DESC LIMIT "+.@per_page+" OFFSET "+.@offset, .@ids, .@codes$, .@starts$, .@ends$, .@status$, .@data$;
+
+	if (getarraysize(.@ids) == 0) {
+		if (.@history_page > 1) {
+			mes "No more events.";
+		} else {
+			mes "No event history found.";
+		}
 	} else {
 		for (set .@i, 0; .@i < getarraysize(.@ids); set .@i, .@i + 1) {
 			// Format event name based on type
@@ -945,34 +1605,114 @@ L_History:
 			} else if (.@codes$[.@i] == "happy_hour") {
 				set .@name$, "Happy Hour";
 			} else if (.@codes$[.@i] == "motd") {
-				if (.@extra$[.@i] != "" && .@extra$[.@i] != "null") {
-					set .@name$, "MOTD: " + .@extra$[.@i];
+				// Extract mob_name from JSON
+				.@mob$ = "";
+				if (.@data$[.@i] != "" && .@data$[.@i] != "null") {
+					// Simple extraction - find mob_name value
+					.@pos = strstr(.@data$[.@i], "\"mob_name\"");
+					if (.@pos >= 0) {
+						// Get the value after the key
+						.@sub$ = substr(.@data$[.@i], .@pos + 12, 30);
+						.@end = strstr(.@sub$, "\"");
+						if (.@end > 0) .@mob$ = substr(.@sub$, 0, .@end);
+					}
+				}
+				if (.@mob$ != "") {
+					set .@name$, "MOTD: " + .@mob$;
 				} else {
 					set .@name$, "Monster of the Day";
 				}
+			} else if (.@codes$[.@i] == "invasion") {
+				// Extract threat and get town from event_invasion_instances
+				.@threat = 0;
+				.@town$ = "";
+				.@outcome$ = "";
+
+				// Parse threat from JSON
+				.@pos = strstr(.@data$[.@i], "\"threat\"");
+				if (.@pos >= 0) {
+					.@sub$ = substr(.@data$[.@i], .@pos + 9, 5);
+					.@threat = atoi(.@sub$);
+				}
+
+				// Get threat name
+				switch(.@threat) {
+					case 0: .@threat$ = "Wolf"; break;
+					case 1: .@threat$ = "Tiger"; break;
+					case 2: .@threat$ = "Demon"; break;
+					case 3: .@threat$ = "Dragon"; break;
+					case 4: .@threat$ = "God"; break;
+					default: .@threat$ = "?"; break;
+				}
+
+				// Try to get town from event_invasion_instances
+				query_sql "SELECT t.display_name FROM event_invasion_instances ii JOIN event_invasion_towns t ON ii.town_id = t.id JOIN event_instances ei ON ei.actual_start BETWEEN DATE_SUB(ii.started_at, INTERVAL 1 MINUTE) AND DATE_ADD(ii.started_at, INTERVAL 1 MINUTE) WHERE ei.id = "+.@ids[.@i]+" LIMIT 1", .@town$;
+				if (.@town$ == "") .@town$ = "Town";
+
+				// Set outcome based on status
+				if (.@status$[.@i] == "completed") {
+					.@outcome$ = "^00AA00Victory^000000";
+				} else if (.@status$[.@i] == "failed") {
+					.@outcome$ = "^FF4444Defeat^000000";
+				} else if (.@status$[.@i] == "cancelled") {
+					.@outcome$ = "^888888Cancelled^000000";
+				} else if (.@status$[.@i] == "active") {
+					.@outcome$ = "^FFAA00Active^000000";
+				}
+
+				set .@name$, "["+.@threat$+"] "+.@town$+" "+.@outcome$;
 			} else {
 				set .@name$, .@codes$[.@i];
 			}
 
-			// Status color
-			if (.@status$[.@i] == "active") {
-				set .@stat$, "^00AA00ACTIVE^000000";
-			} else if (.@status$[.@i] == "scheduled") {
-				set .@stat$, "^0055FFpending^000000";
-			} else if (.@status$[.@i] == "completed") {
-				set .@stat$, "^888888done^000000";
+			// Status color (for non-invasion events)
+			if (.@codes$[.@i] != "invasion") {
+				if (.@status$[.@i] == "active") {
+					set .@stat$, "^00AA00ACTIVE^000000";
+				} else if (.@status$[.@i] == "scheduled") {
+					set .@stat$, "^0055FFpending^000000";
+				} else if (.@status$[.@i] == "completed") {
+					set .@stat$, "^888888done^000000";
+				} else {
+					set .@stat$, "^FF0000"+.@status$[.@i]+"^000000";
+				}
+				.@end_display$ = (.@ends$[.@i] != "" && .@ends$[.@i] != "NULL") ? .@ends$[.@i] : "...";
+				mes .@starts$[.@i]+" - "+.@end_display$+" ["+.@stat$+"]";
+				mes "  "+.@name$;
 			} else {
-				set .@stat$, "^FF0000"+.@status$[.@i]+"^000000";
+				// Invasion: show time and name (which includes outcome)
+				.@end_display$ = (.@ends$[.@i] != "" && .@ends$[.@i] != "NULL") ? .@ends$[.@i] : "...";
+				mes .@starts$[.@i]+" - "+.@end_display$;
+				mes "  "+.@name$;
 			}
-
-			// Format end time (show "-" if still running)
-			set .@end_display$, (.@ends$[.@i] != "" && .@ends$[.@i] != "NULL") ? .@ends$[.@i] : "...";
-
-			mes .@starts$[.@i]+" - "+.@end_display$+" ["+.@stat$+"]";
-			mes "  "+.@name$;
 		}
 	}
-	close;
+	next;
+
+	// Pagination menu
+	.@has_prev = (.@history_page > 1);
+	.@has_next = (getarraysize(.@ids) == .@per_page && .@offset + .@per_page < .@max_events);
+
+	if (.@has_prev && .@has_next) {
+		switch(select("Previous Page:Next Page:Back")) {
+			case 1: .@history_page--; goto L_HistoryDisplay;
+			case 2: .@history_page++; goto L_HistoryDisplay;
+			case 3: close;
+		}
+	} else if (.@has_prev) {
+		switch(select("Previous Page:Back")) {
+			case 1: .@history_page--; goto L_HistoryDisplay;
+			case 2: close;
+		}
+	} else if (.@has_next) {
+		switch(select("Next Page:Back")) {
+			case 1: .@history_page++; goto L_HistoryDisplay;
+			case 2: close;
+		}
+	} else {
+		close;
+	}
+	end;
 
 // ============================================================
 // Invalidate Website Cache
