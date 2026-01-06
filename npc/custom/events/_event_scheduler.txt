@@ -397,7 +397,7 @@ S_CheckInvasionTrigger:
 	// Check time window (only trigger during valid hours)
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_hour'", .@min_hour$;
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_hour'", .@max_hour$;
-	.@hour = gettime(GETTIME_HOUR);
+	.@hour = gettime(3);  // 3 = hours (0-23)
 	.@min_h = (.@min_hour$ != "") ? atoi(.@min_hour$) : 9;
 	.@max_h = (.@max_hour$ != "") ? atoi(.@max_hour$) : 22;
 	if (.@hour < .@min_h || .@hour >= .@max_h) return;

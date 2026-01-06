@@ -1159,7 +1159,7 @@ L_Inv_Start:
 		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
 		.@duration = (.@duration$ != "") ? atoi(.@duration$) : 45;
 
-		query_sql "INSERT INTO event_instances (event_type_id, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'gm', " + getcharid(3) + ", NOW(), DATE_ADD(NOW(), INTERVAL " + .@duration + " MINUTE), 'scheduled', JSON_OBJECT('threat', " + .@threat + ", 'town_id', " + .@town_id + ", 'theme_id', " + .@theme_id + "))";
+		query_sql "INSERT INTO event_instances (event_type_id, event_code, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'invasion', 'gm', " + getcharid(3) + ", NOW(), DATE_ADD(NOW(), INTERVAL " + .@duration + " MINUTE), 'scheduled', JSON_OBJECT('threat', " + .@threat + ", 'town_id', " + .@town_id + ", 'theme_id', " + .@theme_id + "))";
 
 		// Set pending values and trigger
 		$@InvasionPendingThreat = .@threat;
@@ -1254,7 +1254,7 @@ L_Inv_Schedule_OneTime:
 	.@duration = (.@duration$ != "") ? atoi(.@duration$) : 45;
 
 	// Create event_instances record for scheduled invasion
-	query_sql "INSERT INTO event_instances (event_type_id, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'one_time', " + getcharid(3) + ", '" + .@start_dt$ + "', DATE_ADD('" + .@start_dt$ + "', INTERVAL " + .@duration + " MINUTE), 'scheduled', JSON_OBJECT('threat', " + .@threat + ", 'town_id', " + .@town_id + ", 'theme_id', " + .@theme_id + "))";
+	query_sql "INSERT INTO event_instances (event_type_id, event_code, trigger_type, triggered_by, scheduled_start, scheduled_end, status, event_data) VALUES (" + .@event_type_id + ", 'invasion', 'one_time', " + getcharid(3) + ", '" + .@start_dt$ + "', DATE_ADD('" + .@start_dt$ + "', INTERVAL " + .@duration + " MINUTE), 'scheduled', JSON_OBJECT('threat', " + .@threat + ", 'town_id', " + .@town_id + ", 'theme_id', " + .@theme_id + "))";
 
 	mes "[Events Manager]";
 	mes "Invasion scheduled!";
@@ -1318,12 +1318,12 @@ L_Inv_Schedule_Recurring:
 
 	// Set next_run
 	query_sql "SELECT LAST_INSERT_ID()", .@sched_id;
-	if (.@dow == gettime(GETTIME_DAYOFWEEK) && gettime(GETTIME_HOUR) < .@start_hour) {
+	if (.@dow == gettime(4) && gettime(3) < .@start_hour) {  // 4=day of week, 3=hour
 		// Today, later
 		query_sql "UPDATE event_schedule SET next_run = DATE_ADD(CURDATE(), INTERVAL " + .@start_hour + " HOUR) WHERE id = " + .@sched_id;
 	} else {
 		// Next week
-		.@days_until = (.@dow - gettime(GETTIME_DAYOFWEEK) + 7) % 7;
+		.@days_until = (.@dow - gettime(4) + 7) % 7;  // 4=day of week
 		if (.@days_until == 0) .@days_until = 7;
 		query_sql "UPDATE event_schedule SET next_run = DATE_ADD(DATE_ADD(CURDATE(), INTERVAL " + .@days_until + " DAY), INTERVAL " + .@start_hour + " HOUR) WHERE id = " + .@sched_id;
 	}
@@ -1588,8 +1588,8 @@ L_HistoryDisplay:
 	.@max_events = 30;
 	.@offset = (.@history_page - 1) * .@per_page;
 
-	// Query with pagination - get extra data for invasions
-	query_sql "SELECT ei.id, et.code, DATE_FORMAT(COALESCE(ei.actual_start, ei.scheduled_start), '%m/%d %H:%i'), DATE_FORMAT(ei.actual_end, '%H:%i'), ei.status, ei.event_data FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id ORDER BY (ei.status = 'active') DESC, ei.id DESC LIMIT "+.@per_page+" OFFSET "+.@offset, .@ids, .@codes$, .@starts$, .@ends$, .@status$, .@data$;
+	// Query with pagination - extract JSON fields directly via SQL
+	query_sql "SELECT ei.id, et.code, DATE_FORMAT(COALESCE(ei.actual_start, ei.scheduled_start), '%m/%d %H:%i'), DATE_FORMAT(ei.actual_end, '%H:%i'), ei.status, COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ei.event_data, '$.mob_name')), ''), COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ei.event_data, '$.threat')), '0') FROM event_instances ei JOIN event_types et ON ei.event_type_id = et.id ORDER BY (ei.status = 'active') DESC, ei.id DESC LIMIT "+.@per_page+" OFFSET "+.@offset, .@ids, .@codes$, .@starts$, .@ends$, .@status$, .@mob_names$, .@threats$;
 
 	if (getarraysize(.@ids) == 0) {
 		if (.@history_page > 1) {
@@ -1605,35 +1605,17 @@ L_HistoryDisplay:
 			} else if (.@codes$[.@i] == "happy_hour") {
 				set .@name$, "Happy Hour";
 			} else if (.@codes$[.@i] == "motd") {
-				// Extract mob_name from JSON
-				.@mob$ = "";
-				if (.@data$[.@i] != "" && .@data$[.@i] != "null") {
-					// Simple extraction - find mob_name value
-					.@pos = strstr(.@data$[.@i], "\"mob_name\"");
-					if (.@pos >= 0) {
-						// Get the value after the key
-						.@sub$ = substr(.@data$[.@i], .@pos + 12, 30);
-						.@end = strstr(.@sub$, "\"");
-						if (.@end > 0) .@mob$ = substr(.@sub$, 0, .@end);
-					}
-				}
-				if (.@mob$ != "") {
-					set .@name$, "MOTD: " + .@mob$;
+				// mob_name extracted via SQL
+				if (.@mob_names$[.@i] != "" && .@mob_names$[.@i] != "null") {
+					set .@name$, "MOTD: " + .@mob_names$[.@i];
 				} else {
 					set .@name$, "Monster of the Day";
 				}
 			} else if (.@codes$[.@i] == "invasion") {
-				// Extract threat and get town from event_invasion_instances
-				.@threat = 0;
+				// threat extracted via SQL
+				.@threat = atoi(.@threats$[.@i]);
 				.@town$ = "";
 				.@outcome$ = "";
-
-				// Parse threat from JSON
-				.@pos = strstr(.@data$[.@i], "\"threat\"");
-				if (.@pos >= 0) {
-					.@sub$ = substr(.@data$[.@i], .@pos + 9, 5);
-					.@threat = atoi(.@sub$);
-				}
 
 				// Get threat name
 				switch(.@threat) {

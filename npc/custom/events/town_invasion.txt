@@ -120,7 +120,7 @@ OnScheduledInvasion:
 		// Check time window
 		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_min_hour'", .@min_hour$;
 		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_max_hour'", .@max_hour$;
-		.@hour = gettime(GETTIME_HOUR);
+		.@hour = gettime(3);  // 3 = hours (0-23)
 		.@min_h = (.@min_hour$ != "") ? atoi(.@min_hour$) : 9;
 		.@max_h = (.@max_hour$ != "") ? atoi(.@max_hour$) : 22;
 		if (.@hour < .@min_h || .@hour >= .@max_h) {
@@ -399,11 +399,26 @@ OnMonsterKilled:
 	.@char_id = getcharid(0);
 	.@char_name$ = strcharinfo(0);
 
-	query_sql "INSERT INTO event_invasion_contributions (invasion_id, char_id, char_name, kills, waves_participated) VALUES (" + $@InvasionID + ", " + .@char_id + ", '" + escape_sql(.@char_name$) + "', 1, 1) ON DUPLICATE KEY UPDATE kills = kills + 1";
+	// Give Hunt Points for kill - scales with monster tier AND threat level
+	// Tier base: weak=1, medium=1, strong=2, elite=3, miniboss=10, boss=15, mvp=50
+	// Threat multiplier: Wolf=1.0, Tiger=1.25, Demon=1.5, Dragon=2.0, God=3.0
+	.@mob_id = killedrid;
+	.@tier_pts = 1;  // default (weak/medium)
+	query_sql "SELECT tier FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND mob_id = " + .@mob_id + " LIMIT 1", .@tier$;
+	if (.@tier$ == "strong") .@tier_pts = 2;
+	else if (.@tier$ == "elite") .@tier_pts = 3;
+	else if (.@tier$ == "miniboss") .@tier_pts = 10;
+	else if (.@tier$ == "boss") .@tier_pts = 15;
+	else if (.@tier$ == "mvp") .@tier_pts = 50;
 
-	// Give Hunt Points for kill (scales with threat level)
-	// Wolf=1, Tiger=2, Demon=3, Dragon=4, God=5
-	.@kill_pts = $@InvasionThreat + 1;
+	// Apply threat multiplier (100=1x, 125=1.25x, etc)
+	setarray .@threat_mult, 100, 125, 150, 200, 300;  // Wolf, Tiger, Demon, Dragon, God
+	.@kill_pts = (.@tier_pts * .@threat_mult[$@InvasionThreat]) / 100;
+	if (.@kill_pts < 1) .@kill_pts = 1;
+
+	// Track contribution and points earned
+	query_sql "INSERT INTO event_invasion_contributions (invasion_id, char_id, char_name, kills, waves_participated, points_earned) VALUES (" + $@InvasionID + ", " + .@char_id + ", '" + escape_sql(.@char_name$) + "', 1, 1, " + .@kill_pts + ") ON DUPLICATE KEY UPDATE kills = kills + 1, points_earned = points_earned + " + .@kill_pts;
+
 	#HUNT_POINTS += .@kill_pts;
 	dispbottom "[Invasion] +" + .@kill_pts + " Hunt Points (Total: " + #HUNT_POINTS + ")", 0x00CC00;
 
@@ -668,14 +683,11 @@ S_DistributeRewards:
 	setarray .@base_points, 50, 100, 150, 250, 500; // Wolf, Tiger, Demon, Dragon, God
 	.@base = .@base_points[$@InvasionThreat];
 
-	// Points per kill already awarded during invasion (threat + 1)
-	.@pts_per_kill = $@InvasionThreat + 1;
-
 	// Get all contributors
 	query_sql "SELECT char_id, kills, waves_participated FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID, .@char_ids, .@kills, .@waves;
 
 	for (.@i = 0; .@i < getarraysize(.@char_ids); .@i++) {
-		// Calculate end-of-invasion bonus (NOT including already-awarded kill/wave points)
+		// Calculate end-of-invasion bonus
 		.@bonus = .@base; // Threat-based completion bonus
 
 		// Defense bonus for victory (+50% on the base bonus)
@@ -683,25 +695,21 @@ S_DistributeRewards:
 			.@bonus = (.@bonus * 150) / 100;
 		}
 
-		// Calculate total for display (already awarded + new bonus)
-		.@already_awarded = (.@kills[.@i] * .@pts_per_kill) + (.@waves[.@i] * 10);
-		.@total = .@already_awarded + .@bonus;
-
 		// Award bonus points
 		if (attachrid(.@char_ids[.@i])) {
 			#HUNT_POINTS += .@bonus;
 			if (.@victory) {
-				dispbottom "[Invasion] Victory Bonus: +" + .@bonus + " Hunt Points! (Total earned: " + .@total + ")", 0x00FF00;
+				dispbottom "[Invasion] Victory Bonus: +" + .@bonus + " Hunt Points! (Total: " + #HUNT_POINTS + ")", 0x00FF00;
 			} else {
-				dispbottom "[Invasion] Participation Bonus: +" + .@bonus + " Hunt Points (Total earned: " + .@total + ")", 0xFFAA00;
+				dispbottom "[Invasion] Participation Bonus: +" + .@bonus + " Hunt Points (Total: " + #HUNT_POINTS + ")", 0xFFAA00;
 			}
 
-			// Update database
-			query_sql "UPDATE event_invasion_contributions SET points_earned = " + .@total + ", claimed = 1 WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
+			// Update database - bonus points added to any previously tracked
+			query_sql "UPDATE event_invasion_contributions SET points_earned = points_earned + " + .@bonus + ", claimed = 1 WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
 			detachrid;
 		} else {
-			// Player offline - mark unclaimed (they already got kill/wave points, just missing bonus)
-			query_sql "UPDATE event_invasion_contributions SET points_earned = " + .@total + " WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
+			// Player offline - mark bonus as unclaimed
+			query_sql "UPDATE event_invasion_contributions SET points_earned = points_earned + " + .@bonus + " WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_ids[.@i];
 		}
 	}
 	return;
