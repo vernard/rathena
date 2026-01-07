@@ -947,7 +947,7 @@ OnInit:
 	// Monster IDs from rAthena mob_db
 
 	// Beginner Fields (Lv 1-20)
-	setarray .Mobs_prt_fild05[0], 1002, 1113;  // Poring (1002), Drops (1113)
+	setarray .Mobs_prt_fild05[0], 1002, 1063;  // Poring (Lv 1), Lunatic (Lv 3)
 	set .Mobs_prt_fild05_count, 2;
 
 	setarray .Mobs_prt_fild08[0], 1002, 1063;  // Poring (1002), Lunatic (1063)
@@ -973,7 +973,7 @@ OnInit:
 	set .Mobs_pay_dun00_count, 2;
 
 	// Low-Mid Fields (Lv 15-35)
-	setarray .Mobs_pay_fild06[0], 1024, 1077;  // Wormtail (1024), Poison Spore (1077)
+	setarray .Mobs_pay_fild06[0], 1024, 1014;  // Wormtail (Lv 16), Spore (Lv 16)
 	set .Mobs_pay_fild06_count, 2;
 
 	setarray .Mobs_moc_fild01[0], 1107, 1113, 1002;  // Baby Desert Wolf (Lv 9), Drops (Lv 3), Poring (Lv 1)
