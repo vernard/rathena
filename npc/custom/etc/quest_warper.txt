@@ -77,7 +77,7 @@ function	script	Q_Warpra	{
 	if(getarg(0) == 0) callfunc "QWS_MMarray",0;
 	if(getarg(0) == 1) callfunc "QWS_MMarray",1;
 	
-	set @MMenu,select(@Mmenulist$[0],@Mmenulist$[1],@Mmenulist$[2],@Mmenulist$[3],@Mmenulist$[4],@Mmenulist$[5],@Mmenulist$[6],@Mmenulist$[7],@Mmenulist$[8],@Mmenulist$[9],@Mmenulist$[10],@Mmenulist$[11]);
+	set @MMenu,select(@Mmenulist$[0],@Mmenulist$[1],@Mmenulist$[2],@Mmenulist$[3],@Mmenulist$[4],@Mmenulist$[5],@Mmenulist$[6],@Mmenulist$[7],@Mmenulist$[8],@Mmenulist$[9],@Mmenulist$[10],@Mmenulist$[11],@Mmenulist$[12]);
 
 	switch(@Mmenuref[@MMenu-1]+1){
 	case 1: goto GM_Menu;
@@ -95,13 +95,14 @@ function	script	Q_Warpra	{
 		end;
 	case 4: goto L_town;
 	case 5: goto L_dungeon;
-	case 6: goto L_FewWarps;
-	case 7: goto L_NoUnlock;
-	case 8: goto L_heal_Full;
-	case 9: goto L_heal_Part;
-	case 10: goto L_Storage;
-	case 11: goto L_GStorage;
-	case 12:
+	case 6: goto L_field;
+	case 7: goto L_FewWarps;
+	case 8: goto L_NoUnlock;
+	case 9: goto L_heal_Full;
+	case 10: goto L_heal_Part;
+	case 11: goto L_Storage;
+	case 12: goto L_GStorage;
+	case 13:
 	default:
 		goto L_end;
 	}
@@ -112,6 +113,7 @@ GM_Menu:
 	next;
 	mes "Town warping = "+(($QW_TW_OFF)?"^FF0000 Off":"^00FF00 On")+"^000000";
 	mes "Dungeon warping = "+(($QW_DW_OFF)?"^FF0000 Off":"^00FF00 On")+"^000000";
+	mes "Field warping = "+(($QW_FW_OFF)?"^FF0000 Off":"^00FF00 On")+"^000000";
 	mes "Dungeon Depth limit is "+(($QW_DL)?"^00FF00 On":"^FF0000 Off")+"^000000";
 	mes "If on Dungeon Depth limit is set to ^0000FF"+$QW_DDL+"^000000";
 	mes "Show Map Users = "+(($QW_MapUserShow)?"^00FF00 On":"^FF0000 Off")+"^000000";
@@ -124,30 +126,31 @@ GM_Menu:
 	mes "Guild Storage = "+(($QW_GStor)?"^00FF00 On":"^FF0000 Off")+"^000000";
 	mes "Kafra points collect = "+(($QW_KPoint)?"^00FF00 On":"^FF0000 Off")+"^000000";
 
-	switch(select("Town Warping","Dungeon Warping","Dungeon Level Limit","Show Map Users","Healing full","Healing partly","Storage","Guild Storage","Kafra points collect","Set Prices","Special Warp","Exit")) {
+	switch(select("Town Warping","Dungeon Warping","Field Warping","Dungeon Level Limit","Show Map Users","Healing full","Healing partly","Storage","Guild Storage","Kafra points collect","Set Prices","Special Warp","Exit")) {
 	case 1: set $QW_TW_OFF,($QW_TW_OFF)?0:1; goto GM_Menu;
 	case 2: set $QW_DW_OFF,($QW_DW_OFF)?0:1; goto GM_Menu;
-	case 3: goto DungeonLevelLimit;
-	case 4: set $QW_MapUserShow,($QW_MapUserShow)?0:1; goto GM_Menu;
-	case 5:
+	case 3: set $QW_FW_OFF,($QW_FW_OFF)?0:1; goto GM_Menu;
+	case 4: goto DungeonLevelLimit;
+	case 5: set $QW_MapUserShow,($QW_MapUserShow)?0:1; goto GM_Menu;
+	case 6:
 		if ($QW_HF == 0) {
 			set $QW_HF,1;
 			set $QW_HP,0;
 		}
 		else set $QW_HF,0;
 		goto GM_Menu;
-	case 6:
+	case 7:
 		if ($QW_HP == 0) {
 			set $QW_HP,1;
 			set $QW_HF,0;
 		}
 		else set $QW_HP,0;
 		goto GM_Menu;
-	case 7: set $QW_Stor,($QW_Stor)?0:1; goto GM_Menu;
-	case 8: set $QW_GStor,($QW_GStor)?0:1; goto GM_Menu;
-	case 9: set $QW_KPoint,($QW_KPoint)?0:1; goto GM_Menu;
-	case 10: goto Setprice;
-	case 11: goto SpecialWarpMenu;
+	case 8: set $QW_Stor,($QW_Stor)?0:1; goto GM_Menu;
+	case 9: set $QW_GStor,($QW_GStor)?0:1; goto GM_Menu;
+	case 10: set $QW_KPoint,($QW_KPoint)?0:1; goto GM_Menu;
+	case 11: goto Setprice;
+	case 12: goto SpecialWarpMenu;
 	default:
 		close;
 		end;
@@ -167,6 +170,7 @@ Setprice:
 	mes "Basic Dungeon level warp fee = "+(($QW_BW_FEE)?"^00FF00"+$QW_BW_FEE:"^FF0000NO")+"^000000 zeny per level";
 	mes "Advanced Dungeon level warp fee = "+(($QW_AW_FEE)?"^00FF00"+$QW_AW_FEE:"^FF0000NO")+"^000000 zeny per level";
 	mes "Overseas Dungeon level warp fee = "+(($QW_OW_FEE)?"^00FF00"+$QW_OW_FEE:"^FF0000NO")+"^000000 zeny per level";
+	mes "Field Warps = "+(($QW_FW_PRICE)?"^00FF00"+$QW_FW_PRICE:"^FF0000Free")+"^000000";
 
 	mes "Full Healing = "+(($QW_HF_PRICE)?"^00FF00"+$QW_HF_PRICE:"^FF0000Free")+"^000000";
 	mes "^FF0000HP ^000000Part Healing = "+(($QW_HP_H_PRICE)?"^00FF00"+$QW_HP_H_PRICE+"^000000 a point":"^FF0000Free^000000");
@@ -177,7 +181,7 @@ Setprice:
 	if ($QW_S_PRICE == 60) mes "Storage = ^0000FF Kafra Mode ^000000";
 	mes "Guild Storage = "+(($QW_GS_PRICE)?"^00FF00"+$QW_GS_PRICE:"^FF0000Free")+"^000000";
 	
-	switch(select("Basic - Warps","Advanced - Warps","Overseas - Warps","Basic Dungeon warp fee","Advanced Dungeon warp fee","Overseas Dungeon warp fee","Full Healing","Part Healing","Storage","Guild Storage","Back","Exit")) {
+	switch(select("Basic - Warps","Advanced - Warps","Overseas - Warps","Basic Dungeon warp fee","Advanced Dungeon warp fee","Overseas Dungeon warp fee","Field Warps","Full Healing","Part Healing","Storage","Guild Storage","Back","Exit")) {
 	case 1:
 		next;
 		mes "Basic - Warps are = "+(($QW_BW_PRICE)?"^00FF00"+$QW_BW_PRICE:"^FF0000Free")+"^000000";
@@ -222,11 +226,17 @@ Setprice:
 		goto Setprice;
 	case 7:
 		next;
+		mes "Field Warps = "+(($QW_FW_PRICE)?"^00FF00"+$QW_FW_PRICE:"^FF0000Free")+"^000000";
+		mes "Cost for warping to unlocked field locations.";
+		input $QW_FW_PRICE;
+		goto Setprice;
+	case 8:
+		next;
 		mes "Full Healing = "+(($QW_HF_PRICE)?"^00FF00"+$QW_HF_PRICE:"^FF0000Free")+"^000000";
 		mes "Instant full healing 1 price.";
 		input $QW_HF_PRICE;
 		goto Setprice;
-	case 8:
+	case 9:
 		next;
 		mes "^FF0000HP ^000000Part Healing = "+(($QW_HP_H_PRICE)?"^00FF00"+$QW_HP_H_PRICE+"^000000 a point":"^FF0000Free^000000");
 		mes "^FF0000SP ^000000Part Healing = "+(($QW_HP_S_PRICE)?"^00FF00"+$QW_HP_S_PRICE+"^000000 a point":"^FF0000Free^000000");
@@ -236,7 +246,7 @@ Setprice:
 		input $QW_HP_H_PRICE;
 		input $QW_HP_S_PRICE;
 		goto Setprice;
-	case 9:
+	case 10:
 		next;
 		if ($QW_S_PRICE && $QW_S_PRICE != 60) mes "Storage = ^00FF00 "+$QW_S_PRICE+" ^000000";
 		if (!$QW_S_PRICE) mes "Storage = ^FF0000 Free ^000000";
@@ -244,13 +254,13 @@ Setprice:
 		mes "Storage cost, if set to 60 Kafra pricing will be handled.";
 		input $QW_S_PRICE;
 		goto Setprice;
-	case 10:
+	case 11:
 		next;
 		mes "Guild Storage = "+(($QW_GS_PRICE)?"^00FF00"+$QW_GS_PRICE:"^FF0000Free")+"^000000";
 		mes "Guild Storage, free on Guild Kafras.";
 		input $QW_GS_PRICE;
 		goto Setprice;
-	case 11:
+	case 12:
 		goto GM_Menu;
 	default:
 		close;
@@ -399,6 +409,33 @@ L_dungeon:
 	warp @DGat$[@Darrayref],@DXcoords[@Darrayref],@DYcoords[@Darrayref];
 	close2;
 	set Zeny, Zeny+@pTprice[@Tmenuref[@DWMenu-1]];
+	end;
+
+//=============================Fields=================================
+
+L_field:
+	callfunc "QWS_Farray";
+	freeloop(1);
+	set .@menu$,"";
+	for(set .@i,0; .@i<20; set .@i,.@i+1)	// Expected maximum is 20 fields
+		set .@menu$,.@menu$+@Fmenulist$[.@i]+":";
+	freeloop(0);
+	set @FWMenu,select(.@menu$);
+
+	if (@Fmenuref[@FWMenu-1] == 57005) goto L_end; // 57005='dead' in hex
+
+	if(Zeny<@pFprice[@Fmenuref[@FWMenu-1]]) callsub L_Short_on_zeny,5;
+	set Zeny, Zeny-@pFprice[@Fmenuref[@FWMenu-1]];
+	if ($QW_KPoint == 1) set RESRVPTS, RESRVPTS + (@pFprice[@Fmenuref[@FWMenu-1]]/16);
+	// Save last warp location
+	set #QW_LastMap$, @pFmap$[@Fmenuref[@FWMenu-1]];
+	set #QW_LastX, @pFXcoords[@Fmenuref[@FWMenu-1]];
+	set #QW_LastY, @pFYcoords[@Fmenuref[@FWMenu-1]];
+	set #QW_LastName$, @pFmenuitems$[@Fmenuref[@FWMenu-1]];
+	set #QW_LastLevel$, "";
+	set #QW_LastPrice, @pFprice[@Fmenuref[@FWMenu-1]];
+	warp @pFmap$[@Fmenuref[@FWMenu-1]],@pFXcoords[@Fmenuref[@FWMenu-1]],@pFYcoords[@Fmenuref[@FWMenu-1]];
+	close2;
 	end;
 
 //=============================Healing=============================
@@ -566,6 +603,7 @@ L_Short_on_zeny:
 	case 2: mes "You don't seem to have "+@fee+" zeny to pay the storage fee."; break;
 	case 3: mes "You don't seem to have "+$QW_GS_PRICE+" zeny to pay the guild storage fee."; break;
 	case 4: mes "You don't seem to have "+@healfee+" zeny to pay for your healing."; break;
+	case 5: mes "You don't seem to have "+@pFprice[@Fmenuref[@FWMenu-1]]+" zeny to pay for the warp to "+@pFmenuitems$[@Fmenuref[@FWMenu-1]]+"."; break;
 	}
 	close;
 	end;
@@ -587,6 +625,11 @@ stampcard:
 	mes "You collected^00FF00 "+@Dstamp+" of "+@MaxDstamp+" ^000000Dungeons.";
 	mes "To unlock a dungeon, search for my colleagues.";
 	mes "You can usually find them near the middle or end of the dungeon.";
+	next;
+	mes "Let me check what fields you have.";
+	callfunc "QWS_FieldStamps";
+	mes "You collected^00FF00 "+@Fstamp+" of "+@MaxFstamp+" ^000000Fields.";
+	mes "To unlock a field, walk far from town and find our field helpers.";
 	return;
 }
 
@@ -626,12 +669,26 @@ function	script	QWS_DungeonStamps	{
 	return;
 }
 
+function	script	QWS_FieldStamps	{
+	set @Fstamp,0;
+	set @MaxFstamp,6; //maximum number of fields (currently 6 for Yuno region)
+	// Count bits 0-30 from ##QWS_F_Unlock
+	set @binvalue,1;
+	set @Fstamploop,0;
+	do {
+		if ((@binvalue & ##QWS_F_Unlock) == @binvalue) set @Fstamp,@Fstamp+1;
+		set @binvalue, @binvalue *2;
+		set @Fstamploop, @Fstamploop + 1;
+	} while (@Fstamploop < @MaxFstamp);
+	return;
+}
+
 //======================Main=Menu=Array============================
 
 function	script	QWS_MMarray	{
 
-	// Currently 12 items (added Last Warp at index 1)
-	setarray @pMmenuitems$[0], "GameMaster Menu", "Last Warp", $QW_SP_Warpname$, "Warp to Towns", "Warp to Dungeons", "Why so few warps?", "Why don't you unlock this location?", "Heal", "Heal", "Storage", "Guild Storage", "Cancel";
+	// Currently 13 items (added Warp to Fields after Dungeons)
+	setarray @pMmenuitems$[0], "GameMaster Menu", "Last Warp", $QW_SP_Warpname$, "Warp to Towns", "Warp to Dungeons", "Warp to Fields", "Why so few warps?", "Why don't you unlock this location?", "Heal", "Heal", "Storage", "Guild Storage", "Cancel";
 	set @Mi,0; // loop counter
 	set @Mj,0; // menu line counter
 
@@ -674,6 +731,13 @@ function	script	QWS_MMarray	{
 	set @Mi,@Mi+1;
 //----------------Dungeon-Warp
 	if ($QW_DW_OFF == 0) {
+		set @Mmenulist$[@Mj],@pMmenuitems$[@Mi];
+		set @Mmenuref[@Mj],@Mi;
+		set @Mj,@Mj+1;
+	}
+	set @Mi,@Mi+1;
+//----------------Field-Warp
+	if ($QW_FW_OFF == 0) {
 		set @Mmenulist$[@Mj],@pMmenuitems$[@Mi];
 		set @Mmenuref[@Mj],@Mi;
 		set @Mj,@Mj+1;
@@ -998,6 +1062,135 @@ menu_item:
 	set @Tmenuref[@Tj],@Ti;
 	set @Tj,@Tj+1;
 	set @Ti,@Ti+1;
+	return;
+}
+}
+
+//=====================Field=Menu=Arrays===========================
+// Adding a field:
+//	setarray @pFmenuitems$[@Fi], "yuno_fild03 - El Mes Plateau";	// Name shown in Field select Menu (format: mapname - Description)
+//	setarray @pFprice[@Fi], $QW_FW_PRICE;				// Warp price for fields
+//
+//	setarray @pFmap$[@Fi], "yuno_fild03";	// Map name
+//	setarray @pFXcoords[@Fi], 182;		// X warp coords (near unlock NPC)
+//	setarray @pFYcoords[@Fi], 200;		// Y warp coords
+//
+//	QWS_Make_Field_Menu 0;	// Use a free number (assigned by field bit position)
+//
+// Adding a field warpra:
+//	map,x,y,facing	script	Field Warpra#example	112,{
+//		callfunc "QWS_Field_Warpra",<field number>,"mapname - Description";
+//		close;
+//	}
+//	Field number is the same as "QWS_Make_Field_Menu".
+//==================================================================
+
+function	script	QWS_Farray	{
+	function QWS_Make_Field_Menu;
+
+	set @Fi,0; // loop counter
+	set @Fj,0; // menu lines counter
+
+//----------------YUNO FIELD 03 - EL MES PLATEAU (2 from Yuno)
+	setarray @pFmenuitems$[@Fi], "yuno_fild03 - El Mes Plateau";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild03";
+	setarray @pFXcoords[@Fi], 182;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 0;
+//----------------YUNO FIELD 05 - EL MES PLATEAU (2 from Yuno)
+	setarray @pFmenuitems$[@Fi], "yuno_fild05 - El Mes Plateau";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild05";
+	setarray @pFXcoords[@Fi], 238;
+	setarray @pFYcoords[@Fi], 235;
+
+	QWS_Make_Field_Menu 1;
+//----------------YUNO FIELD 09 - GUARDS CAMP (2 from Alde)
+	setarray @pFmenuitems$[@Fi], "yuno_fild09 - Guards Camp";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild09";
+	setarray @pFXcoords[@Fi], 219;
+	setarray @pFYcoords[@Fi], 250;
+
+	QWS_Make_Field_Menu 2;
+//----------------YUNO FIELD 12 - BORDER CHECKPOINT (2 from Alde)
+	setarray @pFmenuitems$[@Fi], "yuno_fild12 - Border Checkpoint";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild12";
+	setarray @pFXcoords[@Fi], 201;
+	setarray @pFYcoords[@Fi], 302;
+
+	QWS_Make_Field_Menu 3;
+//----------------YUNO FIELD 07 - EL MES GORGE (Juperos entrance)
+	setarray @pFmenuitems$[@Fi], "yuno_fild07 - El Mes Gorge";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild07";
+	setarray @pFXcoords[@Fi], 184;
+	setarray @pFYcoords[@Fi], 347;
+
+	QWS_Make_Field_Menu 4;
+//----------------YUNO FIELD 08 - KIEL ACADEMY (Kiel Factory entrance)
+	setarray @pFmenuitems$[@Fi], "yuno_fild08 - Kiel Academy";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild08";
+	setarray @pFXcoords[@Fi], 225;
+	setarray @pFYcoords[@Fi], 202;
+
+	QWS_Make_Field_Menu 5;
+
+//----------------Exit option
+	set @Fmenulist$[@Fj], "Exit";
+	set @Fmenuref[@Fj], 57005; // 57005='dead' in hex
+	return;
+
+
+function	QWS_Make_Field_Menu	{
+	// Get bit for this field
+	set @tempfieldmenubin,1;
+	if (getarg(0) == 0) goto fieldmenucheck;
+	set @tempfieldmenuloop,0;
+	do {
+		set @tempfieldmenubin, @tempfieldmenubin * 2;
+		set @tempfieldmenuloop, @tempfieldmenuloop + 1;
+	} while (getarg(0) > @tempfieldmenuloop);
+fieldmenucheck:
+	// Check if field is unlocked (using ##QWS_F_Unlock or ##QWS_F_Unlock2)
+	if (getarg(0) > 30) {
+		set .@bitindex, getarg(0) - 31;
+		set @tempfieldcheck,1;
+		if (.@bitindex > 0) {
+			set .@loop,0;
+			do {
+				set @tempfieldcheck, @tempfieldcheck * 2;
+				set .@loop, .@loop + 1;
+			} while (.@bitindex > .@loop);
+		}
+		if ((@tempfieldcheck & ##QWS_F_Unlock2) != @tempfieldcheck) {
+			set @Fi,@Fi+1;
+			return;
+		}
+	} else {
+		if ((@tempfieldmenubin & ##QWS_F_Unlock) != @tempfieldmenubin) {
+			set @Fi,@Fi+1;
+			return;
+		}
+	}
+	// Field is unlocked, add to menu
+	if (@pFprice[@Fi] != 0)&&($QW_MapUserShow == 0) set @Fmenulist$[@Fj], @pFmenuitems$[@Fi]+" -> "+@pFprice[@Fi];
+	if (@pFprice[@Fi] == 0)&&($QW_MapUserShow == 0) set @Fmenulist$[@Fj], @pFmenuitems$[@Fi];
+	if (@pFprice[@Fi] != 0)&&($QW_MapUserShow == 1) set @Fmenulist$[@Fj], @pFmenuitems$[@Fi]+" ["+getmapusers(@pFmap$[@Fi])+"]"+" -> "+@pFprice[@Fi];
+	if (@pFprice[@Fi] == 0)&&($QW_MapUserShow == 1) set @Fmenulist$[@Fj], @pFmenuitems$[@Fi]+" ["+getmapusers(@pFmap$[@Fi])+"]";
+	set @Fmenuref[@Fj],@Fi;
+	set @Fj,@Fj+1;
+	set @Fi,@Fi+1;
 	return;
 }
 }
@@ -1819,6 +2012,68 @@ binget:
 	return 0;
 }
 }
+
+//=================Field=Warpras=That=Only=Unlock==================
+
+function	script	QWS_Field_Warpra	{
+	function QWS_F_getbin;
+	function QWS_F_setbin;
+
+	if ((QWS_F_getbin(getarg(0)) == 0) && (getarg(1) != "")) {
+		mes "[Field Warpra]";
+		mes getarg(1)+" unlocked!";
+		mes "You can now warp here from any Warpra.";
+		QWS_F_setbin(getarg(0));
+		return;
+	} else if (QWS_F_getbin(getarg(0)) == 1) {
+		mes "[Field Warpra]";
+		mes "Already unlocked.";
+		mes "Use any Warpra to return here.";
+	} else
+		debugmes "QWS_Field_Warpra error, improper syntax?";
+	return;
+
+
+function	QWS_F_setbin	{
+	// Use ##QWS_F_Unlock for bits 0-30, ##QWS_F_Unlock2 for bits 31+
+	set @tempsetbindata,1;
+	set .@bitindex, getarg(0);
+	if (.@bitindex > 30) set .@bitindex, .@bitindex - 31;
+	if (.@bitindex == 0) goto binset;
+	set @temploopsetbin,0;
+	do {
+		set @tempsetbindata, @tempsetbindata * 2;
+		set @temploopsetbin, @temploopsetbin + 1;
+	} while (.@bitindex > @temploopsetbin);
+binset:
+	if (getarg(0) > 30)
+		set ##QWS_F_Unlock2,(##QWS_F_Unlock2 | @tempsetbindata);
+	else
+		set ##QWS_F_Unlock,(##QWS_F_Unlock | @tempsetbindata);
+	return;
+}
+
+function	QWS_F_getbin	{
+	// Use ##QWS_F_Unlock for bits 0-30, ##QWS_F_Unlock2 for bits 31+
+	set @tempgetbindata,1;
+	set .@bitindex, getarg(0);
+	if (.@bitindex > 30) set .@bitindex, .@bitindex - 31;
+	if (.@bitindex == 0) goto binget;
+	set @temploopgetbin,0;
+	do {
+		set @tempgetbindata, @tempgetbindata * 2;
+		set @temploopgetbin, @temploopgetbin + 1;
+	} while (.@bitindex > @temploopgetbin);
+binget:
+	if (getarg(0) > 30) {
+		if ((@tempgetbindata & ##QWS_F_Unlock2) == @tempgetbindata) return 1;
+	} else {
+		if ((@tempgetbindata & ##QWS_F_Unlock) == @tempgetbindata) return 1;
+	}
+	return 0;
+}
+}
+
 //============================Warpras==============================
 
 -	script	Warpra#0	-1,{ callfunc "Q_Warpra",1; }
@@ -1906,3 +2161,18 @@ thor_v02,81,207,3	script	Warpra Helper#37	112,{ callfunc "QWS_Dungeon_Warpra",37
 mosk_dun02,165,40,3	script	Warpra Helper#38	112,{ callfunc "QWS_Dungeon_Warpra",38,"Moscovia Dungeon"; close; }
 ra_san03,125,275,3	script	Warpra Helper#39	112,{ callfunc "QWS_Dungeon_Warpra",39,"Rachel Sanctuary"; close; }
 abbey02,149,20,3	script	Warpra Helper#40	112,{ callfunc "QWS_Dungeon_Warpra",40,"Abbey"; close; }
+
+//===================Field=Unlock=Warpras===========================
+// Field Warpras that unlock field locations for the "Warp to Fields" menu.
+// Position: +2 X from bounty board (so players warp next to both NPCs)
+//
+// Yuno Region - 6 fields:
+// - 2-portal rule: yuno_fild03, fild05 (from Yuno), fild09, fild12 (from Alde)
+// - Dungeon access: fild07 (Juperos entrance), fild08 (Kiel Factory entrance)
+//==================================================================
+yuno_fild03,182,200,4	script	Field Warpra#yf03	112,{ callfunc "QWS_Field_Warpra",0,"yuno_fild03 - El Mes Plateau"; close; }
+yuno_fild05,238,235,4	script	Field Warpra#yf05	112,{ callfunc "QWS_Field_Warpra",1,"yuno_fild05 - El Mes Plateau"; close; }
+yuno_fild09,219,250,4	script	Field Warpra#yf09	112,{ callfunc "QWS_Field_Warpra",2,"yuno_fild09 - Guards Camp"; close; }
+yuno_fild12,201,302,4	script	Field Warpra#yf12	112,{ callfunc "QWS_Field_Warpra",3,"yuno_fild12 - Border Checkpoint"; close; }
+yuno_fild07,184,347,4	script	Field Warpra#yf07	112,{ callfunc "QWS_Field_Warpra",4,"yuno_fild07 - El Mes Gorge"; close; }
+yuno_fild08,225,202,4	script	Field Warpra#yf08	112,{ callfunc "QWS_Field_Warpra",5,"yuno_fild08 - Kiel Academy"; close; }
