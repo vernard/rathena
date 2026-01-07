@@ -2,36 +2,184 @@
 //= Reset NPC
 //===== Description: =========================================
 //= Resets skills, stats, or both.
-//===== Pricing: =============================================
+//= Prices are configurable by GMs in-game.
+//===== Default Pricing: =====================================
 //= 1.5m for single reset (stats OR skills)
 //= 2.5m for both
 //= No limit on number of resets
 //===== Notes: ===============================================
 //= ResetStatus properly handles trans class bonus stat points
+//= GM level 60+ can configure prices via [GM] menu option
 //============================================================
 prontera,150,193,4	script	Reset Girl	124,{
-	//			Skills,		Stats,		Both
-	setarray .@Reset,	1500000,	1500000,	2500000;
 	mes "[Reset Girl]";
 	mes "I am the Reset Girl.";
-	mes "Reset Stats: "+ callfunc("F_InsertComma",.@Reset[1]) +"z";
-	mes "Reset Skills: "+ callfunc("F_InsertComma",.@Reset[0]) +"z";
-	mes "Reset Both: "+ callfunc("F_InsertComma",.@Reset[2]) +"z";
+	mes "Reset Stats: "+ callfunc("F_InsertComma", $ResetPrice_Stats) +"z";
+	mes "Reset Skills: "+ callfunc("F_InsertComma", $ResetPrice_Skills) +"z";
+	mes "Reset Both: "+ callfunc("F_InsertComma", $ResetPrice_Both) +"z";
 	mes "Please select the service you want:";
 	next;
-	set .@i,(select("^FF3355Reset Skills:Reset Stats:Reset Both^000000:Cancel"));
-	if(.@i > 3) close;
-	mes "[Reset Girl]";
-	if (Zeny < .@Reset[.@i-1]) {
-		mes "Sorry, you don't have enough Zeny.";
-		close;
+
+	// GM menu option
+	if (getgmlevel() >= 60) {
+		set .@choice, select("^FF3355Reset Skills:Reset Stats:Reset Both^000000:^FF0000[GM] Set Prices^000000:Cancel");
+	} else {
+		set .@choice, select("^FF3355Reset Skills:Reset Stats:Reset Both^000000:Cancel");
+		// Adjust choice for non-GM menu (no GM option)
+		if (.@choice == 4) set .@choice, 5;
 	}
-	set Zeny, Zeny-.@Reset[.@i-1];
-	if(.@i&1){
-		sc_end_class;
-		ResetSkill;
+
+	switch(.@choice) {
+		case 1: // Reset Skills
+			if (Zeny < $ResetPrice_Skills) {
+				mes "[Reset Girl]";
+				mes "Sorry, you don't have enough Zeny.";
+				close;
+			}
+			set Zeny, Zeny - $ResetPrice_Skills;
+			sc_end_class;
+			ResetSkill;
+			mes "[Reset Girl]";
+			mes "Your skills have been reset!";
+			close;
+
+		case 2: // Reset Stats
+			if (Zeny < $ResetPrice_Stats) {
+				mes "[Reset Girl]";
+				mes "Sorry, you don't have enough Zeny.";
+				close;
+			}
+			set Zeny, Zeny - $ResetPrice_Stats;
+			ResetStatus;
+			mes "[Reset Girl]";
+			mes "Your stats have been reset!";
+			close;
+
+		case 3: // Reset Both
+			if (Zeny < $ResetPrice_Both) {
+				mes "[Reset Girl]";
+				mes "Sorry, you don't have enough Zeny.";
+				close;
+			}
+			set Zeny, Zeny - $ResetPrice_Both;
+			sc_end_class;
+			ResetSkill;
+			ResetStatus;
+			mes "[Reset Girl]";
+			mes "Your skills and stats have been reset!";
+			close;
+
+		case 4: // GM Set Prices
+			goto L_GMMenu;
+
+		default: // Cancel
+			close;
 	}
-	if(.@i&2) ResetStatus;
-	mes "There you go!";
-	close;
+	end;
+
+// ============================================================
+// GM Price Configuration Menu
+// ============================================================
+L_GMMenu:
+	mes "[^FF0000GM Panel^000000]";
+	mes "Current Reset Prices:";
+	mes "Skills: ^0000FF"+ callfunc("F_InsertComma", $ResetPrice_Skills) +"z^000000";
+	mes "Stats: ^0000FF"+ callfunc("F_InsertComma", $ResetPrice_Stats) +"z^000000";
+	mes "Both: ^0000FF"+ callfunc("F_InsertComma", $ResetPrice_Both) +"z^000000";
+	next;
+
+	switch(select("Set Skills Price:Set Stats Price:Set Both Price:Set All to Same:Reset to Defaults:Back")) {
+		case 1: // Skills Price
+			mes "[^FF0000GM Panel^000000]";
+			mes "Current Skills Reset price:";
+			mes "^0000FF"+ callfunc("F_InsertComma", $ResetPrice_Skills) +"z^000000";
+			mes " ";
+			mes "Enter new price in zeny:";
+			mes "^888888(0 = free, max 100,000,000)^000000";
+			input .@newprice;
+			if (.@newprice < 0) set .@newprice, 0;
+			if (.@newprice > 100000000) set .@newprice, 100000000;
+			set $ResetPrice_Skills, .@newprice;
+			mes " ";
+			mes "Skills Reset price set to:";
+			mes "^00AA00"+ callfunc("F_InsertComma", $ResetPrice_Skills) +"z^000000";
+			close;
+
+		case 2: // Stats Price
+			mes "[^FF0000GM Panel^000000]";
+			mes "Current Stats Reset price:";
+			mes "^0000FF"+ callfunc("F_InsertComma", $ResetPrice_Stats) +"z^000000";
+			mes " ";
+			mes "Enter new price in zeny:";
+			mes "^888888(0 = free, max 100,000,000)^000000";
+			input .@newprice;
+			if (.@newprice < 0) set .@newprice, 0;
+			if (.@newprice > 100000000) set .@newprice, 100000000;
+			set $ResetPrice_Stats, .@newprice;
+			mes " ";
+			mes "Stats Reset price set to:";
+			mes "^00AA00"+ callfunc("F_InsertComma", $ResetPrice_Stats) +"z^000000";
+			close;
+
+		case 3: // Both Price
+			mes "[^FF0000GM Panel^000000]";
+			mes "Current Both Reset price:";
+			mes "^0000FF"+ callfunc("F_InsertComma", $ResetPrice_Both) +"z^000000";
+			mes " ";
+			mes "Enter new price in zeny:";
+			mes "^888888(0 = free, max 100,000,000)^000000";
+			input .@newprice;
+			if (.@newprice < 0) set .@newprice, 0;
+			if (.@newprice > 100000000) set .@newprice, 100000000;
+			set $ResetPrice_Both, .@newprice;
+			mes " ";
+			mes "Both Reset price set to:";
+			mes "^00AA00"+ callfunc("F_InsertComma", $ResetPrice_Both) +"z^000000";
+			close;
+
+		case 4: // Set All to Same
+			mes "[^FF0000GM Panel^000000]";
+			mes "Set all reset types to the same price.";
+			mes " ";
+			mes "Enter new price in zeny:";
+			mes "^888888(0 = free, max 100,000,000)^000000";
+			input .@newprice;
+			if (.@newprice < 0) set .@newprice, 0;
+			if (.@newprice > 100000000) set .@newprice, 100000000;
+			set $ResetPrice_Skills, .@newprice;
+			set $ResetPrice_Stats, .@newprice;
+			set $ResetPrice_Both, .@newprice;
+			mes " ";
+			mes "All Reset prices set to:";
+			mes "^00AA00"+ callfunc("F_InsertComma", .@newprice) +"z^000000";
+			close;
+
+		case 5: // Reset to Defaults
+			set $ResetPrice_Skills, 1500000;
+			set $ResetPrice_Stats, 1500000;
+			set $ResetPrice_Both, 2500000;
+			mes "[^FF0000GM Panel^000000]";
+			mes "Prices reset to defaults:";
+			mes "Skills: ^0000FF1,500,000z^000000";
+			mes "Stats: ^0000FF1,500,000z^000000";
+			mes "Both: ^0000FF2,500,000z^000000";
+			close;
+
+		default: // Back
+			close;
+	}
+	end;
+
+// ============================================================
+// Initialize default prices on server start
+// ============================================================
+OnInit:
+	// Only set defaults if not already configured
+	if ($ResetPrice_Skills == 0 && $ResetPrice_Stats == 0 && $ResetPrice_Both == 0) {
+		set $ResetPrice_Skills, 1500000;
+		set $ResetPrice_Stats, 1500000;
+		set $ResetPrice_Both, 2500000;
+		debugmes "[ResetGirl] Initialized default prices: Skills=1.5m, Stats=1.5m, Both=2.5m";
+	}
+	end;
 }
