@@ -816,7 +816,7 @@ function	script	QWS_Tarray	{
 	set @Ti,0; // loop counter
 	set @Tj,0; // menu lines counter
 
-//----------------Prontera
+//----------------Prontera (Capital - always first)
 	setarray @pTmenuitems$[@Ti], "Prontera";
 	setarray @pTprice[@Ti], $QW_BW_PRICE;
 
@@ -843,7 +843,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 103;
 
 	QWS_Make_Town_Menu 2;
-//----------------Amatsu:
+//----------------Amatsu
 	setarray @pTmenuitems$[@Ti], "Amatsu";
 	setarray @pTprice[@Ti], $QW_OW_PRICE;
 
@@ -852,7 +852,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 86;
 
 	QWS_Make_Town_Menu 3;
-//----------------Ayothaya:
+//----------------Ayothaya
 	setarray @pTmenuitems$[@Ti], "Ayothaya";
 	setarray @pTprice[@Ti], $QW_OW_PRICE;
 
@@ -861,7 +861,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 57;
 
 	QWS_Make_Town_Menu 4;
-//----------------Comodo:
+//----------------Comodo
 	setarray @pTmenuitems$[@Ti], "Comodo";
 	setarray @pTprice[@Ti], $QW_AW_PRICE;
 
@@ -870,7 +870,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 161;
 
 	QWS_Make_Town_Menu 5;
-//----------------Einbech:
+//----------------Einbech
 	setarray @pTmenuitems$[@Ti], "Einbech";
 	setarray @pTprice[@Ti], $QW_AW_PRICE;
 
@@ -879,7 +879,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 126;
 
 	QWS_Make_Town_Menu 6;
-//----------------Einbroch:
+//----------------Einbroch
 	setarray @pTmenuitems$[@Ti], "Einbroch";
 	setarray @pTprice[@Ti], $QW_AW_PRICE;
 
@@ -888,7 +888,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 191;
 
 	QWS_Make_Town_Menu 7;
-//----------------Geffen:
+//----------------Geffen
 	setarray @pTmenuitems$[@Ti], "Geffen";
 	setarray @pTprice[@Ti], $QW_BW_PRICE;
 
@@ -897,16 +897,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 66;
 
 	QWS_Make_Town_Menu 8;
-//----------------Kunlun:
-	setarray @pTmenuitems$[@Ti], "Kunlun";
-	setarray @pTprice[@Ti], $QW_OW_PRICE;
-
-	setarray @pTmap$[@Ti], "gonryun";
-	setarray @pTXcoords[@Ti], 150;
-	setarray @pTYcoords[@Ti], 130;
-
-	QWS_Make_Town_Menu 9;
-//----------------Hugel:
+//----------------Hugel
 	setarray @pTmenuitems$[@Ti], "Hugel";
 	setarray @pTprice[@Ti], $QW_AW_PRICE;
 
@@ -915,7 +906,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 121;
 
 	QWS_Make_Town_Menu 10;
-//----------------Izlude:
+//----------------Izlude
 	setarray @pTmenuitems$[@Ti], "Izlude";
 	setarray @pTprice[@Ti], $QW_BW_PRICE;
 
@@ -924,7 +915,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 111;
 
 	QWS_Make_Town_Menu 11;
-//----------------Jawaii:
+//----------------Jawaii
 	setarray @pTmenuitems$[@Ti], "Jawaii";
 	setarray @pTprice[@Ti], $QW_AW_PRICE;
 
@@ -933,7 +924,25 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 115;
 
 	QWS_Make_Town_Menu 12;
-//----------------Lighthalzen:
+//----------------Juno
+	setarray @pTmenuitems$[@Ti], "Juno";
+	setarray @pTprice[@Ti], $QW_AW_PRICE;
+
+	setarray @pTmap$[@Ti], "yuno";
+	setarray @pTXcoords[@Ti], 160;
+	setarray @pTYcoords[@Ti], 168;
+
+	QWS_Make_Town_Menu 20;
+//----------------Kunlun
+	setarray @pTmenuitems$[@Ti], "Kunlun";
+	setarray @pTprice[@Ti], $QW_OW_PRICE;
+
+	setarray @pTmap$[@Ti], "gonryun";
+	setarray @pTXcoords[@Ti], 150;
+	setarray @pTYcoords[@Ti], 130;
+
+	QWS_Make_Town_Menu 9;
+//----------------Lighthalzen
 	setarray @pTmenuitems$[@Ti], "Lighthalzen";
 	setarray @pTprice[@Ti], $QW_AW_PRICE;
 
@@ -942,7 +951,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 110;
 
 	QWS_Make_Town_Menu 13;
-//----------------Luoyang:
+//----------------Luoyang
 	setarray @pTmenuitems$[@Ti], "Luoyang";
 	setarray @pTprice[@Ti], $QW_OW_PRICE;
 
@@ -960,7 +969,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 131;
 
 	QWS_Make_Town_Menu 15;
-//----------------Morocc:
+//----------------Morocc
 	setarray @pTmenuitems$[@Ti], "Morocc";
 	setarray @pTprice[@Ti], $QW_BW_PRICE;
 
@@ -978,7 +987,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 193;
 
 	QWS_Make_Town_Menu 25;
-//----------------Niflheim:
+//----------------Niflheim
 	setarray @pTmenuitems$[@Ti], "Niflheim";
 	setarray @pTprice[@Ti], $QW_AW_PRICE;
 
@@ -987,7 +996,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 186;
 
 	QWS_Make_Town_Menu 17;
-//----------------Payon:
+//----------------Payon
 	setarray @pTmenuitems$[@Ti], "Payon";
 	setarray @pTprice[@Ti], $QW_BW_PRICE;
 
@@ -1005,7 +1014,7 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 111;
 
 	QWS_Make_Town_Menu 26;
-//----------------Umbala:
+//----------------Umbala
 	setarray @pTmenuitems$[@Ti], "Umbala";
 	setarray @pTprice[@Ti], $QW_AW_PRICE;
 
@@ -1023,15 +1032,6 @@ function	script	QWS_Tarray	{
 	setarray @pTYcoords[@Ti], 123;
 
 	QWS_Make_Town_Menu 28;
-//----------------Juno:
-	setarray @pTmenuitems$[@Ti], "Juno";
-	setarray @pTprice[@Ti], $QW_AW_PRICE;
-
-	setarray @pTmap$[@Ti], "yuno";
-	setarray @pTXcoords[@Ti], 160;
-	setarray @pTYcoords[@Ti], 168;
-
-	QWS_Make_Town_Menu 20;
 //----------------Cancel
 	setarray @pTmenuitems$[@Ti], "Cancel";
 	setarray @pTprice[@Ti], 0;
@@ -1093,63 +1093,7 @@ function	script	QWS_Farray	{
 	set @Fi,0; // loop counter
 	set @Fj,0; // menu lines counter
 
-//----------------YUNO FIELD 03 - EL MES PLATEAU (2 from Yuno)
-	setarray @pFmenuitems$[@Fi], "yuno_fild03 - El Mes Plateau";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "yuno_fild03";
-	setarray @pFXcoords[@Fi], 182;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 0;
-//----------------YUNO FIELD 05 - EL MES PLATEAU (2 from Yuno)
-	setarray @pFmenuitems$[@Fi], "yuno_fild05 - El Mes Plateau";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "yuno_fild05";
-	setarray @pFXcoords[@Fi], 238;
-	setarray @pFYcoords[@Fi], 235;
-
-	QWS_Make_Field_Menu 1;
-//----------------YUNO FIELD 09 - GUARDS CAMP (2 from Alde)
-	setarray @pFmenuitems$[@Fi], "yuno_fild09 - Guards Camp";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "yuno_fild09";
-	setarray @pFXcoords[@Fi], 219;
-	setarray @pFYcoords[@Fi], 250;
-
-	QWS_Make_Field_Menu 2;
-//----------------YUNO FIELD 12 - BORDER CHECKPOINT (2 from Alde)
-	setarray @pFmenuitems$[@Fi], "yuno_fild12 - Border Checkpoint";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "yuno_fild12";
-	setarray @pFXcoords[@Fi], 201;
-	setarray @pFYcoords[@Fi], 302;
-
-	QWS_Make_Field_Menu 3;
-//----------------YUNO FIELD 07 - EL MES GORGE (Juperos entrance)
-	setarray @pFmenuitems$[@Fi], "yuno_fild07 - El Mes Gorge";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "yuno_fild07";
-	setarray @pFXcoords[@Fi], 184;
-	setarray @pFYcoords[@Fi], 347;
-
-	QWS_Make_Field_Menu 4;
-//----------------YUNO FIELD 08 - KIEL ACADEMY (Kiel Factory entrance)
-	setarray @pFmenuitems$[@Fi], "yuno_fild08 - Kiel Academy";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "yuno_fild08";
-	setarray @pFXcoords[@Fi], 225;
-	setarray @pFYcoords[@Fi], 202;
-
-	QWS_Make_Field_Menu 5;
-
-//----------------EINBROCH REGION FIELDS---------------------------
-//----------------EIN FIELD 01 - Mine Field (from yuno_fild05)
+//----------------EIN FIELD 01 - Mine Field
 	setarray @pFmenuitems$[@Fi], "ein_fild01 - Mine Field";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
@@ -1158,7 +1102,7 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 200;
 
 	QWS_Make_Field_Menu 6;
-//----------------EIN FIELD 02 - Mine Field (from yuno_fild04)
+//----------------EIN FIELD 02 - Mine Field
 	setarray @pFmenuitems$[@Fi], "ein_fild02 - Mine Field";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
@@ -1167,7 +1111,7 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 193;
 
 	QWS_Make_Field_Menu 7;
-//----------------EIN FIELD 03 - Einbroch Field (D=2 from Einbroch)
+//----------------EIN FIELD 03 - Einbroch Field
 	setarray @pFmenuitems$[@Fi], "ein_fild03 - Einbroch Field";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
@@ -1176,7 +1120,7 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 208;
 
 	QWS_Make_Field_Menu 8;
-//----------------EIN FIELD 05 - Einbroch Field (D=2 from Einbroch)
+//----------------EIN FIELD 05 - Einbroch Field
 	setarray @pFmenuitems$[@Fi], "ein_fild05 - Einbroch Field";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
@@ -1185,7 +1129,7 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 175;
 
 	QWS_Make_Field_Menu 9;
-//----------------EIN FIELD 06 - Einbroch Field (from yuno_fild04/07)
+//----------------EIN FIELD 06 - Goat Valley
 	setarray @pFmenuitems$[@Fi], "ein_fild06 - Goat Valley";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
@@ -1194,7 +1138,7 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 145;
 
 	QWS_Make_Field_Menu 10;
-//----------------EIN FIELD 07 - Einbroch Field (D=3 from Einbech)
+//----------------EIN FIELD 07 - Metaling Plains
 	setarray @pFmenuitems$[@Fi], "ein_fild07 - Metaling Plains";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
@@ -1203,7 +1147,7 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 225;
 
 	QWS_Make_Field_Menu 11;
-//----------------EIN FIELD 10 - Einbech Field (D=2 from Einbech)
+//----------------EIN FIELD 10 - Porcellio Plains
 	setarray @pFmenuitems$[@Fi], "ein_fild10 - Porcellio Plains";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
@@ -1212,92 +1156,7 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 190;
 
 	QWS_Make_Field_Menu 12;
-
-//----------------RACHEL REGION FIELDS-----------------------------
-//----------------RA FIELD 07 - Rachel Field (D=2 from Rachel)
-	setarray @pFmenuitems$[@Fi], "ra_fild07 - Roween Plains";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ra_fild07";
-	setarray @pFXcoords[@Fi], 182;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 13;
-//----------------RA FIELD 08 - Rachel Field (D=2 from Rachel)
-	setarray @pFmenuitems$[@Fi], "ra_fild08 - Stapo Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ra_fild08";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 14;
-//----------------RA FIELD 10 - Rachel Field (D=2 from Rachel)
-	setarray @pFmenuitems$[@Fi], "ra_fild10 - Galion Plains";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ra_fild10";
-	setarray @pFXcoords[@Fi], 248;
-	setarray @pFYcoords[@Fi], 98;
-
-	QWS_Make_Field_Menu 15;
-//----------------RA FIELD 13 - Rachel Field (D=2 from Rachel)
-	setarray @pFmenuitems$[@Fi], "ra_fild13 - Border Post";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ra_fild13";
-	setarray @pFXcoords[@Fi], 39;
-	setarray @pFYcoords[@Fi], 301;
-
-	QWS_Make_Field_Menu 16;
-//----------------RA FIELD 02 - Rachel Field (D=3 from Rachel)
-	setarray @pFmenuitems$[@Fi], "ra_fild02 - Muscipular Valley";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ra_fild02";
-	setarray @pFXcoords[@Fi], 252;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 17;
-//----------------RA FIELD 09 - Rachel Field (D=3 from Rachel)
-	setarray @pFmenuitems$[@Fi], "ra_fild09 - Drosera Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ra_fild09";
-	setarray @pFXcoords[@Fi], 152;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 18;
-
-//----------------HUGEL REGION FIELDS------------------------------
-//----------------HU FIELD 05 - Abyss Lake Entrance (D=2)
-	setarray @pFmenuitems$[@Fi], "hu_fild05 - Abyss Lake Ent.";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "hu_fild05";
-	setarray @pFXcoords[@Fi], 165;
-	setarray @pFYcoords[@Fi], 310;
-
-	QWS_Make_Field_Menu 19;
-//----------------HU FIELD 03 - Hugel Field (D=3)
-	setarray @pFmenuitems$[@Fi], "hu_fild03 - Grove Forest";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "hu_fild03";
-	setarray @pFXcoords[@Fi], 182;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 20;
-//----------------HU FIELD 04 - Hugel Field (D=3)
-	setarray @pFmenuitems$[@Fi], "hu_fild04 - Petite Valley";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "hu_fild04";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 22;
-//----------------HU FIELD 01 - Thanatos Tower Entrance (D=3)
+//----------------HU FIELD 01 - Thanatos Tower
 	setarray @pFmenuitems$[@Fi], "hu_fild01 - Thanatos Tower";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
@@ -1306,72 +1165,34 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 154;
 
 	QWS_Make_Field_Menu 23;
-
-//----------------VEINS REGION FIELDS------------------------------
-//----------------VE FIELD 03 - Thor Volcano Entrance (D=2)
-	setarray @pFmenuitems$[@Fi], "ve_fild03 - Thor Volcano";
+//----------------HU FIELD 03 - Grove Forest
+	setarray @pFmenuitems$[@Fi], "hu_fild03 - Grove Forest";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
-	setarray @pFmap$[@Fi], "ve_fild03";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 150;
-
-	QWS_Make_Field_Menu 24;
-//----------------VE FIELD 04 - Veins Field (D=2)
-	setarray @pFmenuitems$[@Fi], "ve_fild04 - Magma Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ve_fild04";
-	setarray @pFXcoords[@Fi], 122;
-	setarray @pFYcoords[@Fi], 150;
-
-	QWS_Make_Field_Menu 25;
-//----------------VE FIELD 05 - Veins Field (D=2)
-	setarray @pFmenuitems$[@Fi], "ve_fild05 - Kasa Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ve_fild05";
-	setarray @pFXcoords[@Fi], 282;
+	setarray @pFmap$[@Fi], "hu_fild03";
+	setarray @pFXcoords[@Fi], 182;
 	setarray @pFYcoords[@Fi], 200;
 
-	QWS_Make_Field_Menu 26;
-//----------------VE FIELD 01 - Veins Field (D=3)
-	setarray @pFmenuitems$[@Fi], "ve_fild01 - Gryphon Field";
+	QWS_Make_Field_Menu 20;
+//----------------HU FIELD 04 - Petite Valley
+	setarray @pFmenuitems$[@Fi], "hu_fild04 - Petite Valley";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
-	setarray @pFmap$[@Fi], "ve_fild01";
+	setarray @pFmap$[@Fi], "hu_fild04";
 	setarray @pFXcoords[@Fi], 202;
 	setarray @pFYcoords[@Fi], 200;
 
-	QWS_Make_Field_Menu 27;
-//----------------VE FIELD 02 - Veins Field (D=3)
-	setarray @pFmenuitems$[@Fi], "ve_fild02 - Imp Field";
+	QWS_Make_Field_Menu 22;
+//----------------HU FIELD 05 - Abyss Lake Ent.
+	setarray @pFmenuitems$[@Fi], "hu_fild05 - Abyss Lake Ent.";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
-	setarray @pFmap$[@Fi], "ve_fild02";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
+	setarray @pFmap$[@Fi], "hu_fild05";
+	setarray @pFXcoords[@Fi], 165;
+	setarray @pFYcoords[@Fi], 310;
 
-	QWS_Make_Field_Menu 28;
-//----------------RA FIELD 04 - Rachel Field (D=3+ from Rachel)
-	setarray @pFmenuitems$[@Fi], "ra_fild04 - Roween Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ra_fild04";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 29;
-//----------------RA FIELD 06 - Rachel Field (D=4+ from Rachel)
-	setarray @pFmenuitems$[@Fi], "ra_fild06 - Drosera Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ra_fild06";
-	setarray @pFXcoords[@Fi], 217;
-	setarray @pFYcoords[@Fi], 198;
-
-	QWS_Make_Field_Menu 30;
-//----------------HU FIELD 07 - Hugel Field (D=3+)
+	QWS_Make_Field_Menu 19;
+//----------------HU FIELD 07 - Petite Canyon
 	setarray @pFmenuitems$[@Fi], "hu_fild07 - Petite Canyon";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
@@ -1380,6 +1201,177 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 98;
 
 	QWS_Make_Field_Menu 31;
+//----------------RA FIELD 02 - Muscipular Valley
+	setarray @pFmenuitems$[@Fi], "ra_fild02 - Muscipular Valley";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild02";
+	setarray @pFXcoords[@Fi], 252;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 17;
+//----------------RA FIELD 04 - Roween Field
+	setarray @pFmenuitems$[@Fi], "ra_fild04 - Roween Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild04";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 29;
+//----------------RA FIELD 06 - Drosera Field
+	setarray @pFmenuitems$[@Fi], "ra_fild06 - Drosera Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild06";
+	setarray @pFXcoords[@Fi], 217;
+	setarray @pFYcoords[@Fi], 198;
+
+	QWS_Make_Field_Menu 30;
+//----------------RA FIELD 07 - Roween Plains
+	setarray @pFmenuitems$[@Fi], "ra_fild07 - Roween Plains";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild07";
+	setarray @pFXcoords[@Fi], 182;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 13;
+//----------------RA FIELD 08 - Stapo Field
+	setarray @pFmenuitems$[@Fi], "ra_fild08 - Stapo Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild08";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 14;
+//----------------RA FIELD 09 - Drosera Field
+	setarray @pFmenuitems$[@Fi], "ra_fild09 - Drosera Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild09";
+	setarray @pFXcoords[@Fi], 152;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 18;
+//----------------RA FIELD 10 - Galion Plains
+	setarray @pFmenuitems$[@Fi], "ra_fild10 - Galion Plains";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild10";
+	setarray @pFXcoords[@Fi], 248;
+	setarray @pFYcoords[@Fi], 98;
+
+	QWS_Make_Field_Menu 15;
+//----------------RA FIELD 13 - Border Post
+	setarray @pFmenuitems$[@Fi], "ra_fild13 - Border Post";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild13";
+	setarray @pFXcoords[@Fi], 39;
+	setarray @pFYcoords[@Fi], 301;
+
+	QWS_Make_Field_Menu 16;
+//----------------VE FIELD 01 - Gryphon Field
+	setarray @pFmenuitems$[@Fi], "ve_fild01 - Gryphon Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ve_fild01";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 27;
+//----------------VE FIELD 02 - Imp Field
+	setarray @pFmenuitems$[@Fi], "ve_fild02 - Imp Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ve_fild02";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 28;
+//----------------VE FIELD 03 - Thor Volcano
+	setarray @pFmenuitems$[@Fi], "ve_fild03 - Thor Volcano";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ve_fild03";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 150;
+
+	QWS_Make_Field_Menu 24;
+//----------------VE FIELD 04 - Magma Field
+	setarray @pFmenuitems$[@Fi], "ve_fild04 - Magma Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ve_fild04";
+	setarray @pFXcoords[@Fi], 122;
+	setarray @pFYcoords[@Fi], 150;
+
+	QWS_Make_Field_Menu 25;
+//----------------VE FIELD 05 - Kasa Field
+	setarray @pFmenuitems$[@Fi], "ve_fild05 - Kasa Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ve_fild05";
+	setarray @pFXcoords[@Fi], 282;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 26;
+//----------------YUNO FIELD 03 - El Mes Plateau
+	setarray @pFmenuitems$[@Fi], "yuno_fild03 - El Mes Plateau";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild03";
+	setarray @pFXcoords[@Fi], 182;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 0;
+//----------------YUNO FIELD 05 - El Mes Plateau
+	setarray @pFmenuitems$[@Fi], "yuno_fild05 - El Mes Plateau";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild05";
+	setarray @pFXcoords[@Fi], 238;
+	setarray @pFYcoords[@Fi], 235;
+
+	QWS_Make_Field_Menu 1;
+//----------------YUNO FIELD 07 - El Mes Gorge
+	setarray @pFmenuitems$[@Fi], "yuno_fild07 - El Mes Gorge";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild07";
+	setarray @pFXcoords[@Fi], 184;
+	setarray @pFYcoords[@Fi], 347;
+
+	QWS_Make_Field_Menu 4;
+//----------------YUNO FIELD 08 - Kiel Academy
+	setarray @pFmenuitems$[@Fi], "yuno_fild08 - Kiel Academy";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild08";
+	setarray @pFXcoords[@Fi], 225;
+	setarray @pFYcoords[@Fi], 202;
+
+	QWS_Make_Field_Menu 5;
+//----------------YUNO FIELD 09 - Guards Camp
+	setarray @pFmenuitems$[@Fi], "yuno_fild09 - Guards Camp";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild09";
+	setarray @pFXcoords[@Fi], 219;
+	setarray @pFYcoords[@Fi], 250;
+
+	QWS_Make_Field_Menu 2;
+//----------------YUNO FIELD 12 - Border Checkpoint
+	setarray @pFmenuitems$[@Fi], "yuno_fild12 - Border Checkpoint";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild12";
+	setarray @pFXcoords[@Fi], 201;
+	setarray @pFYcoords[@Fi], 302;
+
+	QWS_Make_Field_Menu 3;
 
 //----------------Exit option
 	set @Fmenulist$[@Fj], "Exit";
@@ -1460,6 +1452,20 @@ function	script	QWS_Darray	{
 	set @Dj,0;
 	set @Dref,0;
 
+//----------------ABBEY (NAMELESS ISLAND)
+	setarray @pDmenuitems$[@Di], "Abbey";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 4;
+
+	setarray @DGat$[@Dref], "nameless_n", "abbey01", "abbey02", "abbey03";
+	setarray @DLevelName$[@Dref], "Nameless Island", "Abbey 1F", "Abbey 2F", "Abbey 3F";
+	setarray @DXcoords[@Dref], 160, 51, 149, 119;
+	setarray @DYcoords[@Dref], 179, 15, 11, 8;
+	setarray @DDepth[@Dref], 0, 1, 2, 3;
+
+	QWS_Make_Dungeon_Menu 40;
+
 //----------------ABYSS LAKE
 	setarray @pDmenuitems$[@Di], "Abyss Lake";
 	setarray @pDprice[@Di], $QW_AW_PRICE;
@@ -1490,10 +1496,10 @@ function	script	QWS_Darray	{
 	QWS_Make_Dungeon_Menu 1;
 
 //----------------ANT HELL
-	setarray @pDmenuitems$[@Di], "Ant Hell Dungeon"; 
+	setarray @pDmenuitems$[@Di], "Ant Hell Dungeon";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
-	setarray @DLevels[2], 2;
+	setarray @DLevels[@Di], 2;
 
 	setarray @DGat$[@Dref], "anthell01", "anthell02";
 	setarray @DLevelName$[@Dref], "Level 1", "Level 2";
@@ -1507,7 +1513,7 @@ function	script	QWS_Darray	{
 	setarray @pDmenuitems$[@Di], "Ayothaya Dungeon";
 	setarray @pDprice[@Di], $QW_OW_PRICE;
 	setarray @pDfee$[@Di], "$QW_OW_FEE";
-	setarray @DLevels[3], 2;
+	setarray @DLevels[@Di], 2;
 
 	setarray @DGat$[@Dref], "ayo_dun01", "ayo_dun02";
 	setarray @DLevelName$[@Dref], "Level 1", "Level 2";
@@ -1517,11 +1523,25 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 3;
 
+//----------------BEACH DUNGEON
+	setarray @pDmenuitems$[@Di], "Beach Dungeon";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 3;
+
+	setarray @DGat$[@Dref], "beach_dun", "beach_dun2", "beach_dun3";
+	setarray @DLevelName$[@Dref], "Beach Cave", "Beach 2F", "Beach 3F";
+	setarray @DXcoords[@Dref], 266, 154, 23;
+	setarray @DYcoords[@Dref], 67, 25, 260;
+	setarray @DDepth[@Dref], 0, 1, 2;
+
+	QWS_Make_Dungeon_Menu 35;
+
 //----------------BYALAN
 	setarray @pDmenuitems$[@Di], "Byalan Dungeon";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
-	setarray @DLevels[4], 5;
+	setarray @DLevels[@Di], 5;
 
 	setarray @DGat$[@Dref], "iz_dun00", "iz_dun01", "iz_dun02", "iz_dun03", "iz_dun04";
 	setarray @DLevelName$[@Dref], "Level 1", "Level 2", "Level 3", "Level 4", "Level 5";
@@ -1535,7 +1555,7 @@ function	script	QWS_Darray	{
 	setarray @pDmenuitems$[@Di], "Clock Tower Dungeon";
 	setarray @pDprice[@Di], $QW_AW_PRICE;
 	setarray @pDfee$[@Di], "$QW_AW_FEE";
-	setarray @DLevels[5], 8;
+	setarray @DLevels[@Di], 8;
 
 	setarray @DGat$[@Dref], "c_tower1", "c_tower2", "c_tower3", "c_tower4", "alde_dun01", "alde_dun02", "alde_dun03", "alde_dun04";
 	setarray @DLevelName$[@Dref], "Clock Tower Level 1", "Clock Tower Level 2", "Clock Tower Level 3", "Clock Tower Level 4", "Basement 1F", "Basement 2F", "Basement 3F", "Basement 4F";
@@ -1550,7 +1570,7 @@ function	script	QWS_Darray	{
 	setarray @pDmenuitems$[@Di], "Coal Mine Dungeon";
 	setarray @pDprice[@Di], $QW_AW_PRICE;
 	setarray @pDfee$[@Di], "$QW_AW_FEE";
-	setarray @DLevels[6], 3;
+	setarray @DLevels[@Di], 3;
 
 	setarray @DGat$[@Dref], "mjo_dun01", "mjo_dun02", "mjo_dun03";
 	setarray @DLevelName$[@Dref], "Level 1", "Level 2", "Level 3";
@@ -1564,7 +1584,7 @@ function	script	QWS_Darray	{
 	setarray @pDmenuitems$[@Di], "Culvert Dungeon";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
-	setarray @DLevels[7], 4;
+	setarray @DLevels[@Di], 4;
 
 	setarray @DGat$[@Dref], "prt_sewb1", "prt_sewb2", "prt_sewb3", "prt_sewb4";
 	setarray @DLevelName$[@Dref], "Level 1", "Level 2", "Level 3", "Level 4";
@@ -1578,7 +1598,7 @@ function	script	QWS_Darray	{
 	setarray @pDmenuitems$[@Di], "Einbech Dungeon";
 	setarray @pDprice[@Di], $QW_AW_PRICE;
 	setarray @pDfee$[@Di], "$QW_AW_FEE";
-	setarray @DLevels[8], 2;
+	setarray @DLevels[@Di], 2;
 
 	setarray @DGat$[@Dref], "ein_dun01", "ein_dun02";
 	setarray @DLevelName$[@Dref], "Level 1", "Level 2";
@@ -1592,7 +1612,7 @@ function	script	QWS_Darray	{
 	setarray @pDmenuitems$[@Di], "Gefenia Dungeon";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
-	setarray @DLevels[9], 4;
+	setarray @DLevels[@Di], 4;
 
 	setarray @DGat$[@Dref], "gefenia01", "gefenia02", "gefenia03", "gefenia04";
 	setarray @DLevelName$[@Dref], "Level 1", "Level 2", "Level 3", "Level 4";
@@ -1616,20 +1636,6 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 10;
 
-//----------------GH ENTRANCE
-	setarray @pDmenuitems$[@Di], "GH Entrance";
-	setarray @pDprice[@Di], $QW_BW_PRICE;
-	setarray @pDfee$[@Di], "$QW_BW_FEE";
-	setarray @DLevels[@Di], 1;
-
-	setarray @DGat$[@Dref], "glast_01";
-	setarray @DLevelName$[@Dref], "Glast Heim Entrance";
-	setarray @DXcoords[@Dref], 370;
-	setarray @DYcoords[@Dref], 300;
-	setarray @DDepth[@Dref], 0;
-
-	QWS_Make_Dungeon_Menu 11;
-
 //----------------GH CASTLE
 	setarray @pDmenuitems$[@Di], "GH Castle";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
@@ -1644,19 +1650,19 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 29;
 
-//----------------GH ST. ABBEY
-	setarray @pDmenuitems$[@Di], "GH St. Abbey";
+//----------------GH CHIVALRY
+	setarray @pDmenuitems$[@Di], "GH Chivalry";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
-	setarray @DLevels[@Di], 1;
+	setarray @DLevels[@Di], 2;
 
-	setarray @DGat$[@Dref], "gl_church";
-	setarray @DLevelName$[@Dref], "St. Abbey";
-	setarray @DXcoords[@Dref], 156;
-	setarray @DYcoords[@Dref], 8;
-	setarray @DDepth[@Dref], 0;
+	setarray @DGat$[@Dref], "gl_knt01", "gl_knt02";
+	setarray @DLevelName$[@Dref], "Chivalry 1", "Chivalry 2";
+	setarray @DXcoords[@Dref], 150, 157;
+	setarray @DYcoords[@Dref], 10, 287;
+	setarray @DDepth[@Dref], 0, 1;
 
-	QWS_Make_Dungeon_Menu 41;
+	QWS_Make_Dungeon_Menu 31;
 
 //----------------GH CHURCHYARD
 	setarray @pDmenuitems$[@Di], "GH Churchyard";
@@ -1672,19 +1678,33 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 42;
 
-//----------------GH CHIVALRY
-	setarray @pDmenuitems$[@Di], "GH Chivalry";
+//----------------GH ENTRANCE
+	setarray @pDmenuitems$[@Di], "GH Entrance";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 1;
+
+	setarray @DGat$[@Dref], "glast_01";
+	setarray @DLevelName$[@Dref], "Glast Heim Entrance";
+	setarray @DXcoords[@Dref], 370;
+	setarray @DYcoords[@Dref], 300;
+	setarray @DDepth[@Dref], 0;
+
+	QWS_Make_Dungeon_Menu 11;
+
+//----------------GH LOWEST CAVE
+	setarray @pDmenuitems$[@Di], "GH Lowest Cave";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
 	setarray @DLevels[@Di], 2;
 
-	setarray @DGat$[@Dref], "gl_knt01", "gl_knt02";
-	setarray @DLevelName$[@Dref], "Chivalry 1", "Chivalry 2";
-	setarray @DXcoords[@Dref], 150, 157;
-	setarray @DYcoords[@Dref], 10, 287;
+	setarray @DGat$[@Dref], "gl_dun01", "gl_dun02";
+	setarray @DLevelName$[@Dref], "Lowest Cave 1", "Lowest Cave 2";
+	setarray @DXcoords[@Dref], 133, 224;
+	setarray @DYcoords[@Dref], 271, 274;
 	setarray @DDepth[@Dref], 0, 1;
 
-	QWS_Make_Dungeon_Menu 31;
+	QWS_Make_Dungeon_Menu 34;
 
 //----------------GH PRISON
 	setarray @pDmenuitems$[@Di], "GH Prison";
@@ -1714,33 +1734,19 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 33;
 
-//----------------GH LOWEST CAVE
-	setarray @pDmenuitems$[@Di], "GH Lowest Cave";
+//----------------GH ST. ABBEY
+	setarray @pDmenuitems$[@Di], "GH St. Abbey";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
-	setarray @DLevels[@Di], 2;
+	setarray @DLevels[@Di], 1;
 
-	setarray @DGat$[@Dref], "gl_dun01", "gl_dun02";
-	setarray @DLevelName$[@Dref], "Lowest Cave 1", "Lowest Cave 2";
-	setarray @DXcoords[@Dref], 133, 224;
-	setarray @DYcoords[@Dref], 271, 274;
-	setarray @DDepth[@Dref], 0, 1;
+	setarray @DGat$[@Dref], "gl_church";
+	setarray @DLevelName$[@Dref], "St. Abbey";
+	setarray @DXcoords[@Dref], 156;
+	setarray @DYcoords[@Dref], 8;
+	setarray @DDepth[@Dref], 0;
 
-	QWS_Make_Dungeon_Menu 34;
-
-//----------------KUNLUN DUNGEON
-	setarray @pDmenuitems$[@Di], "Kunlun Dungeon";
-	setarray @pDprice[@Di], $QW_OW_PRICE;
-	setarray @pDfee$[@Di], "$QW_OW_FEE";
-	setarray @DLevels[@Di], 3;
-
-	setarray @DGat$[@Dref], "gon_dun01", "gon_dun02", "gon_dun03";
-	setarray @DLevelName$[@Dref], "Level 1", "Level 2", "Level 3";
-	setarray @DXcoords[@Dref], 143, 17, 68;
-	setarray @DYcoords[@Dref], 59, 114, 9;
-	setarray @DDepth[@Dref], 0, 1, 2;
-
-	QWS_Make_Dungeon_Menu 12;
+	QWS_Make_Dungeon_Menu 41;
 
 //----------------HIDDEN DUNGEON
 	setarray @pDmenuitems$[@Di], "Hidden Dungeon";
@@ -1755,6 +1761,20 @@ function	script	QWS_Darray	{
 	setarray @DDepth[@Dref], 0, 1, 2;
 
 	QWS_Make_Dungeon_Menu 13;
+
+//----------------ICE DUNGEON
+	setarray @pDmenuitems$[@Di], "Ice Dungeon";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 3;
+
+	setarray @DGat$[@Dref], "ice_dun01", "ice_dun02", "ice_dun03";
+	setarray @DLevelName$[@Dref], "Ice Cave 1F", "Ice Cave 2F", "Ice Cave 3F";
+	setarray @DXcoords[@Dref], 157, 151, 149;
+	setarray @DYcoords[@Dref], 17, 139, 24;
+	setarray @DDepth[@Dref], 0, 1, 2;
+
+	QWS_Make_Dungeon_Menu 36;
 
 //----------------JUPEROS CAVE
 	setarray @pDmenuitems$[@Di], "Juperos Cave";
@@ -1784,6 +1804,20 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 28;
 
+//----------------KUNLUN DUNGEON
+	setarray @pDmenuitems$[@Di], "Kunlun Dungeon";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 3;
+
+	setarray @DGat$[@Dref], "gon_dun01", "gon_dun02", "gon_dun03";
+	setarray @DLevelName$[@Dref], "Level 1", "Level 2", "Level 3";
+	setarray @DXcoords[@Dref], 143, 17, 68;
+	setarray @DYcoords[@Dref], 59, 114, 9;
+	setarray @DDepth[@Dref], 0, 1, 2;
+
+	QWS_Make_Dungeon_Menu 12;
+
 //----------------LIGHTHALZEN BIO LAB
 	setarray @pDmenuitems$[@Di], "Lighthalzen Bio Lab";
 	setarray @pDprice[@Di], $QW_AW_PRICE;
@@ -1798,7 +1832,7 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 15;
 
-//----------------LOUYANG DUNGEON
+//----------------LUOYANG DUNGEON
 	setarray @pDmenuitems$[@Di], "Luoyang Dungeon";
 	setarray @pDprice[@Di], $QW_OW_PRICE;
 	setarray @pDfee$[@Di], "$QW_OW_FEE";
@@ -1825,6 +1859,20 @@ function	script	QWS_Darray	{
 	setarray @DDepth[@Dref], 0, 1;
 
 	QWS_Make_Dungeon_Menu 17;
+
+//----------------MOSCOVIA DUNGEON
+	setarray @pDmenuitems$[@Di], "Moscovia Dungeon";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 3;
+
+	setarray @DGat$[@Dref], "mosk_dun01", "mosk_dun02", "mosk_dun03";
+	setarray @DLevelName$[@Dref], "Forest 1F", "Forest 2F", "Forest 3F";
+	setarray @DXcoords[@Dref], 189, 165, 117;
+	setarray @DYcoords[@Dref], 45, 30, 36;
+	setarray @DDepth[@Dref], 0, 1, 2;
+
+	QWS_Make_Dungeon_Menu 38;
 
 //----------------ODIN TEMPLE
 	setarray @pDmenuitems$[@Di], "Odin Temple";
@@ -1882,6 +1930,20 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 21;
 
+//----------------RACHEL SANCTUARY
+	setarray @pDmenuitems$[@Di], "Rachel Sanctuary";
+	setarray @pDprice[@Di], $QW_OW_PRICE;
+	setarray @pDfee$[@Di], "$QW_OW_FEE";
+	setarray @DLevels[@Di], 5;
+
+	setarray @DGat$[@Dref], "ra_san01", "ra_san02", "ra_san03", "ra_san04", "ra_san05";
+	setarray @DLevelName$[@Dref], "Sanctuary Entrance", "Sanctuary East", "Sanctuary Central", "Sanctuary West", "Sanctuary Inner";
+	setarray @DXcoords[@Dref], 140, 213, 119, 119, 150;
+	setarray @DYcoords[@Dref], 75, 275, 283, 110, 145;
+	setarray @DDepth[@Dref], 0, 1, 1, 1, 2;
+
+	QWS_Make_Dungeon_Menu 39;
+
 //----------------SPHINX
 	setarray @pDmenuitems$[@Di], "Sphinx Dungeon";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
@@ -1924,76 +1986,6 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 24;
 
-//----------------TOY FACTORY
-	setarray @pDmenuitems$[@Di], "Toy Factory Dungeon";
-	setarray @pDprice[@Di], $QW_AW_PRICE;
-	setarray @pDfee$[@Di], "$QW_AW_FEE";
-	setarray @DLevels[@Di], 2;
-
-	setarray @DGat$[@Dref], "xmas_dun01", "xmas_dun02";
-	setarray @DLevelName$[@Dref], "Factory Warehouse", "Classifying Room";
-	setarray @DXcoords[@Dref], 205, 129;
-	setarray @DYcoords[@Dref], 16, 133;
-	setarray @DDepth[@Dref], 0, 1;
-
-	QWS_Make_Dungeon_Menu 25;
-
-//----------------TURTLE ISTLAND
-	setarray @pDmenuitems$[@Di], "Turtle Island Dungeon";
-	setarray @pDprice[@Di], $QW_AW_PRICE;
-	setarray @pDfee$[@Di], "$QW_AW_FEE";
-	setarray @DLevels[@Di], 4;
-
-	setarray @DGat$[@Dref], "tur_dun01", "tur_dun02", "tur_dun03", "tur_dun04";
-	setarray @DLevelName$[@Dref], "Outside", "Level 1", "Level 2", "Level 3";
-	setarray @DXcoords[@Dref], 161, 148, 132, 100;
-	setarray @DYcoords[@Dref], 34, 256, 190, 192;
-	setarray @DDepth[@Dref], 0, 0, 1, 2;
-
-	QWS_Make_Dungeon_Menu 26;
-
-//----------------UMBALA
-	setarray @pDmenuitems$[@Di], "Umbala Dungeon";
-	setarray @pDprice[@Di], $QW_OW_PRICE;
-	setarray @pDfee$[@Di], "$QW_OW_FEE";
-	setarray @DLevels[@Di], 3;
-
-	setarray @DGat$[@Dref], "um_dun01", "um_dun02", "yggdrasil01";
-	setarray @DLevelName$[@Dref], "Carpenter's Shop in The Tree", "Passage to a Foreign World", "Hvergelmir's Fountain";
-	setarray @DXcoords[@Dref], 205, 48, 40;
-	setarray @DYcoords[@Dref], 26, 30, 63;
-	setarray @DDepth[@Dref], 0, 1, 2;
-
-	QWS_Make_Dungeon_Menu 27;
-
-//----------------BEACH DUNGEON
-	setarray @pDmenuitems$[@Di], "Beach Dungeon";
-	setarray @pDprice[@Di], $QW_OW_PRICE;
-	setarray @pDfee$[@Di], "$QW_OW_FEE";
-	setarray @DLevels[@Di], 3;
-
-	setarray @DGat$[@Dref], "beach_dun", "beach_dun2", "beach_dun3";
-	setarray @DLevelName$[@Dref], "Beach Cave", "Beach 2F", "Beach 3F";
-	setarray @DXcoords[@Dref], 266, 154, 23;
-	setarray @DYcoords[@Dref], 67, 25, 260;
-	setarray @DDepth[@Dref], 0, 1, 2;
-
-	QWS_Make_Dungeon_Menu 35;
-
-//----------------ICE DUNGEON
-	setarray @pDmenuitems$[@Di], "Ice Dungeon";
-	setarray @pDprice[@Di], $QW_OW_PRICE;
-	setarray @pDfee$[@Di], "$QW_OW_FEE";
-	setarray @DLevels[@Di], 3;
-
-	setarray @DGat$[@Dref], "ice_dun01", "ice_dun02", "ice_dun03";
-	setarray @DLevelName$[@Dref], "Ice Cave 1F", "Ice Cave 2F", "Ice Cave 3F";
-	setarray @DXcoords[@Dref], 157, 151, 149;
-	setarray @DYcoords[@Dref], 17, 139, 24;
-	setarray @DDepth[@Dref], 0, 1, 2;
-
-	QWS_Make_Dungeon_Menu 36;
-
 //----------------THOR VOLCANO
 	setarray @pDmenuitems$[@Di], "Thor Volcano";
 	setarray @pDprice[@Di], $QW_OW_PRICE;
@@ -2008,47 +2000,47 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 37;
 
-//----------------MOSCOVIA DUNGEON
-	setarray @pDmenuitems$[@Di], "Moscovia Dungeon";
+//----------------TOY FACTORY
+	setarray @pDmenuitems$[@Di], "Toy Factory Dungeon";
+	setarray @pDprice[@Di], $QW_AW_PRICE;
+	setarray @pDfee$[@Di], "$QW_AW_FEE";
+	setarray @DLevels[@Di], 2;
+
+	setarray @DGat$[@Dref], "xmas_dun01", "xmas_dun02";
+	setarray @DLevelName$[@Dref], "Factory Warehouse", "Classifying Room";
+	setarray @DXcoords[@Dref], 205, 129;
+	setarray @DYcoords[@Dref], 16, 133;
+	setarray @DDepth[@Dref], 0, 1;
+
+	QWS_Make_Dungeon_Menu 25;
+
+//----------------TURTLE ISLAND
+	setarray @pDmenuitems$[@Di], "Turtle Island Dungeon";
+	setarray @pDprice[@Di], $QW_AW_PRICE;
+	setarray @pDfee$[@Di], "$QW_AW_FEE";
+	setarray @DLevels[@Di], 4;
+
+	setarray @DGat$[@Dref], "tur_dun01", "tur_dun02", "tur_dun03", "tur_dun04";
+	setarray @DLevelName$[@Dref], "Outside", "Level 1", "Level 2", "Level 3";
+	setarray @DXcoords[@Dref], 161, 148, 132, 100;
+	setarray @DYcoords[@Dref], 34, 256, 190, 192;
+	setarray @DDepth[@Dref], 0, 0, 1, 2;
+
+	QWS_Make_Dungeon_Menu 26;
+
+//----------------UMBALA DUNGEON
+	setarray @pDmenuitems$[@Di], "Umbala Dungeon";
 	setarray @pDprice[@Di], $QW_OW_PRICE;
 	setarray @pDfee$[@Di], "$QW_OW_FEE";
 	setarray @DLevels[@Di], 3;
 
-	setarray @DGat$[@Dref], "mosk_dun01", "mosk_dun02", "mosk_dun03";
-	setarray @DLevelName$[@Dref], "Forest 1F", "Forest 2F", "Forest 3F";
-	setarray @DXcoords[@Dref], 189, 165, 117;
-	setarray @DYcoords[@Dref], 45, 30, 36;
+	setarray @DGat$[@Dref], "um_dun01", "um_dun02", "yggdrasil01";
+	setarray @DLevelName$[@Dref], "Carpenter's Shop in The Tree", "Passage to a Foreign World", "Hvergelmir's Fountain";
+	setarray @DXcoords[@Dref], 205, 48, 40;
+	setarray @DYcoords[@Dref], 26, 30, 63;
 	setarray @DDepth[@Dref], 0, 1, 2;
 
-	QWS_Make_Dungeon_Menu 38;
-
-//----------------RACHEL SANCTUARY
-	setarray @pDmenuitems$[@Di], "Rachel Sanctuary";
-	setarray @pDprice[@Di], $QW_OW_PRICE;
-	setarray @pDfee$[@Di], "$QW_OW_FEE";
-	setarray @DLevels[@Di], 5;
-
-	setarray @DGat$[@Dref], "ra_san01", "ra_san02", "ra_san03", "ra_san04", "ra_san05";
-	setarray @DLevelName$[@Dref], "Sanctuary Entrance", "Sanctuary East", "Sanctuary Central", "Sanctuary West", "Sanctuary Inner";
-	setarray @DXcoords[@Dref], 140, 213, 119, 119, 150;
-	setarray @DYcoords[@Dref], 75, 275, 283, 110, 145;
-	setarray @DDepth[@Dref], 0, 1, 1, 1, 2;
-
-	QWS_Make_Dungeon_Menu 39;
-
-//----------------ABBEY (NAMELESS ISLAND)
-	setarray @pDmenuitems$[@Di], "Abbey";
-	setarray @pDprice[@Di], $QW_OW_PRICE;
-	setarray @pDfee$[@Di], "$QW_OW_FEE";
-	setarray @DLevels[@Di], 4;
-
-	setarray @DGat$[@Dref], "nameless_n", "abbey01", "abbey02", "abbey03";
-	setarray @DLevelName$[@Dref], "Nameless Island", "Abbey 1F", "Abbey 2F", "Abbey 3F";
-	setarray @DXcoords[@Dref], 160, 51, 149, 119;
-	setarray @DYcoords[@Dref], 179, 15, 11, 8;
-	setarray @DDepth[@Dref], 0, 1, 2, 3;
-
-	QWS_Make_Dungeon_Menu 40;
+	QWS_Make_Dungeon_Menu 27;
 
 //----------------Cancel
 	setarray @pDmenuitems$[@Di], "Cancel";
