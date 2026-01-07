@@ -836,8 +836,11 @@ OnInit:
 		// Rachel Sanctuary (Lv 53-65)
 		"ra_san01", "ra_san03",
 		// Additional GH maps (separated regions)
-		"gl_church", "gl_prison1", "gl_sew01", "gl_sew02", "gl_dun01", "gl_dun02";
-	.MapCount = 78;  // Total maps in .Maps$ array
+		"gl_church", "gl_prison1", "gl_sew01", "gl_sew02", "gl_dun01", "gl_dun02",
+		// Yuno/Juno Fields (Lv 18-55)
+		"yuno_fild01", "yuno_fild02", "yuno_fild03", "yuno_fild04", "yuno_fild05", "yuno_fild06",
+		"yuno_fild07", "yuno_fild08", "yuno_fild09", "yuno_fild10", "yuno_fild11", "yuno_fild12";
+	.MapCount = 90;  // Total maps in .Maps$ array
 
 	// ==================== MAP NAMES ====================
 	// Beginner Fields
@@ -941,6 +944,19 @@ OnInit:
 	set .MapName_gl_sew02$, "GH Culvert F2";
 	set .MapName_gl_dun01$, "GH Lowest Cave F1";
 	set .MapName_gl_dun02$, "GH Lowest Cave F2";
+	// Yuno/Juno Fields
+	set .MapName_yuno_fild01$, "Juno Field (Border)";
+	set .MapName_yuno_fild02$, "Juno Field (Kiel Cottage)";
+	set .MapName_yuno_fild03$, "El Mes Plateau";
+	set .MapName_yuno_fild04$, "El Mes Plateau";
+	set .MapName_yuno_fild05$, "El Mes Plateau";
+	set .MapName_yuno_fild06$, "Juno Field";
+	set .MapName_yuno_fild07$, "El Mes Gorge";
+	set .MapName_yuno_fild08$, "Juno Field (Academy)";
+	set .MapName_yuno_fild09$, "Juno Field (Guards Camp)";
+	set .MapName_yuno_fild10$, "Juno Field";
+	set .MapName_yuno_fild11$, "Juno Field";
+	set .MapName_yuno_fild12$, "Juno Field (Border)";
 
 	// ==================== MONSTER LISTS ====================
 	// Format: setarray .Mobs_<mapname>[0], <mob_id1>, <mob_id2>, ...
@@ -1241,6 +1257,55 @@ OnInit:
 	// gl_dun02 - GH Lowest Cave F2 (Lv 48-55)
 	setarray .Mobs_gl_dun02[0], 1310, 1253;  // Majoruros (Lv 55), Gargoyle (Lv 48)
 	set .Mobs_gl_dun02_count, 2;
+
+	// ==================== YUNO/JUNO FIELDS ====================
+	// yuno_fild01 - Border Posts (Lv 11-29)
+	setarray .Mobs_yuno_fild01[0], 1114, 1031;  // Dustiness (Lv 29), Poporing (Lv 11)
+	set .Mobs_yuno_fild01_count, 2;
+
+	// yuno_fild02 - Kiel Cottage (Lv 18-47)
+	setarray .Mobs_yuno_fild02[0], 1494, 1128, 1114;  // Beetle King (Lv 47), Horn (Lv 18), Dustiness (Lv 29)
+	set .Mobs_yuno_fild02_count, 3;
+
+	// yuno_fild03 - El Mes Plateau (Lv 1-36)
+	setarray .Mobs_yuno_fild03[0], 1031, 1113, 1368;  // Poporing (Lv 11), Drops (Lv 3), Geographer (Lv 36)
+	set .Mobs_yuno_fild03_count, 3;
+
+	// yuno_fild04 - El Mes Plateau (Lv 1-4)
+	setarray .Mobs_yuno_fild04[0], 1002, 1113, 1009;  // Poring (Lv 1), Drops (Lv 3), Condor (Lv 4)
+	set .Mobs_yuno_fild04_count, 3;
+
+	// yuno_fild05 - El Mes Plateau (Lv 18-35)
+	setarray .Mobs_yuno_fild05[0], 1162, 1114, 1128;  // Rafflesia (Lv 35), Dustiness (Lv 29), Horn (Lv 18)
+	set .Mobs_yuno_fild05_count, 3;
+
+	// yuno_fild06 - Juno Field (Lv 43-54)
+	setarray .Mobs_yuno_fild06[0], 1386, 1372;  // Sleeper (Lv 54), Goat (Lv 43)
+	set .Mobs_yuno_fild06_count, 2;
+
+	// yuno_fild07 - El Mes Gorge (Lv 36-57)
+	setarray .Mobs_yuno_fild07[0], 1376, 1368, 1380;  // Harpy (Lv 57), Geographer (Lv 36), Driller (Lv 42)
+	set .Mobs_yuno_fild07_count, 3;
+
+	// yuno_fild08 - Kiel Academy (Lv 36-50)
+	setarray .Mobs_yuno_fild08[0], 1369, 1368;  // Grand Peco (Lv 50), Geographer (Lv 36)
+	set .Mobs_yuno_fild08_count, 2;
+
+	// yuno_fild09 - Guards Camp (Lv 18-47)
+	setarray .Mobs_yuno_fild09[0], 1494, 1128, 1174;  // Beetle King (Lv 47), Horn (Lv 18), Stainer (Lv 19)
+	set .Mobs_yuno_fild09_count, 3;
+
+	// yuno_fild10 - Juno Field (Lv 19-47)
+	setarray .Mobs_yuno_fild10[0], 1494, 1368;  // Beetle King (Lv 47), Geographer (Lv 36)
+	set .Mobs_yuno_fild10_count, 2;
+
+	// yuno_fild11 - Juno Field (Lv 36-54)
+	setarray .Mobs_yuno_fild11[0], 1386, 1368;  // Sleeper (Lv 54), Geographer (Lv 36)
+	set .Mobs_yuno_fild11_count, 2;
+
+	// yuno_fild12 - Border Checkpoint (Lv 11-39)
+	setarray .Mobs_yuno_fild12[0], 1114, 1378, 1031;  // Dustiness (Lv 29), Demon Pungus (Lv 39), Poporing (Lv 11)
+	set .Mobs_yuno_fild12_count, 3;
 
 	// Mark initialization complete
 	.Initialized = 1;
@@ -1839,6 +1904,55 @@ gl_dun01,140,250,4	duplicate(BountyBoard)	Bounty Board#gl_dun01_2	4_BOARD3
 // gl_dun02 - GH Lowest Cave F2 (entry from gl_dun01)
 gl_dun02,220,270,4	duplicate(BountyBoard)	Bounty Board#gl_dun02	4_BOARD3
 gl_dun02,140,140,4	duplicate(BountyBoard)	Bounty Board#gl_dun02_2	4_BOARD3
+
+// ==================== YUNO/JUNO FIELDS ====================
+// Town connections: Yuno city → fild04, Aldebaran → fild01
+
+// yuno_fild01 - Border Posts (entry from Aldebaran at 208,17)
+yuno_fild01,210,25,4	duplicate(BountyBoard)	Bounty Board#yuno_fild01	4_BOARD3
+yuno_fild01,174,326,4	duplicate(BountyBoard)	Bounty Board#yuno_fild01_2	4_BOARD3
+
+// yuno_fild02 - Kiel Cottage (town direction: fild03 at 20,337)
+yuno_fild02,25,332,4	duplicate(BountyBoard)	Bounty Board#yuno_fild02	4_BOARD3
+yuno_fild02,181,211,4	duplicate(BountyBoard)	Bounty Board#yuno_fild02_2	4_BOARD3
+
+// yuno_fild03 - El Mes Plateau (town direction: fild04 at 375,90)
+yuno_fild03,184,23,4	duplicate(BountyBoard)	Bounty Board#yuno_fild03	4_BOARD3
+yuno_fild03,180,200,4	duplicate(BountyBoard)	Bounty Board#yuno_fild03_2	4_BOARD3
+
+// yuno_fild04 - El Mes Plateau (entry from Yuno city at 231,288)
+yuno_fild04,235,282,4	duplicate(BountyBoard)	Bounty Board#yuno_fild04	4_BOARD3
+yuno_fild04,275,64,4	duplicate(BountyBoard)	Bounty Board#yuno_fild04_2	4_BOARD3
+
+// yuno_fild05 - El Mes Plateau (town direction: fild04 at 59,28)
+yuno_fild05,65,35,4	duplicate(BountyBoard)	Bounty Board#yuno_fild05	4_BOARD3
+yuno_fild05,236,235,4	duplicate(BountyBoard)	Bounty Board#yuno_fild05_2	4_BOARD3
+
+// yuno_fild06 - Juno Field (town direction: fild05 at 42,319)
+yuno_fild06,48,324,4	duplicate(BountyBoard)	Bounty Board#yuno_fild06	4_BOARD3
+yuno_fild06,225,284,4	duplicate(BountyBoard)	Bounty Board#yuno_fild06_2	4_BOARD3
+
+// yuno_fild07 - El Mes Gorge (town direction: fild03 at 179,352)
+yuno_fild07,182,347,4	duplicate(BountyBoard)	Bounty Board#yuno_fild07	4_BOARD3
+
+// yuno_fild08 - Kiel Academy (town direction: fild02 at 74,374)
+yuno_fild08,78,369,4	duplicate(BountyBoard)	Bounty Board#yuno_fild08	4_BOARD3
+yuno_fild08,223,202,4	duplicate(BountyBoard)	Bounty Board#yuno_fild08_2	4_BOARD3
+
+// yuno_fild09 - Guards Camp (town direction: fild01 at 70,17)
+yuno_fild09,75,24,4	duplicate(BountyBoard)	Bounty Board#yuno_fild09	4_BOARD3
+yuno_fild09,217,250,4	duplicate(BountyBoard)	Bounty Board#yuno_fild09_2	4_BOARD3
+
+// yuno_fild10 - Juno Field (isolated - no warps found)
+yuno_fild10,46,184,4	duplicate(BountyBoard)	Bounty Board#yuno_fild10	4_BOARD3
+
+// yuno_fild11 - Juno Field (town direction: fild07 at 92,371)
+yuno_fild11,89,365,4	duplicate(BountyBoard)	Bounty Board#yuno_fild11	4_BOARD3
+yuno_fild11,225,283,4	duplicate(BountyBoard)	Bounty Board#yuno_fild11_2	4_BOARD3
+
+// yuno_fild12 - Border Checkpoint (town direction: fild01 at 373,239)
+yuno_fild12,368,244,4	duplicate(BountyBoard)	Bounty Board#yuno_fild12	4_BOARD3
+yuno_fild12,199,302,4	duplicate(BountyBoard)	Bounty Board#yuno_fild12_2	4_BOARD3
 
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
