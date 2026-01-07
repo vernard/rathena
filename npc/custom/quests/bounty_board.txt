@@ -976,7 +976,7 @@ OnInit:
 	setarray .Mobs_pay_fild06[0], 1024, 1077;  // Wormtail (1024), Poison Spore (1077)
 	set .Mobs_pay_fild06_count, 2;
 
-	setarray .Mobs_moc_fild01[0], 1014, 1107, 1166;  // Spore (1014), Baby Desert Wolf (1107), Savage (1166)
+	setarray .Mobs_moc_fild01[0], 1107, 1113, 1002;  // Baby Desert Wolf (Lv 9), Drops (Lv 3), Poring (Lv 1)
 	set .Mobs_moc_fild01_count, 3;
 
 	setarray .Mobs_moc_fild02[0], 1019, 1113;  // Peco Peco (Lv 19), Drops (Lv 3)
@@ -1598,7 +1598,7 @@ pay_dun00,100,100,4	duplicate(BountyBoard)	Bounty Board#pay_dun00_2	4_BOARD3
 // Low-Mid Fields (Lv 15-35)
 pay_fild06,152,198,4	duplicate(BountyBoard)	Bounty Board#pay_fild06	4_BOARD3
 pay_fild06,200,100,4	duplicate(BountyBoard)	Bounty Board#pay_fild06_2	4_BOARD3
-moc_fild01,24,240,4	duplicate(BountyBoard)	Bounty Board#moc_fild01	4_BOARD3
+moc_fild01,80,240,4	duplicate(BountyBoard)	Bounty Board#moc_fild01	4_BOARD3
 moc_fild01,180,180,4	duplicate(BountyBoard)	Bounty Board#moc_fild01_2	4_BOARD3
 moc_fild02,69,340,4	duplicate(BountyBoard)	Bounty Board#moc_fild02	4_BOARD3
 moc_fild02,200,200,4	duplicate(BountyBoard)	Bounty Board#moc_fild02_2	4_BOARD3
