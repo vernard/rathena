@@ -1307,6 +1307,158 @@ OnInit:
 	setarray .Mobs_yuno_fild12[0], 1114, 1378, 1031;  // Dustiness (Lv 29), Demon Pungus (Lv 39), Poporing (Lv 11)
 	set .Mobs_yuno_fild12_count, 3;
 
+	// ==================== EINBROCH REGION FIELDS ====================
+	// ein_fild01 - Mine Field (Lv 43-56) - accessed from yuno_fild05
+	setarray .Mobs_ein_fild01[0], 1199, 1378;  // Punk (Lv 43), Demon Pungus (Lv 56)
+	set .Mobs_ein_fild01_count, 2;
+
+	// ein_fild02 - Mine Field (Lv 52-69) - accessed from yuno_fild04
+	setarray .Mobs_ein_fild02[0], 1380, 1618;  // Driller (Lv 52), Ungoliant (Lv 69)
+	set .Mobs_ein_fild02_count, 2;
+
+	// ein_fild03 - Einbroch Field (Lv 26-56)
+	setarray .Mobs_ein_fild03[0], 1613, 1628, 1368;  // Metaling (Lv 26), Holden (Lv 36), Geographer (Lv 56)
+	set .Mobs_ein_fild03_count, 3;
+
+	// ein_fild04 - Einbroch Field (Lv 26-56) - town exit
+	setarray .Mobs_ein_fild04[0], 1613, 1628, 1368;  // Metaling (Lv 26), Holden (Lv 36), Geographer (Lv 56)
+	set .Mobs_ein_fild04_count, 3;
+
+	// ein_fild05 - Einbroch Field (Lv 23-56)
+	setarray .Mobs_ein_fild05[0], 1627, 1615, 1614;  // Anopheles (Lv 23), Obsidian (Lv 50), Mineral (Lv 56)
+	set .Mobs_ein_fild05_count, 3;
+
+	// ein_fild06 - Einbroch Field (Lv 69-70) - accessed from yuno_fild04/07
+	setarray .Mobs_ein_fild06[0], 1372, 1376;  // Goat (Lv 69), Harpy (Lv 70)
+	set .Mobs_ein_fild06_count, 2;
+
+	// ein_fild07 - Einbroch Field (Lv 26-69)
+	setarray .Mobs_ein_fild07[0], 1613, 1368, 1618;  // Metaling (Lv 26), Geographer (Lv 56), Ungoliant (Lv 69)
+	set .Mobs_ein_fild07_count, 3;
+
+	// ein_fild08 - Einbroch Field (Lv 26-28) - town exit
+	setarray .Mobs_ein_fild08[0], 1613, 1619;  // Metaling (Lv 26), Porcellio (Lv 28)
+	set .Mobs_ein_fild08_count, 2;
+
+	// ein_fild09 - Einbech Field (Lv 26-28) - town exit
+	setarray .Mobs_ein_fild09[0], 1613, 1619;  // Metaling (Lv 26), Porcellio (Lv 28)
+	set .Mobs_ein_fild09_count, 2;
+
+	// ein_fild10 - Einbech Field (Lv 26-56)
+	setarray .Mobs_ein_fild10[0], 1619, 1118, 1368;  // Porcellio (Lv 28), Flora (Lv 26), Geographer (Lv 56)
+	set .Mobs_ein_fild10_count, 3;
+
+	// ==================== RACHEL REGION FIELDS ====================
+	// ra_fild01 - Rachel Field (Lv 56-72)
+	setarray .Mobs_ra_fild01[0], 1780, 1781, 1259;  // Muscipular (Lv 57), Drosera (Lv 46), Gryphon (Lv 72)
+	set .Mobs_ra_fild01_count, 3;
+
+	// ra_fild02 - Rachel Field (Lv 44-57)
+	setarray .Mobs_ra_fild02[0], 1783, 1780, 1781;  // Galion (Lv 44), Muscipular (Lv 57), Drosera (Lv 46)
+	set .Mobs_ra_fild02_count, 3;
+
+	// ra_fild03 - Rachel Field (Lv 23-46)
+	setarray .Mobs_ra_fild03[0], 1783, 1781, 1782;  // Galion (Lv 44), Drosera (Lv 46), Roween (Lv 31)
+	set .Mobs_ra_fild03_count, 3;
+
+	// ra_fild04 - Rachel Field (Lv 31-44)
+	setarray .Mobs_ra_fild04[0], 1782, 1784, 1783;  // Roween (Lv 31), Stapo (Lv 23), Galion (Lv 44)
+	set .Mobs_ra_fild04_count, 3;
+
+	// ra_fild05 - Rachel Field (Lv 45-56)
+	setarray .Mobs_ra_fild05[0], 1680, 1781, 1368;  // Hill Wind (Lv 45), Drosera (Lv 46), Geographer (Lv 56)
+	set .Mobs_ra_fild05_count, 3;
+
+	// ra_fild06 - Rachel Field (Lv 23-46)
+	setarray .Mobs_ra_fild06[0], 1680, 1627, 1781;  // Hill Wind (Lv 45), Anopheles (Lv 23), Drosera (Lv 46)
+	set .Mobs_ra_fild06_count, 3;
+
+	// ra_fild07 - Rachel Field (Lv 23-44)
+	setarray .Mobs_ra_fild07[0], 1782, 1783, 1784;  // Roween (Lv 31), Galion (Lv 44), Stapo (Lv 23)
+	set .Mobs_ra_fild07_count, 3;
+
+	// ra_fild08 - Rachel Field (Lv 3-46)
+	setarray .Mobs_ra_fild08[0], 1784, 1113, 1781;  // Stapo (Lv 23), Drops (Lv 3), Drosera (Lv 46)
+	set .Mobs_ra_fild08_count, 3;
+
+	// ra_fild09 - Rachel Field (Lv 26-46)
+	setarray .Mobs_ra_fild09[0], 1781, 1613, 1680;  // Drosera (Lv 46), Metaling (Lv 26), Hill Wind (Lv 45)
+	set .Mobs_ra_fild09_count, 3;
+
+	// ra_fild10 - Rachel Field (Lv 23-44)
+	setarray .Mobs_ra_fild10[0], 1784, 1783, 1782;  // Stapo (Lv 23), Galion (Lv 44), Roween (Lv 31)
+	set .Mobs_ra_fild10_count, 3;
+
+	// ra_fild11 - Rachel Field (Lv 3-23) - town exit
+	setarray .Mobs_ra_fild11[0], 1113, 1784, 1782;  // Drops (Lv 3), Stapo (Lv 23), Roween (Lv 31)
+	set .Mobs_ra_fild11_count, 3;
+
+	// ra_fild12 - Rachel Field (Lv 3-23) - town exit
+	setarray .Mobs_ra_fild12[0], 1113, 1784, 1031;  // Drops (Lv 3), Stapo (Lv 23), Poporing (Lv 14)
+	set .Mobs_ra_fild12_count, 3;
+
+	// ra_fild13 - Rachel Field (Lv 3-31)
+	setarray .Mobs_ra_fild13[0], 1784, 1113, 1782;  // Stapo (Lv 23), Drops (Lv 3), Roween (Lv 31)
+	set .Mobs_ra_fild13_count, 3;
+
+	// ==================== HUGEL REGION FIELDS ====================
+	// hu_fild01 - Thanatos Tower Entrance (Lv 56-60)
+	setarray .Mobs_hu_fild01[0], 1368, 1378, 1692;  // Geographer (Lv 56), Demon Pungus (Lv 56), Breeze (Lv 60)
+	set .Mobs_hu_fild01_count, 3;
+
+	// hu_fild02 - Hugel Field (Lv 23-60)
+	setarray .Mobs_hu_fild02[0], 1627, 1687, 1692;  // Anopheles (Lv 23), Grove (Lv 42), Breeze (Lv 60)
+	set .Mobs_hu_fild02_count, 3;
+
+	// hu_fild03 - Hugel Field (Lv 14-42)
+	setarray .Mobs_hu_fild03[0], 1687, 1715, 1031;  // Grove (Lv 42), Novus (Lv 50), Poporing (Lv 14)
+	set .Mobs_hu_fild03_count, 3;
+
+	// hu_fild04 - Hugel Field (Lv 50-66)
+	setarray .Mobs_hu_fild04[0], 1155, 1384, 1386;  // Petite (Lv 44), Deleter (Lv 66), Sleeper (Lv 54)
+	set .Mobs_hu_fild04_count, 3;
+
+	// hu_fild05 - Abyss Lake Entrance (Lv 42-54)
+	setarray .Mobs_hu_fild05[0], 1687, 1627, 1386;  // Grove (Lv 42), Anopheles (Lv 23), Sleeper (Lv 54)
+	set .Mobs_hu_fild05_count, 3;
+
+	// hu_fild06 - Hugel Field (Lv 42-60) - town exit
+	setarray .Mobs_hu_fild06[0], 1687, 1692, 1627;  // Grove (Lv 42), Breeze (Lv 60), Anopheles (Lv 23)
+	set .Mobs_hu_fild06_count, 3;
+
+	// hu_fild07 - Hugel Field (Lv 44-66)
+	setarray .Mobs_hu_fild07[0], 1155, 1384, 1627;  // Petite (Lv 44), Deleter (Lv 66), Anopheles (Lv 23)
+	set .Mobs_hu_fild07_count, 3;
+
+	// ==================== VEINS REGION FIELDS ====================
+	// ve_fild01 - Veins Field (Lv 56-72)
+	setarray .Mobs_ve_fild01[0], 1688, 1689, 1259;  // Magmaring (Lv 60), Kasa (Lv 79), Gryphon (Lv 72)
+	set .Mobs_ve_fild01_count, 3;
+
+	// ve_fild02 - Veins Field (Lv 60-79)
+	setarray .Mobs_ve_fild02[0], 1688, 1689, 1690;  // Magmaring (Lv 60), Kasa (Lv 79), Imp (Lv 66)
+	set .Mobs_ve_fild02_count, 3;
+
+	// ve_fild03 - Thor Volcano Entrance (Lv 60-66)
+	setarray .Mobs_ve_fild03[0], 1688, 1690, 1689;  // Magmaring (Lv 60), Imp (Lv 66), Kasa (Lv 79)
+	set .Mobs_ve_fild03_count, 3;
+
+	// ve_fild04 - Veins Field (Lv 60-79)
+	setarray .Mobs_ve_fild04[0], 1688, 1689, 1690;  // Magmaring (Lv 60), Kasa (Lv 79), Imp (Lv 66)
+	set .Mobs_ve_fild04_count, 3;
+
+	// ve_fild05 - Veins Field (Lv 60-79)
+	setarray .Mobs_ve_fild05[0], 1688, 1690, 1689;  // Magmaring (Lv 60), Imp (Lv 66), Kasa (Lv 79)
+	set .Mobs_ve_fild05_count, 3;
+
+	// ve_fild06 - Veins Field (Lv 60-79) - town exit
+	setarray .Mobs_ve_fild06[0], 1688, 1690, 1689;  // Magmaring (Lv 60), Imp (Lv 66), Kasa (Lv 79)
+	set .Mobs_ve_fild06_count, 3;
+
+	// ve_fild07 - Veins Field (Lv 60-79) - town exit
+	setarray .Mobs_ve_fild07[0], 1688, 1689, 1690;  // Magmaring (Lv 60), Kasa (Lv 79), Imp (Lv 66)
+	set .Mobs_ve_fild07_count, 3;
+
 	// Mark initialization complete
 	.Initialized = 1;
 	end;
@@ -1953,6 +2105,161 @@ yuno_fild11,225,283,4	duplicate(BountyBoard)	Bounty Board#yuno_fild11_2	4_BOARD3
 // yuno_fild12 - Border Checkpoint (town direction: fild01 at 373,239)
 yuno_fild12,368,244,4	duplicate(BountyBoard)	Bounty Board#yuno_fild12	4_BOARD3
 yuno_fild12,199,302,4	duplicate(BountyBoard)	Bounty Board#yuno_fild12_2	4_BOARD3
+
+// ==================== EINBROCH REGION FIELDS ====================
+
+// ein_fild01 - Mine Field (town direction: yuno_fild05 at 349,369)
+ein_fild01,345,364,4	duplicate(BountyBoard)	Bounty Board#ein_fild01	4_BOARD3
+ein_fild01,180,200,4	duplicate(BountyBoard)	Bounty Board#ein_fild01_2	4_BOARD3
+
+// ein_fild02 - Mine Field (town direction: yuno_fild04 at 357,251)
+ein_fild02,352,246,4	duplicate(BountyBoard)	Bounty Board#ein_fild02	4_BOARD3
+ein_fild02,180,180,4	duplicate(BountyBoard)	Bounty Board#ein_fild02_2	4_BOARD3
+
+// ein_fild03 - Einbroch Field (town direction: fild04 at 363,257)
+ein_fild03,358,252,4	duplicate(BountyBoard)	Bounty Board#ein_fild03	4_BOARD3
+ein_fild03,180,120,4	duplicate(BountyBoard)	Bounty Board#ein_fild03_2	4_BOARD3
+
+// ein_fild04 - Einbroch Field (town direction: einbroch at 184,26)
+ein_fild04,180,32,4	duplicate(BountyBoard)	Bounty Board#ein_fild04	4_BOARD3
+ein_fild04,180,180,4	duplicate(BountyBoard)	Bounty Board#ein_fild04_2	4_BOARD3
+
+// ein_fild05 - Einbroch Field (town direction: fild04 at 76,294)
+ein_fild05,80,290,4	duplicate(BountyBoard)	Bounty Board#ein_fild05	4_BOARD3
+ein_fild05,200,200,4	duplicate(BountyBoard)	Bounty Board#ein_fild05_2	4_BOARD3
+
+// ein_fild06 - Einbroch Field (town direction: yuno_fild04 at 252,365)
+ein_fild06,248,360,4	duplicate(BountyBoard)	Bounty Board#ein_fild06	4_BOARD3
+ein_fild06,200,150,4	duplicate(BountyBoard)	Bounty Board#ein_fild06_2	4_BOARD3
+
+// ein_fild07 - Einbroch Field (town direction: fild06 at 145,362)
+ein_fild07,150,357,4	duplicate(BountyBoard)	Bounty Board#ein_fild07	4_BOARD3
+ein_fild07,280,180,4	duplicate(BountyBoard)	Bounty Board#ein_fild07_2	4_BOARD3
+
+// ein_fild08 - Einbroch Field (town direction: einbroch at 164,380)
+ein_fild08,160,375,4	duplicate(BountyBoard)	Bounty Board#ein_fild08	4_BOARD3
+ein_fild08,190,200,4	duplicate(BountyBoard)	Bounty Board#ein_fild08_2	4_BOARD3
+
+// ein_fild09 - Einbech Field (town direction: einbech at 71,352)
+ein_fild09,76,347,4	duplicate(BountyBoard)	Bounty Board#ein_fild09	4_BOARD3
+ein_fild09,200,200,4	duplicate(BountyBoard)	Bounty Board#ein_fild09_2	4_BOARD3
+
+// ein_fild10 - Einbech Field (town direction: fild09 at 24,331)
+ein_fild10,30,326,4	duplicate(BountyBoard)	Bounty Board#ein_fild10	4_BOARD3
+ein_fild10,200,200,4	duplicate(BountyBoard)	Bounty Board#ein_fild10_2	4_BOARD3
+
+// ==================== RACHEL REGION FIELDS ====================
+
+// ra_fild01 - Rachel Field (deep - ice_dun01 exit at 233,333)
+ra_fild01,228,328,4	duplicate(BountyBoard)	Bounty Board#ra_fild01	4_BOARD3
+ra_fild01,200,180,4	duplicate(BountyBoard)	Bounty Board#ra_fild01_2	4_BOARD3
+
+// ra_fild02 - Rachel Field (town direction: fild07 at 168,36)
+ra_fild02,172,41,4	duplicate(BountyBoard)	Bounty Board#ra_fild02	4_BOARD3
+ra_fild02,250,200,4	duplicate(BountyBoard)	Bounty Board#ra_fild02_2	4_BOARD3
+
+// ra_fild03 - Rachel Field (town direction: fild02 at 23,294)
+ra_fild03,28,289,4	duplicate(BountyBoard)	Bounty Board#ra_fild03	4_BOARD3
+ra_fild03,200,180,4	duplicate(BountyBoard)	Bounty Board#ra_fild03_2	4_BOARD3
+
+// ra_fild04 - Rachel Field (town direction: fild03 at 374,168)
+ra_fild04,369,172,4	duplicate(BountyBoard)	Bounty Board#ra_fild04	4_BOARD3
+ra_fild04,200,200,4	duplicate(BountyBoard)	Bounty Board#ra_fild04_2	4_BOARD3
+
+// ra_fild05 - Rachel Field (town direction: fild04 at 33,353)
+ra_fild05,38,348,4	duplicate(BountyBoard)	Bounty Board#ra_fild05	4_BOARD3
+ra_fild05,200,200,4	duplicate(BountyBoard)	Bounty Board#ra_fild05_2	4_BOARD3
+
+// ra_fild06 - Rachel Field (town direction: fild05 at 19,277)
+ra_fild06,24,272,4	duplicate(BountyBoard)	Bounty Board#ra_fild06	4_BOARD3
+ra_fild06,180,150,4	duplicate(BountyBoard)	Bounty Board#ra_fild06_2	4_BOARD3
+
+// ra_fild07 - Rachel Field (town direction: fild11 at 215,27)
+ra_fild07,210,32,4	duplicate(BountyBoard)	Bounty Board#ra_fild07	4_BOARD3
+ra_fild07,180,200,4	duplicate(BountyBoard)	Bounty Board#ra_fild07_2	4_BOARD3
+
+// ra_fild08 - Rachel Field (town direction: fild12 at 287,370)
+ra_fild08,282,365,4	duplicate(BountyBoard)	Bounty Board#ra_fild08	4_BOARD3
+ra_fild08,200,200,4	duplicate(BountyBoard)	Bounty Board#ra_fild08_2	4_BOARD3
+
+// ra_fild09 - Rachel Field (town direction: fild08 at 368,234)
+ra_fild09,363,238,4	duplicate(BountyBoard)	Bounty Board#ra_fild09	4_BOARD3
+ra_fild09,150,200,4	duplicate(BountyBoard)	Bounty Board#ra_fild09_2	4_BOARD3
+
+// ra_fild10 - Rachel Field (town direction: fild11 at 384,287)
+ra_fild10,379,282,4	duplicate(BountyBoard)	Bounty Board#ra_fild10	4_BOARD3
+ra_fild10,200,180,4	duplicate(BountyBoard)	Bounty Board#ra_fild10_2	4_BOARD3
+
+// ra_fild11 - Rachel Field (town direction: rachel at 360,226)
+ra_fild11,355,221,4	duplicate(BountyBoard)	Bounty Board#ra_fild11	4_BOARD3
+ra_fild11,180,200,4	duplicate(BountyBoard)	Bounty Board#ra_fild11_2	4_BOARD3
+
+// ra_fild12 - Rachel Field (town direction: rachel at 36,225)
+ra_fild12,41,220,4	duplicate(BountyBoard)	Bounty Board#ra_fild12	4_BOARD3
+ra_fild12,200,200,4	duplicate(BountyBoard)	Bounty Board#ra_fild12_2	4_BOARD3
+
+// ra_fild13 - Rachel Field (town direction: fild12 at 295,346)
+ra_fild13,290,341,4	duplicate(BountyBoard)	Bounty Board#ra_fild13	4_BOARD3
+ra_fild13,180,180,4	duplicate(BountyBoard)	Bounty Board#ra_fild13_2	4_BOARD3
+
+// ==================== HUGEL REGION FIELDS ====================
+
+// hu_fild01 - Thanatos Tower Entrance (town direction: fild02 at 361,189)
+hu_fild01,356,184,4	duplicate(BountyBoard)	Bounty Board#hu_fild01	4_BOARD3
+hu_fild01,180,180,4	duplicate(BountyBoard)	Bounty Board#hu_fild01_2	4_BOARD3
+
+// hu_fild02 - Hugel Field (town direction: fild04 at 40,22)
+hu_fild02,45,27,4	duplicate(BountyBoard)	Bounty Board#hu_fild02	4_BOARD3
+hu_fild02,200,180,4	duplicate(BountyBoard)	Bounty Board#hu_fild02_2	4_BOARD3
+
+// hu_fild03 - Hugel Field (town direction: fild05 at 288,19)
+hu_fild03,283,24,4	duplicate(BountyBoard)	Bounty Board#hu_fild03	4_BOARD3
+hu_fild03,180,200,4	duplicate(BountyBoard)	Bounty Board#hu_fild03_2	4_BOARD3
+
+// hu_fild04 - Hugel Field (town direction: fild02 at 48,368)
+hu_fild04,53,363,4	duplicate(BountyBoard)	Bounty Board#hu_fild04	4_BOARD3
+hu_fild04,200,200,4	duplicate(BountyBoard)	Bounty Board#hu_fild04_2	4_BOARD3
+
+// hu_fild05 - Abyss Lake Entrance (town direction: fild06 at 347,130)
+hu_fild05,342,125,4	duplicate(BountyBoard)	Bounty Board#hu_fild05	4_BOARD3
+hu_fild05,200,250,4	duplicate(BountyBoard)	Bounty Board#hu_fild05_2	4_BOARD3
+
+// hu_fild06 - Hugel Field (town direction: hugel at 200,367)
+hu_fild06,195,362,4	duplicate(BountyBoard)	Bounty Board#hu_fild06	4_BOARD3
+hu_fild06,150,200,4	duplicate(BountyBoard)	Bounty Board#hu_fild06_2	4_BOARD3
+
+// hu_fild07 - Hugel Field (center only)
+hu_fild07,200,200,4	duplicate(BountyBoard)	Bounty Board#hu_fild07	4_BOARD3
+
+// ==================== VEINS REGION FIELDS ====================
+
+// ve_fild01 - Veins Field (town direction: fild02 at 361,267)
+ve_fild01,356,262,4	duplicate(BountyBoard)	Bounty Board#ve_fild01	4_BOARD3
+ve_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild01_2	4_BOARD3
+
+// ve_fild02 - Veins Field (town direction: rachel at 195,382)
+ve_fild02,190,377,4	duplicate(BountyBoard)	Bounty Board#ve_fild02	4_BOARD3
+ve_fild02,200,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild02_2	4_BOARD3
+
+// ve_fild03 - Thor Volcano Entrance (town direction: fild04 at 350,220)
+ve_fild03,345,225,4	duplicate(BountyBoard)	Bounty Board#ve_fild03	4_BOARD3
+ve_fild03,200,150,4	duplicate(BountyBoard)	Bounty Board#ve_fild03_2	4_BOARD3
+
+// ve_fild04 - Veins Field (town direction: fild01 at 174,339)
+ve_fild04,169,334,4	duplicate(BountyBoard)	Bounty Board#ve_fild04	4_BOARD3
+ve_fild04,120,150,4	duplicate(BountyBoard)	Bounty Board#ve_fild04_2	4_BOARD3
+
+// ve_fild05 - Veins Field (town direction: fild03 at 200,330)
+ve_fild05,195,325,4	duplicate(BountyBoard)	Bounty Board#ve_fild05	4_BOARD3
+ve_fild05,280,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild05_2	4_BOARD3
+
+// ve_fild06 - Veins Field (town direction: veins at 153,220)
+ve_fild06,148,215,4	duplicate(BountyBoard)	Bounty Board#ve_fild06	4_BOARD3
+ve_fild06,100,150,4	duplicate(BountyBoard)	Bounty Board#ve_fild06_2	4_BOARD3
+
+// ve_fild07 - Veins Field (town direction: veins at 147,371)
+ve_fild07,142,366,4	duplicate(BountyBoard)	Bounty Board#ve_fild07	4_BOARD3
+ve_fild07,180,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild07_2	4_BOARD3
 
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
