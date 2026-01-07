@@ -839,8 +839,18 @@ OnInit:
 		"gl_church", "gl_prison1", "gl_sew01", "gl_sew02", "gl_dun01", "gl_dun02",
 		// Yuno/Juno Fields (Lv 18-55)
 		"yuno_fild01", "yuno_fild02", "yuno_fild03", "yuno_fild04", "yuno_fild05", "yuno_fild06",
-		"yuno_fild07", "yuno_fild08", "yuno_fild09", "yuno_fild10", "yuno_fild11", "yuno_fild12";
-	.MapCount = 90;  // Total maps in .Maps$ array
+		"yuno_fild07", "yuno_fild08", "yuno_fild09", "yuno_fild10", "yuno_fild11", "yuno_fild12",
+		// Einbroch Fields (Lv 23-69)
+		"ein_fild01", "ein_fild02", "ein_fild03", "ein_fild04", "ein_fild05",
+		"ein_fild06", "ein_fild07", "ein_fild08", "ein_fild09", "ein_fild10",
+		// Rachel Fields (Lv 3-72)
+		"ra_fild01", "ra_fild02", "ra_fild03", "ra_fild04", "ra_fild05", "ra_fild06", "ra_fild07",
+		"ra_fild08", "ra_fild09", "ra_fild10", "ra_fild11", "ra_fild12", "ra_fild13",
+		// Hugel Fields (Lv 14-66)
+		"hu_fild01", "hu_fild02", "hu_fild03", "hu_fild04", "hu_fild05", "hu_fild06", "hu_fild07",
+		// Veins Fields (Lv 60-79)
+		"ve_fild01", "ve_fild02", "ve_fild03", "ve_fild04", "ve_fild05", "ve_fild06", "ve_fild07";
+	.MapCount = 127;  // Total maps in .Maps$ array (90 + 37 new fields)
 
 	// ==================== MAP NAMES ====================
 	// Beginner Fields
@@ -957,6 +967,47 @@ OnInit:
 	set .MapName_yuno_fild10$, "Juno Field";
 	set .MapName_yuno_fild11$, "Juno Field";
 	set .MapName_yuno_fild12$, "Juno Field (Border)";
+	// Einbroch Fields
+	set .MapName_ein_fild01$, "Mine Field";
+	set .MapName_ein_fild02$, "Mine Field";
+	set .MapName_ein_fild03$, "Einbroch Field";
+	set .MapName_ein_fild04$, "Einbroch Field";
+	set .MapName_ein_fild05$, "Einbroch Field";
+	set .MapName_ein_fild06$, "Goat Valley";
+	set .MapName_ein_fild07$, "Metaling Plains";
+	set .MapName_ein_fild08$, "Einbroch Field";
+	set .MapName_ein_fild09$, "Einbech Field";
+	set .MapName_ein_fild10$, "Porcellio Plains";
+	// Rachel Fields
+	set .MapName_ra_fild01$, "Rachel Field";
+	set .MapName_ra_fild02$, "Muscipular Valley";
+	set .MapName_ra_fild03$, "Rachel Field";
+	set .MapName_ra_fild04$, "Rachel Field";
+	set .MapName_ra_fild05$, "Rachel Field";
+	set .MapName_ra_fild06$, "Rachel Field";
+	set .MapName_ra_fild07$, "Roween Plains";
+	set .MapName_ra_fild08$, "Stapo Field";
+	set .MapName_ra_fild09$, "Drosera Field";
+	set .MapName_ra_fild10$, "Galion Plains";
+	set .MapName_ra_fild11$, "Rachel Field";
+	set .MapName_ra_fild12$, "Rachel Field";
+	set .MapName_ra_fild13$, "Border Post";
+	// Hugel Fields
+	set .MapName_hu_fild01$, "Thanatos Tower";
+	set .MapName_hu_fild02$, "Novus Field";
+	set .MapName_hu_fild03$, "Grove Forest";
+	set .MapName_hu_fild04$, "Petite Valley";
+	set .MapName_hu_fild05$, "Abyss Lake Ent.";
+	set .MapName_hu_fild06$, "Hugel Field";
+	set .MapName_hu_fild07$, "Hugel Field";
+	// Veins Fields
+	set .MapName_ve_fild01$, "Gryphon Field";
+	set .MapName_ve_fild02$, "Imp Field";
+	set .MapName_ve_fild03$, "Thor Volcano";
+	set .MapName_ve_fild04$, "Magma Field";
+	set .MapName_ve_fild05$, "Kasa Field";
+	set .MapName_ve_fild06$, "Veins Field";
+	set .MapName_ve_fild07$, "Veins Field";
 
 	// ==================== MONSTER LISTS ====================
 	// Format: setarray .Mobs_<mapname>[0], <mob_id1>, <mob_id2>, ...
