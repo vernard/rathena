@@ -1163,8 +1163,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ein_fild02";
-	setarray @pFXcoords[@Fi], 182;
-	setarray @pFYcoords[@Fi], 180;
+	setarray @pFXcoords[@Fi], 165;
+	setarray @pFYcoords[@Fi], 193;
 
 	QWS_Make_Field_Menu 7;
 //----------------EIN FIELD 03 - Einbroch Field (D=2 from Einbroch)
@@ -1172,8 +1172,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ein_fild03";
-	setarray @pFXcoords[@Fi], 182;
-	setarray @pFYcoords[@Fi], 120;
+	setarray @pFXcoords[@Fi], 216;
+	setarray @pFYcoords[@Fi], 208;
 
 	QWS_Make_Field_Menu 8;
 //----------------EIN FIELD 05 - Einbroch Field (D=2 from Einbroch)
@@ -1181,8 +1181,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ein_fild05";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
+	setarray @pFXcoords[@Fi], 247;
+	setarray @pFYcoords[@Fi], 175;
 
 	QWS_Make_Field_Menu 9;
 //----------------EIN FIELD 06 - Einbroch Field (from yuno_fild04/07)
@@ -1190,8 +1190,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ein_fild06";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 150;
+	setarray @pFXcoords[@Fi], 185;
+	setarray @pFYcoords[@Fi], 145;
 
 	QWS_Make_Field_Menu 10;
 //----------------EIN FIELD 07 - Einbroch Field (D=3 from Einbech)
@@ -1199,8 +1199,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ein_fild07";
-	setarray @pFXcoords[@Fi], 282;
-	setarray @pFYcoords[@Fi], 180;
+	setarray @pFXcoords[@Fi], 261;
+	setarray @pFYcoords[@Fi], 225;
 
 	QWS_Make_Field_Menu 11;
 //----------------EIN FIELD 10 - Einbech Field (D=2 from Einbech)
@@ -1208,8 +1208,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ein_fild10";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
+	setarray @pFXcoords[@Fi], 197;
+	setarray @pFYcoords[@Fi], 190;
 
 	QWS_Make_Field_Menu 12;
 
@@ -1237,8 +1237,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ra_fild10";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 180;
+	setarray @pFXcoords[@Fi], 248;
+	setarray @pFYcoords[@Fi], 98;
 
 	QWS_Make_Field_Menu 15;
 //----------------RA FIELD 13 - Rachel Field (D=2 from Rachel)
@@ -1246,8 +1246,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ra_fild13";
-	setarray @pFXcoords[@Fi], 182;
-	setarray @pFYcoords[@Fi], 180;
+	setarray @pFXcoords[@Fi], 39;
+	setarray @pFYcoords[@Fi], 301;
 
 	QWS_Make_Field_Menu 16;
 //----------------RA FIELD 02 - Rachel Field (D=3 from Rachel)
@@ -1275,8 +1275,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "hu_fild05";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 250;
+	setarray @pFXcoords[@Fi], 165;
+	setarray @pFYcoords[@Fi], 310;
 
 	QWS_Make_Field_Menu 19;
 //----------------HU FIELD 03 - Hugel Field (D=3)
@@ -1288,15 +1288,6 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 200;
 
 	QWS_Make_Field_Menu 20;
-//----------------HU FIELD 02 - Hugel Field (D=2)
-	setarray @pFmenuitems$[@Fi], "hu_fild02 - Novus Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "hu_fild02";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 180;
-
-	QWS_Make_Field_Menu 21;
 //----------------HU FIELD 04 - Hugel Field (D=3)
 	setarray @pFmenuitems$[@Fi], "hu_fild04 - Petite Valley";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
@@ -1311,8 +1302,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "hu_fild01";
-	setarray @pFXcoords[@Fi], 182;
-	setarray @pFYcoords[@Fi], 180;
+	setarray @pFXcoords[@Fi], 142;
+	setarray @pFYcoords[@Fi], 154;
 
 	QWS_Make_Field_Menu 23;
 
@@ -1362,6 +1353,33 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 200;
 
 	QWS_Make_Field_Menu 28;
+//----------------RA FIELD 04 - Rachel Field (D=3+ from Rachel)
+	setarray @pFmenuitems$[@Fi], "ra_fild04 - Roween Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild04";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 29;
+//----------------RA FIELD 06 - Rachel Field (D=4+ from Rachel)
+	setarray @pFmenuitems$[@Fi], "ra_fild06 - Drosera Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild06";
+	setarray @pFXcoords[@Fi], 217;
+	setarray @pFYcoords[@Fi], 198;
+
+	QWS_Make_Field_Menu 30;
+//----------------HU FIELD 07 - Hugel Field (D=3+)
+	setarray @pFmenuitems$[@Fi], "hu_fild07 - Petite Canyon";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "hu_fild07";
+	setarray @pFXcoords[@Fi], 177;
+	setarray @pFYcoords[@Fi], 98;
+
+	QWS_Make_Field_Menu 31;
 
 //----------------Exit option
 	set @Fmenulist$[@Fj], "Exit";
@@ -2399,31 +2417,33 @@ yuno_fild08,225,202,4	script	Field Warpra#yf08	112,{ callfunc "QWS_Field_Warpra"
 // - Einbroch access: ein_fild03, ein_fild05 (D=2 from Einbroch)
 // - Einbech access: ein_fild07 (D=3), ein_fild10 (D=2)
 ein_fild01,182,200,4	script	Field Warpra#ef01	112,{ callfunc "QWS_Field_Warpra",6,"ein_fild01 - Mine Field"; close; }
-ein_fild02,182,180,4	script	Field Warpra#ef02	112,{ callfunc "QWS_Field_Warpra",7,"ein_fild02 - Mine Field"; close; }
-ein_fild03,182,120,4	script	Field Warpra#ef03	112,{ callfunc "QWS_Field_Warpra",8,"ein_fild03 - Einbroch Field"; close; }
-ein_fild05,202,200,4	script	Field Warpra#ef05	112,{ callfunc "QWS_Field_Warpra",9,"ein_fild05 - Einbroch Field"; close; }
-ein_fild06,202,150,4	script	Field Warpra#ef06	112,{ callfunc "QWS_Field_Warpra",10,"ein_fild06 - Goat Valley"; close; }
-ein_fild07,282,180,4	script	Field Warpra#ef07	112,{ callfunc "QWS_Field_Warpra",11,"ein_fild07 - Metaling Plains"; close; }
-ein_fild10,202,200,4	script	Field Warpra#ef10	112,{ callfunc "QWS_Field_Warpra",12,"ein_fild10 - Porcellio Plains"; close; }
+ein_fild02,165,193,4	script	Field Warpra#ef02	112,{ callfunc "QWS_Field_Warpra",7,"ein_fild02 - Mine Field"; close; }
+ein_fild03,216,208,4	script	Field Warpra#ef03	112,{ callfunc "QWS_Field_Warpra",8,"ein_fild03 - Einbroch Field"; close; }
+ein_fild05,247,175,4	script	Field Warpra#ef05	112,{ callfunc "QWS_Field_Warpra",9,"ein_fild05 - Einbroch Field"; close; }
+ein_fild06,185,145,4	script	Field Warpra#ef06	112,{ callfunc "QWS_Field_Warpra",10,"ein_fild06 - Goat Valley"; close; }
+ein_fild07,261,225,4	script	Field Warpra#ef07	112,{ callfunc "QWS_Field_Warpra",11,"ein_fild07 - Metaling Plains"; close; }
+ein_fild10,197,190,4	script	Field Warpra#ef10	112,{ callfunc "QWS_Field_Warpra",12,"ein_fild10 - Porcellio Plains"; close; }
 
 // Rachel Region - 6 fields:
 // - D=2: ra_fild07, ra_fild08, ra_fild10, ra_fild13
 // - D=3: ra_fild02, ra_fild09
 ra_fild07,182,200,4	script	Field Warpra#rf07	112,{ callfunc "QWS_Field_Warpra",13,"ra_fild07 - Roween Plains"; close; }
 ra_fild08,202,200,4	script	Field Warpra#rf08	112,{ callfunc "QWS_Field_Warpra",14,"ra_fild08 - Stapo Field"; close; }
-ra_fild10,202,180,4	script	Field Warpra#rf10	112,{ callfunc "QWS_Field_Warpra",15,"ra_fild10 - Galion Plains"; close; }
-ra_fild13,182,180,4	script	Field Warpra#rf13	112,{ callfunc "QWS_Field_Warpra",16,"ra_fild13 - Border Post"; close; }
+ra_fild10,248,98,4	script	Field Warpra#rf10	112,{ callfunc "QWS_Field_Warpra",15,"ra_fild10 - Galion Plains"; close; }
+ra_fild13,39,301,4	script	Field Warpra#rf13	112,{ callfunc "QWS_Field_Warpra",16,"ra_fild13 - Border Post"; close; }
 ra_fild02,252,200,4	script	Field Warpra#rf02	112,{ callfunc "QWS_Field_Warpra",17,"ra_fild02 - Muscipular Valley"; close; }
 ra_fild09,152,200,4	script	Field Warpra#rf09	112,{ callfunc "QWS_Field_Warpra",18,"ra_fild09 - Drosera Field"; close; }
+ra_fild04,202,200,4	script	Field Warpra#rf04	112,{ callfunc "QWS_Field_Warpra",29,"ra_fild04 - Roween Field"; close; }
+ra_fild06,217,198,4	script	Field Warpra#rf06	112,{ callfunc "QWS_Field_Warpra",30,"ra_fild06 - Drosera Field"; close; }
 
 // Hugel Region - 5 fields:
-// - D=2: hu_fild05, hu_fild02
-// - D=3: hu_fild03, hu_fild04, hu_fild01
-hu_fild05,202,250,4	script	Field Warpra#hf05	112,{ callfunc "QWS_Field_Warpra",19,"hu_fild05 - Abyss Lake Ent."; close; }
+// - D=2: hu_fild05
+// - D=3: hu_fild03, hu_fild04, hu_fild01, hu_fild07
+hu_fild05,165,310,4	script	Field Warpra#hf05	112,{ callfunc "QWS_Field_Warpra",19,"hu_fild05 - Abyss Lake Ent."; close; }
 hu_fild03,182,200,4	script	Field Warpra#hf03	112,{ callfunc "QWS_Field_Warpra",20,"hu_fild03 - Grove Forest"; close; }
-hu_fild02,202,180,4	script	Field Warpra#hf02	112,{ callfunc "QWS_Field_Warpra",21,"hu_fild02 - Novus Field"; close; }
 hu_fild04,202,200,4	script	Field Warpra#hf04	112,{ callfunc "QWS_Field_Warpra",22,"hu_fild04 - Petite Valley"; close; }
-hu_fild01,182,180,4	script	Field Warpra#hf01	112,{ callfunc "QWS_Field_Warpra",23,"hu_fild01 - Thanatos Tower"; close; }
+hu_fild01,142,154,4	script	Field Warpra#hf01	112,{ callfunc "QWS_Field_Warpra",23,"hu_fild01 - Thanatos Tower"; close; }
+hu_fild07,177,98,4	script	Field Warpra#hf07	112,{ callfunc "QWS_Field_Warpra",31,"hu_fild07 - Petite Canyon"; close; }
 
 // Veins Region - 5 fields:
 // - D=2: ve_fild03, ve_fild04, ve_fild05
