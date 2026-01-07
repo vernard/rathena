@@ -956,10 +956,10 @@ OnInit:
 	setarray .Mobs_gef_fild00[0], 1002, 1007, 1008;  // Poring, Fabre (1007), Pupa (1008)
 	set .Mobs_gef_fild00_count, 3;
 
-	setarray .Mobs_mjolnir_01[0], 1011, 1104, 1103;  // Chonchon (1011), Coco (1104), Caramel (1103)
+	setarray .Mobs_mjolnir_01[0], 1128, 1104, 1103;  // Horn (Lv 18), Coco (Lv 8), Caramel (Lv 7)
 	set .Mobs_mjolnir_01_count, 3;
 
-	setarray .Mobs_pay_fild01[0], 1014, 1167;  // Spore (1014), Savage Babe (1167)
+	setarray .Mobs_pay_fild01[0], 1014, 1010;  // Spore (Lv 16), Willow (Lv 4)
 	set .Mobs_pay_fild01_count, 2;
 
 	// Beginner Dungeons (Lv 5-25)
@@ -979,7 +979,7 @@ OnInit:
 	setarray .Mobs_moc_fild01[0], 1014, 1107, 1166;  // Spore (1014), Baby Desert Wolf (1107), Savage (1166)
 	set .Mobs_moc_fild01_count, 3;
 
-	setarray .Mobs_moc_fild02[0], 1055, 1009;  // Muka (1055), Condor (1009)
+	setarray .Mobs_moc_fild02[0], 1019, 1113;  // Peco Peco (Lv 19), Drops (Lv 3)
 	set .Mobs_moc_fild02_count, 2;
 
 	setarray .Mobs_moc_fild17[0], 1127;  // Hode (1127)
@@ -988,8 +988,8 @@ OnInit:
 	setarray .Mobs_moc_fild18[0], 1055, 1042;  // Muka (1055), Steel Chonchon (1042)
 	set .Mobs_moc_fild18_count, 2;
 
-	setarray .Mobs_mjolnir_02[0], 1077, 1025;  // Poison Spore (1077), Boa (1025)
-	set .Mobs_mjolnir_02_count, 2;
+	setarray .Mobs_mjolnir_02[0], 1155, 1004, 1118;  // Petite (Lv 44), Hornet (Lv 8), Flora (Lv 26)
+	set .Mobs_mjolnir_02_count, 3;
 
 	// Low-Mid Dungeons (Lv 20-40)
 	setarray .Mobs_anthell01[0], 1160, 1105;  // Piere (1160), Deniro (1105)
@@ -1005,7 +1005,7 @@ OnInit:
 	set .Mobs_pay_dun01_count, 3;
 
 	// Mid Fields (Lv 30-50)
-	setarray .Mobs_gef_fild02[0], 1023, 1166;  // Orc Warrior (1023), Savage (1166)
+	setarray .Mobs_gef_fild02[0], 1023, 1057;  // Orc Warrior (Lv 24), Yoyo (Lv 21)
 	set .Mobs_gef_fild02_count, 2;
 
 	setarray .Mobs_gef_fild03[0], 1023, 1166;  // Orc Warrior (1023), Savage (1166)
@@ -1173,7 +1173,7 @@ OnInit:
 	set .Mobs_thor_v01_count, 3;
 
 	// thor_v02 - Thor Volcano F2 (Lv 76-91)
-	setarray .Mobs_thor_v02[0], 1833, 1837, 1836;  // Kasa (Lv 85), Imp (Lv 76), Magmaring (Lv 40)
+	setarray .Mobs_thor_v02[0], 1838, 1837, 1836;  // Knocker (Lv 50), Imp (Lv 76), Magmaring (Lv 40)
 	set .Mobs_thor_v02_count, 3;
 
 	// ==================== ADDITIONAL ICE CAVE FLOOR ====================
