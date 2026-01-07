@@ -1037,13 +1037,13 @@ OnInit:
 	setarray .Mobs_pay_dun03[0], 1170;  // Sohee (1170)
 	set .Mobs_pay_dun03_count, 1;
 
-	setarray .Mobs_pay_dun04[0], 1180, 1110, 1188;  // Nine Tail (1180), Dokebi (1110), Bongun (1188)
+	setarray .Mobs_pay_dun04[0], 1180, 1110, 1129;  // Nine Tail (Lv 63), Dokebi (Lv 33), Horong (Lv 44)
 	set .Mobs_pay_dun04_count, 3;
 
 	setarray .Mobs_gef_dun01[0], 1061, 1130;  // Nightmare (1061), Jakk (1130)
 	set .Mobs_gef_dun01_count, 2;
 
-	setarray .Mobs_moc_pryd04[0], 1149, 1191;  // Minorous (1149), Mimic (1191)
+	setarray .Mobs_moc_pryd04[0], 1029, 1191;  // Isis (Lv 47), Mimic (Lv 51)
 	set .Mobs_moc_pryd04_count, 2;
 
 	setarray .Mobs_iz_dun03[0], 1069, 1264;  // Swordfish (1069), Merman (1264)
@@ -1230,16 +1230,16 @@ OnInit:
 	setarray .Mobs_gl_sew01[0], 1253, 1194, 1179;  // Gargoyle (Lv 48), Arclouze (Lv 59), Whisper (Lv 34)
 	set .Mobs_gl_sew01_count, 3;
 
-	// gl_sew02 - GH Culvert F2 (Lv 34-59)
-	setarray .Mobs_gl_sew02[0], 1253, 1194, 1179;  // Gargoyle (Lv 48), Arclouze (Lv 59), Whisper (Lv 34)
-	set .Mobs_gl_sew02_count, 3;
+	// gl_sew02 - GH Culvert F2 (Lv 41-48)
+	setarray .Mobs_gl_sew02[0], 1253, 1209;  // Gargoyle (Lv 48), Cramp (Lv 41)
+	set .Mobs_gl_sew02_count, 2;
 
 	// gl_dun01 - GH Lowest Cave F1 (Lv 59-61)
 	setarray .Mobs_gl_dun01[0], 1194, 1207;  // Arclouze (Lv 59), Sting (Lv 61)
 	set .Mobs_gl_dun01_count, 2;
 
-	// gl_dun02 - GH Lowest Cave F2 (Lv 59-61)
-	setarray .Mobs_gl_dun02[0], 1194, 1207;  // Arclouze (Lv 59), Sting (Lv 61)
+	// gl_dun02 - GH Lowest Cave F2 (Lv 48-55)
+	setarray .Mobs_gl_dun02[0], 1310, 1253;  // Majoruros (Lv 55), Gargoyle (Lv 48)
 	set .Mobs_gl_dun02_count, 2;
 
 	// Mark initialization complete
