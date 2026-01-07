@@ -686,6 +686,8 @@ function	script	QWS_FieldStamps	{
 //======================Main=Menu=Array============================
 
 function	script	QWS_MMarray	{
+	// Clear menu array to prevent ghost items from previous builds
+	cleararray @Mmenulist$[0],"",13;
 
 	// Currently 13 items (added Warp to Fields after Dungeons)
 	setarray @pMmenuitems$[0], "GameMaster Menu", "Last Warp", $QW_SP_Warpname$, "Warp to Towns", "Warp to Dungeons", "Warp to Fields", "Why so few warps?", "Why don't you unlock this location?", "Heal", "Heal", "Storage", "Guild Storage", "Cancel";
