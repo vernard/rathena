@@ -849,8 +849,8 @@ OnInit:
 		// Hugel Fields (Lv 14-66)
 		"hu_fild01", "hu_fild02", "hu_fild03", "hu_fild04", "hu_fild05", "hu_fild06", "hu_fild07",
 		// Veins Fields (Lv 60-79)
-		"ve_fild01", "ve_fild02", "ve_fild03", "ve_fild04", "ve_fild05", "ve_fild06", "ve_fild07";
-	.MapCount = 127;  // Total maps in .Maps$ array (90 + 37 new fields)
+		"ve_fild01", "ve_fild02", "ve_fild03", "ve_fild04", "ve_fild05", "ve_fild07";
+	.MapCount = 126;  // Total maps in .Maps$ array (90 + 36 new fields)
 
 	// ==================== MAP NAMES ====================
 	// Beginner Fields
@@ -2287,7 +2287,7 @@ hu_fild07,175,98,4	duplicate(BountyBoard)	Bounty Board#hu_fild07_2	4_BOARD3
 
 // ve_fild01 - Veins Field (town direction: fild02 at 361,267)
 ve_fild01,356,262,4	duplicate(BountyBoard)	Bounty Board#ve_fild01	4_BOARD3
-ve_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild01_2	4_BOARD3
+ve_fild01,180,115,4	duplicate(BountyBoard)	Bounty Board#ve_fild01_2	4_BOARD3
 
 // ve_fild02 - Veins Field (town direction: rachel at 195,382)
 ve_fild02,190,377,4	duplicate(BountyBoard)	Bounty Board#ve_fild02	4_BOARD3
@@ -2295,22 +2295,18 @@ ve_fild02,200,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild02_2	4_BOARD3
 
 // ve_fild03 - Thor Volcano Entrance (town direction: fild04 at 350,220)
 ve_fild03,345,225,4	duplicate(BountyBoard)	Bounty Board#ve_fild03	4_BOARD3
-ve_fild03,200,150,4	duplicate(BountyBoard)	Bounty Board#ve_fild03_2	4_BOARD3
+ve_fild03,212,173,4	duplicate(BountyBoard)	Bounty Board#ve_fild03_2	4_BOARD3
 
 // ve_fild04 - Veins Field (town direction: fild01 at 174,339)
 ve_fild04,169,334,4	duplicate(BountyBoard)	Bounty Board#ve_fild04	4_BOARD3
 ve_fild04,120,150,4	duplicate(BountyBoard)	Bounty Board#ve_fild04_2	4_BOARD3
 
 // ve_fild05 - Veins Field (town direction: fild03 at 200,330)
-ve_fild05,195,325,4	duplicate(BountyBoard)	Bounty Board#ve_fild05	4_BOARD3
-ve_fild05,280,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild05_2	4_BOARD3
-
-// ve_fild06 - Veins Field (town direction: veins at 153,220)
-ve_fild06,148,215,4	duplicate(BountyBoard)	Bounty Board#ve_fild06	4_BOARD3
-ve_fild06,100,150,4	duplicate(BountyBoard)	Bounty Board#ve_fild06_2	4_BOARD3
+ve_fild05,197,320,4	duplicate(BountyBoard)	Bounty Board#ve_fild05	4_BOARD3
+ve_fild05,247,135,4	duplicate(BountyBoard)	Bounty Board#ve_fild05_2	4_BOARD3
 
 // ve_fild07 - Veins Field (town direction: veins at 147,371)
-ve_fild07,142,366,4	duplicate(BountyBoard)	Bounty Board#ve_fild07	4_BOARD3
+ve_fild07,153,364,4	duplicate(BountyBoard)	Bounty Board#ve_fild07	4_BOARD3
 ve_fild07,180,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild07_2	4_BOARD3
 
 

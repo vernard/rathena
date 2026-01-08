@@ -1278,26 +1278,17 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ve_fild01";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
+	setarray @pFXcoords[@Fi], 182;
+	setarray @pFYcoords[@Fi], 115;
 
 	QWS_Make_Field_Menu 27;
-//----------------VE FIELD 02 - Imp Field
-	setarray @pFmenuitems$[@Fi], "ve_fild02 - Imp Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ve_fild02";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 28;
 //----------------VE FIELD 03 - Thor Volcano
 	setarray @pFmenuitems$[@Fi], "ve_fild03 - Thor Volcano";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ve_fild03";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 150;
+	setarray @pFXcoords[@Fi], 214;
+	setarray @pFYcoords[@Fi], 173;
 
 	QWS_Make_Field_Menu 24;
 //----------------VE FIELD 04 - Magma Field
@@ -1314,8 +1305,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ve_fild05";
-	setarray @pFXcoords[@Fi], 282;
-	setarray @pFYcoords[@Fi], 200;
+	setarray @pFXcoords[@Fi], 249;
+	setarray @pFYcoords[@Fi], 135;
 
 	QWS_Make_Field_Menu 26;
 //----------------YUNO FIELD 03 - El Mes Plateau
@@ -2437,11 +2428,10 @@ hu_fild04,202,200,4	script	Field Warpra#hf04	112,{ callfunc "QWS_Field_Warpra",2
 hu_fild01,142,154,4	script	Field Warpra#hf01	112,{ callfunc "QWS_Field_Warpra",23,"hu_fild01 - Thanatos Tower"; close; }
 hu_fild07,177,98,4	script	Field Warpra#hf07	112,{ callfunc "QWS_Field_Warpra",31,"hu_fild07 - Petite Canyon"; close; }
 
-// Veins Region - 5 fields:
+// Veins Region - 4 fields:
 // - D=2: ve_fild03, ve_fild04, ve_fild05
-// - D=3: ve_fild01, ve_fild02
-ve_fild03,202,150,4	script	Field Warpra#vf03	112,{ callfunc "QWS_Field_Warpra",24,"ve_fild03 - Thor Volcano"; close; }
+// - D=3: ve_fild01
+ve_fild03,214,173,4	script	Field Warpra#vf03	112,{ callfunc "QWS_Field_Warpra",24,"ve_fild03 - Thor Volcano"; close; }
 ve_fild04,122,150,4	script	Field Warpra#vf04	112,{ callfunc "QWS_Field_Warpra",25,"ve_fild04 - Magma Field"; close; }
-ve_fild05,282,200,4	script	Field Warpra#vf05	112,{ callfunc "QWS_Field_Warpra",26,"ve_fild05 - Kasa Field"; close; }
-ve_fild01,202,200,4	script	Field Warpra#vf01	112,{ callfunc "QWS_Field_Warpra",27,"ve_fild01 - Gryphon Field"; close; }
-ve_fild02,202,200,4	script	Field Warpra#vf02	112,{ callfunc "QWS_Field_Warpra",28,"ve_fild02 - Imp Field"; close; }
+ve_fild05,249,135,4	script	Field Warpra#vf05	112,{ callfunc "QWS_Field_Warpra",26,"ve_fild05 - Kasa Field"; close; }
+ve_fild01,182,115,4	script	Field Warpra#vf01	112,{ callfunc "QWS_Field_Warpra",27,"ve_fild01 - Gryphon Field"; close; }
