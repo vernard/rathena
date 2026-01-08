@@ -1309,6 +1309,96 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 135;
 
 	QWS_Make_Field_Menu 26;
+//----------------CMD FIELD 01 - Papuchicha Forest
+	setarray @pFmenuitems$[@Fi], "cmd_fild01 - Papuchicha Forest";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "cmd_fild01";
+	setarray @pFXcoords[@Fi], 192;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 32;
+//----------------CMD FIELD 03 - Zenhai Marsh
+	setarray @pFmenuitems$[@Fi], "cmd_fild03 - Zenhai Marsh";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "cmd_fild03";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 33;
+//----------------CMD FIELD 06 - Fortress St. Darmain West
+	setarray @pFmenuitems$[@Fi], "cmd_fild06 - Fortress St. Darmain West";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "cmd_fild06";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 34;
+//----------------CMD FIELD 08 - Fortress St. Darmain East
+	setarray @pFmenuitems$[@Fi], "cmd_fild08 - Fortress St. Darmain East";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "cmd_fild08";
+	setarray @pFXcoords[@Fi], 152;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 35;
+//----------------GEF FIELD 04 - Geffen Field
+	setarray @pFmenuitems$[@Fi], "gef_fild04 - Geffen Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "gef_fild04";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 36;
+//----------------GEF FIELD 07 - Geffen Field
+	setarray @pFmenuitems$[@Fi], "gef_fild07 - Geffen Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "gef_fild07";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 37;
+//----------------GEF FIELD 09 - Geffen Field
+	setarray @pFmenuitems$[@Fi], "gef_fild09 - Geffen Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "gef_fild09";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 38;
+//----------------GEF FIELD 12 - Kordt Forest
+	setarray @pFmenuitems$[@Fi], "gef_fild12 - Kordt Forest";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "gef_fild12";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 39;
+//----------------LOU FIELD 01 - Luoyang Field
+	setarray @pFmenuitems$[@Fi], "lou_fild01 - Luoyang Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "lou_fild01";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 40;
+//----------------AMA FIELD 01 - Amatsu Field
+	setarray @pFmenuitems$[@Fi], "ama_fild01 - Amatsu Field";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ama_fild01";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 41;
 //----------------YUNO FIELD 03 - El Mes Plateau
 	setarray @pFmenuitems$[@Fi], "yuno_fild03 - El Mes Plateau";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
@@ -2435,3 +2525,19 @@ ve_fild03,214,173,4	script	Field Warpra#vf03	112,{ callfunc "QWS_Field_Warpra",2
 ve_fild04,122,150,4	script	Field Warpra#vf04	112,{ callfunc "QWS_Field_Warpra",25,"ve_fild04 - Magma Field"; close; }
 ve_fild05,249,135,4	script	Field Warpra#vf05	112,{ callfunc "QWS_Field_Warpra",26,"ve_fild05 - Kasa Field"; close; }
 ve_fild01,182,115,4	script	Field Warpra#vf01	112,{ callfunc "QWS_Field_Warpra",27,"ve_fild01 - Gryphon Field"; close; }
+
+// Comodo Region - 4 fields
+cmd_fild01,192,200,4	script	Field Warpra#cf01	112,{ callfunc "QWS_Field_Warpra",32,"cmd_fild01 - Papuchicha Forest"; close; }
+cmd_fild03,202,200,4	script	Field Warpra#cf03	112,{ callfunc "QWS_Field_Warpra",33,"cmd_fild03 - Zenhai Marsh"; close; }
+cmd_fild06,202,200,4	script	Field Warpra#cf06	112,{ callfunc "QWS_Field_Warpra",34,"cmd_fild06 - Fortress St. Darmain West"; close; }
+cmd_fild08,152,200,4	script	Field Warpra#cf08	112,{ callfunc "QWS_Field_Warpra",35,"cmd_fild08 - Fortress St. Darmain East"; close; }
+
+// Geffen Region - 4 fields
+gef_fild04,202,200,4	script	Field Warpra#gf04	112,{ callfunc "QWS_Field_Warpra",36,"gef_fild04 - Geffen Field"; close; }
+gef_fild07,202,200,4	script	Field Warpra#gf07	112,{ callfunc "QWS_Field_Warpra",37,"gef_fild07 - Geffen Field"; close; }
+gef_fild09,202,200,4	script	Field Warpra#gf09	112,{ callfunc "QWS_Field_Warpra",38,"gef_fild09 - Geffen Field"; close; }
+gef_fild12,202,200,4	script	Field Warpra#gf12	112,{ callfunc "QWS_Field_Warpra",39,"gef_fild12 - Kordt Forest"; close; }
+
+// Louyang & Amatsu - 2 fields
+lou_fild01,202,200,4	script	Field Warpra#lf01	112,{ callfunc "QWS_Field_Warpra",40,"lou_fild01 - Luoyang Field"; close; }
+ama_fild01,202,200,4	script	Field Warpra#af01	112,{ callfunc "QWS_Field_Warpra",41,"ama_fild01 - Amatsu Field"; close; }

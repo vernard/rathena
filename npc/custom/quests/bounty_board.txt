@@ -849,8 +849,16 @@ OnInit:
 		// Hugel Fields (Lv 14-66)
 		"hu_fild01", "hu_fild02", "hu_fild03", "hu_fild04", "hu_fild05", "hu_fild06", "hu_fild07",
 		// Veins Fields (Lv 60-79)
-		"ve_fild01", "ve_fild02", "ve_fild03", "ve_fild04", "ve_fild05", "ve_fild07";
-	.MapCount = 126;  // Total maps in .Maps$ array (90 + 36 new fields)
+		"ve_fild01", "ve_fild02", "ve_fild03", "ve_fild04", "ve_fild05", "ve_fild07",
+		// Comodo Fields (Lv 18-48)
+		"cmd_fild01", "cmd_fild02", "cmd_fild03", "cmd_fild04", "cmd_fild05", "cmd_fild06", "cmd_fild07", "cmd_fild08", "cmd_fild09",
+		// Geffen Fields - missing (Lv 3-66)
+		"gef_fild01", "gef_fild04", "gef_fild05", "gef_fild06", "gef_fild07", "gef_fild08", "gef_fild09", "gef_fild11", "gef_fild12", "gef_fild13", "gef_fild14",
+		// Louyang Field (Lv 25-47)
+		"lou_fild01",
+		// Amatsu Field (Lv 31-55)
+		"ama_fild01";
+	.MapCount = 147;  // Total maps in .Maps$ array (90 + 57 new fields)
 
 	// ==================== MAP NAMES ====================
 	// Beginner Fields
@@ -1008,6 +1016,32 @@ OnInit:
 	set .MapName_ve_fild05$, "Kasa Field";
 	set .MapName_ve_fild06$, "Veins Field";
 	set .MapName_ve_fild07$, "Veins Field";
+	// Comodo Fields
+	set .MapName_cmd_fild01$, "Papuchicha Forest";
+	set .MapName_cmd_fild02$, "Kokomo Beach";
+	set .MapName_cmd_fild03$, "Zenhai Marsh";
+	set .MapName_cmd_fild04$, "Kokomo Beach";
+	set .MapName_cmd_fild05$, "Papuchicha Forest";
+	set .MapName_cmd_fild06$, "Fortress St. Darmain (West)";
+	set .MapName_cmd_fild07$, "Pharos Beacon Island";
+	set .MapName_cmd_fild08$, "Fortress St. Darmain (East)";
+	set .MapName_cmd_fild09$, "Fortress St. Darmain (South)";
+	// Geffen Fields (missing)
+	set .MapName_gef_fild01$, "Geffen Field";
+	set .MapName_gef_fild04$, "Geffen Field";
+	set .MapName_gef_fild05$, "Geffen Field";
+	set .MapName_gef_fild06$, "Geffen Field";
+	set .MapName_gef_fild07$, "Geffen Field";
+	set .MapName_gef_fild08$, "Geffen Field";
+	set .MapName_gef_fild09$, "Geffen Field";
+	set .MapName_gef_fild11$, "Geffen Field (Goblins)";
+	set .MapName_gef_fild12$, "Kordt Forest";
+	set .MapName_gef_fild13$, "Britoniah";
+	set .MapName_gef_fild14$, "West Orc Village";
+	// Louyang Field
+	set .MapName_lou_fild01$, "Luoyang Field";
+	// Amatsu Field
+	set .MapName_ama_fild01$, "Amatsu Field";
 
 	// ==================== MONSTER LISTS ====================
 	// Format: setarray .Mobs_<mapname>[0], <mob_id1>, <mob_id2>, ...
@@ -1509,6 +1543,98 @@ OnInit:
 	// ve_fild07 - Veins Field (Lv 17-43) - town exit
 	setarray .Mobs_ve_fild07[0], 1254, 1266, 1074;  // Raggler (Lv 23), Aster (Lv 17), Shellfish (Lv 26)
 	set .Mobs_ve_fild07_count, 3;
+
+	// Comodo Fields (Lv 18-48)
+	// cmd_fild01 - Papuchicha Forest (Lv 18-26)
+	setarray .Mobs_cmd_fild01[0], 1271, 1166, 1031;  // Alligator (Lv 40), Savage (Lv 26), Poporing (Lv 30)
+	set .Mobs_cmd_fild01_count, 3;
+
+	// cmd_fild02 - Kokomo Beach (Lv 22-43)
+	setarray .Mobs_cmd_fild02[0], 1074, 1254, 1317;  // Shellfish (Lv 26), Raggler (Lv 23), Seal (Lv 43)
+	set .Mobs_cmd_fild02_count, 3;
+
+	// cmd_fild03 - Zenhai Marsh (Lv 30-48)
+	setarray .Mobs_cmd_fild03[0], 1206, 1256, 1031;  // Anolian (Lv 40), Pest (Lv 48), Poporing (Lv 30)
+	set .Mobs_cmd_fild03_count, 3;
+
+	// cmd_fild04 - Kokomo Beach (Lv 17-40)
+	setarray .Mobs_cmd_fild04[0], 1266, 1271, 1074;  // Aster (Lv 17), Alligator (Lv 40), Shellfish (Lv 26)
+	set .Mobs_cmd_fild04_count, 3;
+
+	// cmd_fild05 - Papuchicha Forest (Lv 30-40)
+	setarray .Mobs_cmd_fild05[0], 1119, 1271, 1031;  // Frilldora (Lv 30), Alligator (Lv 40), Poporing (Lv 30)
+	set .Mobs_cmd_fild05_count, 3;
+
+	// cmd_fild06 - Fortress St. Darmain West (Lv 3-36)
+	setarray .Mobs_cmd_fild06[0], 1282, 1258, 1113;  // Kobold Archer (Lv 36), Goblin Archer (Lv 33), Drops (Lv 3)
+	set .Mobs_cmd_fild06_count, 3;
+
+	// cmd_fild07 - Pharos Beacon Island (Lv 3-26)
+	setarray .Mobs_cmd_fild07[0], 1113;  // Drops (Lv 3)
+	set .Mobs_cmd_fild07_count, 1;
+
+	// cmd_fild08 - Fortress St. Darmain East (Lv 3-46)
+	setarray .Mobs_cmd_fild08[0], 1282, 1258, 1215;  // Kobold Archer (Lv 36), Goblin Archer (Lv 33), Stem Worm (Lv 46)
+	set .Mobs_cmd_fild08_count, 3;
+
+	// cmd_fild09 - Fortress St. Darmain South (Lv 3-43)
+	setarray .Mobs_cmd_fild09[0], 1030, 1042, 1113;  // Anacondaq (Lv 23), Steel Chonchon (Lv 18), Drops (Lv 3)
+	set .Mobs_cmd_fild09_count, 3;
+
+	// Geffen Fields - missing (Lv 3-66)
+	// gef_fild01 - Geffen Field (Lv 9-30)
+	setarray .Mobs_gef_fild01[0], 1012, 1031;  // Roda Frog (Lv 9), Poporing (Lv 30)
+	set .Mobs_gef_fild01_count, 2;
+
+	// gef_fild04 - Geffen Field (Lv 1-8)
+	setarray .Mobs_gef_fild04[0], 1008, 1002, 1011;  // Pupa (Lv 3), Poring (Lv 1), Chonchon (Lv 5)
+	set .Mobs_gef_fild04_count, 3;
+
+	// gef_fild05 - Geffen Field (Lv 1-36)
+	setarray .Mobs_gef_fild05[0], 1261, 1114, 1002;  // Wild Rose (Lv 47), Dustiness (Lv 17), Poring (Lv 1)
+	set .Mobs_gef_fild05_count, 3;
+
+	// gef_fild06 - Geffen Field (Lv 30-38)
+	setarray .Mobs_gef_fild06[0], 1156, 1139, 1133;  // Petite (Lv 38), Mantis (Lv 40), Kobold (Lv 36)
+	set .Mobs_gef_fild06_count, 3;
+
+	// gef_fild07 - Geffen Field (Lv 1-6)
+	setarray .Mobs_gef_fild07[0], 1007, 1011, 1002;  // Fabre (Lv 6), Chonchon (Lv 5), Poring (Lv 1)
+	set .Mobs_gef_fild07_count, 3;
+
+	// gef_fild08 - Geffen Field (Lv 18-40)
+	setarray .Mobs_gef_fild08[0], 1134, 1040, 1042;  // Kobold (Lv 36), Golem (Lv 40), Steel Chonchon (Lv 18)
+	set .Mobs_gef_fild08_count, 3;
+
+	// gef_fild09 - Geffen Field (Lv 30-37)
+	setarray .Mobs_gef_fild09[0], 1094, 1031;  // Ambernite (Lv 37), Poporing (Lv 30)
+	set .Mobs_gef_fild09_count, 2;
+
+	// gef_fild11 - Geffen Field Goblins (Lv 30-55)
+	setarray .Mobs_gef_fild11[0], 1122, 1258, 1031;  // Goblin (Lv 48), Goblin Archer (Lv 33), Poporing (Lv 30)
+	set .Mobs_gef_fild11_count, 3;
+
+	// gef_fild12 - Kordt Forest (Lv 30-36)
+	setarray .Mobs_gef_fild12[0], 1282, 1134;  // Kobold Archer (Lv 36), Kobold (Lv 36)
+	set .Mobs_gef_fild12_count, 2;
+
+	// gef_fild13 - Britoniah (Lv 16-37)
+	setarray .Mobs_gef_fild13[0], 1018, 1094, 1031;  // Creamy (Lv 16), Ambernite (Lv 37), Poporing (Lv 30)
+	set .Mobs_gef_fild13_count, 3;
+
+	// gef_fild14 - West Orc Village (Lv 52-66)
+	setarray .Mobs_gef_fild14[0], 1213, 1189, 1273;  // High Orc (Lv 66), Orc Archer (Lv 54), Orc Lady (Lv 52)
+	set .Mobs_gef_fild14_count, 3;
+
+	// Louyang Field (Lv 25-47)
+	// lou_fild01 - Luoyang Field (Lv 25-47)
+	setarray .Mobs_lou_fild01[0], 1139, 1516, 1103;  // Mantis (Lv 40), Mi Gao (Lv 47), Caramel (Lv 25)
+	set .Mobs_lou_fild01_count, 3;
+
+	// Amatsu Field (Lv 31-55)
+	// ama_fild01 - Amatsu Field (Lv 31-55)
+	setarray .Mobs_ama_fild01[0], 1400, 1406, 1060;  // Karakasa (Lv 43), Kapha (Lv 41), Bigfoot (Lv 31)
+	set .Mobs_ama_fild01_count, 3;
 
 	// Mark initialization complete
 	.Initialized = 1;
@@ -2308,6 +2434,103 @@ ve_fild05,247,135,4	duplicate(BountyBoard)	Bounty Board#ve_fild05_2	4_BOARD3
 // ve_fild07 - Veins Field (town direction: veins at 147,371)
 ve_fild07,153,364,4	duplicate(BountyBoard)	Bounty Board#ve_fild07	4_BOARD3
 ve_fild07,180,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild07_2	4_BOARD3
+
+
+// ==================== COMODO REGION FIELDS ====================
+
+// cmd_fild01 - Papuchicha Forest (entry from cmd_fild02 at 222,24)
+cmd_fild01,222,24,4	duplicate(BountyBoard)	Bounty Board#cmd_fild01	4_BOARD3
+cmd_fild01,190,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild01_2	4_BOARD3
+
+// cmd_fild02 - Kokomo Beach (entry from cmd_fild01 at 222,376)
+cmd_fild02,222,376,4	duplicate(BountyBoard)	Bounty Board#cmd_fild02	4_BOARD3
+cmd_fild02,200,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild02_2	4_BOARD3
+
+// cmd_fild03 - Zenhai Marsh (entry from cmd_fild05 at 23,68)
+cmd_fild03,23,68,4	duplicate(BountyBoard)	Bounty Board#cmd_fild03	4_BOARD3
+cmd_fild03,200,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild03_2	4_BOARD3
+
+// cmd_fild04 - Kokomo Beach (entry from cmd_fild02 at 21,275)
+cmd_fild04,21,275,4	duplicate(BountyBoard)	Bounty Board#cmd_fild04	4_BOARD3
+cmd_fild04,200,150,4	duplicate(BountyBoard)	Bounty Board#cmd_fild04_2	4_BOARD3
+
+// cmd_fild05 - Papuchicha Forest (entry from cmd_fild03 at 21,163)
+cmd_fild05,21,163,4	duplicate(BountyBoard)	Bounty Board#cmd_fild05	4_BOARD3
+cmd_fild05,150,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild05_2	4_BOARD3
+
+// cmd_fild06 - Fortress St. Darmain West (entry from cmd_fild04 at 21,285)
+cmd_fild06,21,285,4	duplicate(BountyBoard)	Bounty Board#cmd_fild06	4_BOARD3
+cmd_fild06,200,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild06_2	4_BOARD3
+
+// cmd_fild07 - Pharos Beacon Island (entry from cmd_fild06 at 149,379)
+cmd_fild07,149,379,4	duplicate(BountyBoard)	Bounty Board#cmd_fild07	4_BOARD3
+cmd_fild07,250,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild07_2	4_BOARD3
+
+// cmd_fild08 - Fortress St. Darmain East (entry from cmd_fild06 at 15,102)
+cmd_fild08,15,102,4	duplicate(BountyBoard)	Bounty Board#cmd_fild08	4_BOARD3
+cmd_fild08,150,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild08_2	4_BOARD3
+
+// cmd_fild09 - Fortress St. Darmain South (entry from cmd_fild07 at 12,170)
+cmd_fild09,12,170,4	duplicate(BountyBoard)	Bounty Board#cmd_fild09	4_BOARD3
+cmd_fild09,200,250,4	duplicate(BountyBoard)	Bounty Board#cmd_fild09_2	4_BOARD3
+
+
+// ==================== GEFFEN REGION FIELDS (MISSING) ====================
+
+// gef_fild01 - Geffen Field (exit to prt_fild04 at 382,111)
+gef_fild01,382,111,4	duplicate(BountyBoard)	Bounty Board#gef_fild01	4_BOARD3
+gef_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild01_2	4_BOARD3
+
+// gef_fild04 - Geffen Field (exit to Geffen at 187,39)
+gef_fild04,187,39,4	duplicate(BountyBoard)	Bounty Board#gef_fild04	4_BOARD3
+gef_fild04,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild04_2	4_BOARD3
+
+// gef_fild05 - Geffen Field (entry from gef_fild06 at 15,201)
+gef_fild05,15,201,4	duplicate(BountyBoard)	Bounty Board#gef_fild05	4_BOARD3
+gef_fild05,200,250,4	duplicate(BountyBoard)	Bounty Board#gef_fild05_2	4_BOARD3
+
+// gef_fild06 - Geffen Field (exit to gef_fild05 at 382,211)
+gef_fild06,382,211,4	duplicate(BountyBoard)	Bounty Board#gef_fild06	4_BOARD3
+gef_fild06,250,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild06_2	4_BOARD3
+
+// gef_fild07 - Geffen Field (exit to Geffen at 339,187)
+gef_fild07,339,187,4	duplicate(BountyBoard)	Bounty Board#gef_fild07	4_BOARD3
+gef_fild07,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild07_2	4_BOARD3
+
+// gef_fild08 - Geffen Field (entry from gef_fild06 at 200,355)
+gef_fild08,200,355,4	duplicate(BountyBoard)	Bounty Board#gef_fild08	4_BOARD3
+gef_fild08,250,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild08_2	4_BOARD3
+
+// gef_fild09 - Geffen Field (entry from gef_fild13 at 23,56)
+gef_fild09,23,56,4	duplicate(BountyBoard)	Bounty Board#gef_fild09	4_BOARD3
+gef_fild09,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild09_2	4_BOARD3
+
+// gef_fild11 - Geffen Field Goblins (exit to prt_fild11 at 377,293)
+gef_fild11,377,293,4	duplicate(BountyBoard)	Bounty Board#gef_fild11	4_BOARD3
+gef_fild11,200,150,4	duplicate(BountyBoard)	Bounty Board#gef_fild11_2	4_BOARD3
+
+// gef_fild12 - Kordt Forest (entry from gef_fild08 at 221,374)
+gef_fild12,221,374,4	duplicate(BountyBoard)	Bounty Board#gef_fild12	4_BOARD3
+gef_fild12,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild12_2	4_BOARD3
+
+// gef_fild13 - Britoniah (exit to gef_fild09 at 380,56)
+gef_fild13,380,56,4	duplicate(BountyBoard)	Bounty Board#gef_fild13	4_BOARD3
+gef_fild13,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild13_2	4_BOARD3
+
+// gef_fild14 - West Orc Village (exit to gef_fild13 at 180,360)
+gef_fild14,180,360,4	duplicate(BountyBoard)	Bounty Board#gef_fild14	4_BOARD3
+gef_fild14,250,250,4	duplicate(BountyBoard)	Bounty Board#gef_fild14_2	4_BOARD3
+
+
+// ==================== LOUYANG & AMATSU FIELDS ====================
+
+// lou_fild01 - Luoyang Field
+lou_fild01,150,200,4	duplicate(BountyBoard)	Bounty Board#lou_fild01	4_BOARD3
+lou_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#lou_fild01_2	4_BOARD3
+
+// ama_fild01 - Amatsu Field
+ama_fild01,200,150,4	duplicate(BountyBoard)	Bounty Board#ama_fild01	4_BOARD3
+ama_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#ama_fild01_2	4_BOARD3
 
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================
