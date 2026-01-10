@@ -490,7 +490,7 @@ function	script	F_BuildSuggestions	{
 
 			// Update cooldown table
 			.@cd_sec = getvariableofnpc(.CooldownSeconds, "BountyBoard");
-			query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", 1, NOW(), 1) ON DUPLICATE KEY UPDATE hunt_count = hunt_count + 1, first_hunt_time = IF(TIMESTAMPDIFF(SECOND, first_hunt_time, NOW()) >= " + .@cd_sec + ", NOW(), first_hunt_time), first_clear = 1");
+			query_sql("INSERT INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", 1, NOW(), 1) ON DUPLICATE KEY UPDATE hunt_count = hunt_count + 1, first_hunt_time = IF(TIMESTAMPDIFF(SECOND, first_hunt_time, NOW()) >= " + .@cd_sec + ", NOW(), first_hunt_time), first_clear = 1");
 
 			// Increment total hunts and clear bounty
 			#HUNT_TOTAL += 1;
@@ -702,7 +702,7 @@ function	script	F_BuildSuggestions	{
 
 				// Update cooldown table
 				.@cd_sec = getvariableofnpc(.CooldownSeconds, "BountyBoard");
-				query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", 1, NOW(), 1) ON DUPLICATE KEY UPDATE hunt_count = hunt_count + 1, first_hunt_time = IF(TIMESTAMPDIFF(SECOND, first_hunt_time, NOW()) >= " + .@cd_sec + ", NOW(), first_hunt_time), first_clear = 1");
+				query_sql("INSERT INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" + getcharid(0) + ", " + Bounty_MobID + ", 1, NOW(), 1) ON DUPLICATE KEY UPDATE hunt_count = hunt_count + 1, first_hunt_time = IF(TIMESTAMPDIFF(SECOND, first_hunt_time, NOW()) >= " + .@cd_sec + ", NOW(), first_hunt_time), first_clear = 1");
 
 				// Increment total hunts and clear bounty
 				#HUNT_TOTAL += 1;
@@ -1745,7 +1745,7 @@ S_GrantBountyRewards:
 
 	// Update cooldown table
 	.@cd_sec = getvariableofnpc(.CooldownSeconds, "BountyBoard");
-	query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" +
+	query_sql("INSERT INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" +
 		getcharid(0) + ", " + Bounty_MobID + ", 1, NOW(), 1) ON DUPLICATE KEY UPDATE hunt_count = hunt_count + 1, first_hunt_time = IF(TIMESTAMPDIFF(SECOND, first_hunt_time, NOW()) >= " + .@cd_sec + ", NOW(), first_hunt_time), first_clear = 1");
 
 	// Increment total hunts
@@ -2707,7 +2707,7 @@ L_ClaimBounty:
 
 	// Update bounty cooldown (single query with ON DUPLICATE KEY, same as S_GrantBountyRewards)
 	.@cd_sec = getvariableofnpc(.CooldownSeconds, "BountyBoard");
-	query_sql("REPLACE INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" +
+	query_sql("INSERT INTO `bounty_cooldowns` (`char_id`, `mob_id`, `hunt_count`, `first_hunt_time`, `first_clear`) VALUES (" +
 		getcharid(0) + ", " + Bounty_MobID + ", 1, NOW(), 1) ON DUPLICATE KEY UPDATE hunt_count = hunt_count + 1, first_hunt_time = IF(TIMESTAMPDIFF(SECOND, first_hunt_time, NOW()) >= " + .@cd_sec + ", NOW(), first_hunt_time), first_clear = 1");
 
 	#HUNT_TOTAL += 1;
