@@ -428,6 +428,11 @@ function	script	F_BuildSuggestions	{
 		if (Bounty_Kills >= Bounty_Target) {
 			// Calculate final rewards (inline - callsub doesn't share .@ scope)
 			.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
+
+			// Level check - if too low, no EXP (prevents trans exploit)
+			.@min_player_lv = max(1, .@mob_lv - 10);
+			.@level_ok = (BaseLevel >= .@min_player_lv);
+
 			.@mult = .TierMult[0];
 			.@kills = Bounty_Target;
 
@@ -473,20 +478,27 @@ function	script	F_BuildSuggestions	{
 			callsub S_ShowRewardStatus;
 			mes " ";
 			mes "Rewards:";
-			mes "  EXP: ^0055FF~" + .@pct + "% of level^000000";
+			if (.@level_ok) {
+				mes "  EXP: ^0055FF~" + .@pct + "% of level^000000";
+			} else {
+				mes "  EXP: ^FF0000None (Lv " + .@min_player_lv + "+ required)^000000";
+			}
 			mes "  Zeny: ^0055FF" + callfunc("F_ShortNum", .@zeny) + "^000000";
 			mes "  Hunt Points: ^0055FF" + .@points + "^000000";
 
 			// Store completed mob ID before clearing (for cooldown display)
 			.@completed_mob = Bounty_MobID;
 
-			// Grant rewards
-			getexp .@base_exp, .@job_exp;
+			// Grant rewards (no EXP if under-leveled - prevents trans exploit)
+			if (.@level_ok) {
+				getexp .@base_exp, .@job_exp;
+			}
 			Zeny += .@zeny;
 			#HUNT_POINTS += .@points;
 
-			// Log to database
-			query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" + getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
+			// Log to database (log 0 EXP if skipped)
+			.@logged_exp = .@level_ok ? .@base_exp : 0;
+			query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" + getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@logged_exp + ", " + .@zeny + ", " + .@points + ")");
 
 			// Update cooldown table
 			.@cd_sec = getvariableofnpc(.CooldownSeconds, "BountyBoard");
@@ -647,6 +659,11 @@ function	script	F_BuildSuggestions	{
 			case 1:
 				// Calculate final rewards (inline - callsub doesn't share .@ scope)
 				.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
+
+				// Level check - if too low, no EXP (prevents trans exploit)
+				.@min_player_lv = max(1, .@mob_lv - 10);
+				.@level_ok = (BaseLevel >= .@min_player_lv);
+
 				.@mult = .TierMult[0];
 				.@kills = Bounty_Target;
 
@@ -688,17 +705,24 @@ function	script	F_BuildSuggestions	{
 				callsub S_ShowRewardStatus;
 				mes " ";
 				mes "Rewards:";
-				mes "  EXP: ^0055FF~" + .@pct + "% of level^000000";
+				if (.@level_ok) {
+					mes "  EXP: ^0055FF~" + .@pct + "% of level^000000";
+				} else {
+					mes "  EXP: ^FF0000None (Lv " + .@min_player_lv + "+ required)^000000";
+				}
 				mes "  Zeny: ^0055FF" + callfunc("F_ShortNum", .@zeny) + "^000000";
 				mes "  Hunt Points: ^0055FF" + .@points + "^000000";
 
-				// Grant rewards
-				getexp .@base_exp, .@job_exp;
+				// Grant rewards (no EXP if under-leveled - prevents trans exploit)
+				if (.@level_ok) {
+					getexp .@base_exp, .@job_exp;
+				}
 				Zeny += .@zeny;
 				#HUNT_POINTS += .@points;
 
-				// Log to database
-				query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" + getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
+				// Log to database (log 0 EXP if skipped)
+				.@logged_exp = .@level_ok ? .@base_exp : 0;
+				query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" + getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@logged_exp + ", " + .@zeny + ", " + .@points + ")");
 
 				// Update cooldown table
 				.@cd_sec = getvariableofnpc(.CooldownSeconds, "BountyBoard");
@@ -2647,6 +2671,11 @@ prontera,164,172,4	script	Monster Hunter Guild	4_F_EDEN_MASTER,{
 L_ClaimBounty:
 	.@mob_name$ = getmonsterinfo(Bounty_MobID, MOB_NAME);
 	.@mob_lv = getmonsterinfo(Bounty_MobID, MOB_LV);
+
+	// Level check - if too low, no EXP (prevents trans exploit)
+	.@min_player_lv = max(1, .@mob_lv - 10);
+	.@level_ok = (BaseLevel >= .@min_player_lv);
+
 	.@mult = 100;  // Single tier
 	.@kills = Bounty_Target;
 
@@ -2692,18 +2721,25 @@ L_ClaimBounty:
 	}
 	mes " ";
 	mes "Rewards:";
-	mes "  EXP: ^0055FF~" + .@pct + "% of level^000000";
+	if (.@level_ok) {
+		mes "  EXP: ^0055FF~" + .@pct + "% of level^000000";
+	} else {
+		mes "  EXP: ^FF0000None (Lv " + .@min_player_lv + "+ required)^000000";
+	}
 	mes "  Zeny: ^0055FF" + callfunc("F_ShortNum", .@zeny) + "^000000";
 	mes "  Hunt Points: ^0055FF" + .@points + "^000000";
 
-	// Grant rewards
-	getexp .@base_exp, .@job_exp;
+	// Grant rewards (no EXP if under-leveled - prevents trans exploit)
+	if (.@level_ok) {
+		getexp .@base_exp, .@job_exp;
+	}
 	Zeny += .@zeny;
 	#HUNT_POINTS += .@points;
 
-	// Log to database
+	// Log to database (log 0 EXP if skipped)
+	.@logged_exp = .@level_ok ? .@base_exp : 0;
 	query_sql("INSERT INTO `bounty_log` (`char_id`, `account_id`, `map`, `mob_id`, `kill_target`, `tier`, `exp_reward`, `zeny_reward`, `points_reward`) VALUES (" +
-		getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@base_exp + ", " + .@zeny + ", " + .@points + ")");
+		getcharid(0) + ", " + getcharid(3) + ", '" + escape_sql(Bounty_Map$) + "', " + Bounty_MobID + ", " + Bounty_Target + ", " + Bounty_Tier + ", " + .@logged_exp + ", " + .@zeny + ", " + .@points + ")");
 
 	// Update bounty cooldown (single query with ON DUPLICATE KEY, same as S_GrantBountyRewards)
 	.@cd_sec = getvariableofnpc(.CooldownSeconds, "BountyBoard");
