@@ -347,6 +347,54 @@ L_Contribute:
 
 		mes " ";
 		mes "^00FF00** TIER " + .@new_tier + " UNLOCKED! **^000000";
+
+		// Check if activation is possible and prompt user
+		// Get pool info to check cooldown and pending status
+		query_sql "SELECT activation_pending, UNIX_TIMESTAMP(created_at) FROM event_crowdfund_pool WHERE id = " + .@pool_id, .@pending, .@pool_created;
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_cooldown'", .@cooldown_str$;
+		.@cooldown = atoi(.@cooldown_str$);
+		.@now = gettimetick(2);
+		.@cooldown_passed = (.@cooldown == 0 || .@now >= (.@pool_created + .@cooldown));
+
+		// Prompt to activate if: not pending, cooldown passed, no active boost
+		if (!.@pending && .@cooldown_passed && !$@ExpBoostActive) {
+			// Get activation delay setting
+			query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_exp_activation_delay'", .@delay_str$;
+			.@activation_delay = atoi(.@delay_str$);
+
+			next;
+			mes "[Event Patron]";
+			mes "Your contribution unlocked";
+			mes "^00FF00Tier " + .@new_tier + "^000000!";
+			mes " ";
+			mes "Reward: ^0000FF" + atoi(.@tier_dur$) + "min " + .@mult$ + " EXP^000000";
+			mes " ";
+			mes "Would you like to activate";
+			mes "the EXP Boost now?";
+			next;
+
+			if (.@activation_delay > 0) {
+				.@delay_mins = .@activation_delay / 60;
+				switch(select("^00FF00Activate NOW^000000:Start " + .@delay_mins + "-min countdown:Wait for higher tier")) {
+					case 1:
+						// Immediate activation - skip countdown
+						set .@activate_pool_id, .@pool_id;
+						goto L_DoActivation;
+					case 2:
+						// Use countdown - go to L_Activate
+						goto L_Activate;
+					case 3:
+						// Do nothing, continue to main menu
+						break;
+				}
+			} else {
+				// No countdown configured
+				if (select("^00FF00Activate NOW^000000:Wait for higher tier") == 1) {
+					set .@activate_pool_id, .@pool_id;
+					goto L_DoActivation;
+				}
+			}
+		}
 	}
 	next;
 	goto L_MainMenu;
@@ -380,12 +428,22 @@ L_Activate:
 	}
 
 	// Check if EXP Boost is already active
+	// First check the variable, then verify against database
 	if ($@ExpBoostActive) {
-		mes "[Event Patron]";
-		mes "An EXP Boost is already active!";
-		mes "Wait for it to end first.";
-		next;
-		goto L_MainMenu;
+		// Double-check with database - variable might be stale
+		query_sql "SELECT COUNT(*) FROM event_instances WHERE event_code = 'exp_boost' AND status = 'active' AND NOW() < scheduled_end", .@db_active;
+		if (.@db_active == 0) {
+			// Database says no active boost - fix the stale variable
+			debugmes "[Event Patron] Fixing stale $@ExpBoostActive flag";
+			set $@ExpBoostActive, 0;
+			// Continue to activation
+		} else {
+			mes "[Event Patron]";
+			mes "An EXP Boost is already active!";
+			mes "Wait for it to end first.";
+			next;
+			goto L_MainMenu;
+		}
 	}
 
 	// Get activation delay
@@ -403,23 +461,29 @@ L_Activate:
 	mes "Current tier: ^00FF00" + .@pool_tier + "^000000";
 	mes "Reward: ^0000FF" + .@duration + "min " + .@mult_display$ + " EXP^000000";
 	mes " ";
-	if (.@activation_delay > 0) {
-		.@delay_mins = .@activation_delay / 60;
-		mes "This will start a ^FF6600" + .@delay_mins + "-minute^000000";
-		mes "countdown. Others can still";
-		mes "contribute for higher tiers!";
-	} else {
-		mes "Activate now for everyone?";
-	}
+	mes "How would you like to activate?";
 	next;
 
-	if (select("Yes, activate!:Wait for higher tier") == 2) {
-		goto L_MainMenu;
-	}
-
-	// If no delay, activate immediately
-	if (.@activation_delay == 0) {
-		// Store pool id and activate
+	// Build menu based on whether countdown is configured
+	if (.@activation_delay > 0) {
+		.@delay_mins = .@activation_delay / 60;
+		switch(select("^00FF00Activate NOW^000000:Start " + .@delay_mins + "-min countdown:Wait for higher tier")) {
+			case 1:
+				// Immediate activation - skip countdown
+				set .@activate_pool_id, .@pool_id;
+				goto L_DoActivation;
+			case 2:
+				// Use countdown - continue to countdown logic below
+				break;
+			case 3:
+				goto L_MainMenu;
+		}
+	} else {
+		// No countdown configured, just two options
+		if (select("^00FF00Activate NOW^000000:Wait for higher tier") == 2) {
+			goto L_MainMenu;
+		}
+		// Immediate activation
 		set .@activate_pool_id, .@pool_id;
 		goto L_DoActivation;
 	}
@@ -757,7 +821,7 @@ L_GM_ExpBoostMenu:
 	}
 	next;
 
-	switch(select("Start Event:Stop Event:View Scheduled:Manage Triggers:Configure Crowdfund:Reset Pool:Cancel Pending:Back")) {
+	switch(select("Start Event:Stop Event:View Scheduled:Manage Triggers:Configure Crowdfund:Reset Pool:Cancel Pending:^FF0000Force Reset State^000000:Back")) {
 		case 1: goto L_GM_ExpStart;
 		case 2: goto L_GM_ExpStop;
 		case 3: goto L_GM_ExpViewSched;
@@ -765,7 +829,8 @@ L_GM_ExpBoostMenu:
 		case 5: goto L_GM_Config;
 		case 6: goto L_GM_ResetPool;
 		case 7: goto L_GM_CancelPending;
-		case 8: goto L_MainMenu;
+		case 8: goto L_GM_ForceReset;
+		case 9: goto L_MainMenu;
 	}
 	end;
 
@@ -1332,6 +1397,52 @@ L_GM_CancelPending:
 	mes "^00FF00Pending activation cancelled!^000000";
 	next;
 	goto L_GM_ExpBoostMenu;
+
+L_GM_ForceReset:
+	mes "[Force Reset State]";
+	mes "^FF0000WARNING: Emergency reset!^000000";
+	mes " ";
+	mes "This will clear all EXP Boost";
+	mes "state flags and mark any";
+	mes "active instances as completed.";
+	mes " ";
+	mes "Current flags:";
+	mes "  $@ExpBoostActive = " + $@ExpBoostActive;
+	mes "  $@ExpBoostInstanceId = " + $@ExpBoostInstanceId;
+	next;
+
+	if (select("^FF0000Yes, force reset^000000:Cancel") == 2) {
+		goto L_GM_ExpBoostMenu;
+	}
+
+	// Clear all state flags
+	set $@ExpBoostActive, 0;
+	set $@ExpBoostMultiplier, 0;
+	set $@ExpBoostDuration, 0;
+	set $@ExpBoostStartTime, 0;
+	set $@ExpBoostEndTime, 0;
+	set $@ExpBoostInstanceId, 0;
+
+	// Also clear any in-memory original rates
+	set $@EB_OrigBaseExp, 0;
+	set $@EB_OrigJobExp, 0;
+
+	// Mark any stuck active instances as completed in database
+	query_sql "UPDATE event_instances SET status = 'completed', actual_end = NOW() WHERE event_code = 'exp_boost' AND status = 'active'";
+
+	// Stop any running NPC timers
+	stopnpctimer;
+
+	mes "[Event Patron]";
+	mes "^00FF00State forcefully reset!^000000";
+	mes " ";
+	mes "All EXP Boost flags cleared.";
+	mes "Active instances marked complete.";
+	mes " ";
+	mes "^FF8800Note: EXP rates NOT restored.^000000";
+	mes "If rates are wrong, restart server";
+	mes "or manually adjust via @setbattleflag";
+	close;
 
 L_GM_EditTiers:
 	mes "[Edit Tier]";
