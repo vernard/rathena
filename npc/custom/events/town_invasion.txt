@@ -37,6 +37,7 @@ OnInit:
 	$@InvasionWaveBossKills = 0;     // MVP + miniboss killed this wave
 	$@InvasionWaveRegularSpawns = 0; // Non-boss monsters spawned
 	$@InvasionWaveRegularKills = 0;  // Non-boss monsters killed
+	$@InvasionLastBossGather = 0;    // Last time bosses were gathered to center
 
 	// Cancel any active invasions from before server restart
 	// (We don't restore mid-invasion state - GMs can manually restart if needed)
@@ -73,14 +74,41 @@ OnTimer10000:
 		end;
 	}
 
-	// Check for periodic reminder (every 5 min, if no recent announcement)
+	// Boss gathering - every 60 seconds, teleport bosses to town center
+	.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+	if (.@boss_left > 0 && gettimetick(2) - $@InvasionLastBossGather >= 60) {
+		// Find and gather all bosses to town center
+		.@mob_count = getmapunits(BL_MOB, $@InvasionMap$, .@gids[0]);
+		.@gathered = 0;
+		.@boss_names$ = "";
+		for (.@i = 0; .@i < .@mob_count; .@i++) {
+			.@mob_id = getunitdata(.@gids[.@i], UMOB_CLASS);
+			query_sql "SELECT tier, mob_name FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND mob_id = " + .@mob_id + " AND tier IN ('mvp', 'miniboss') LIMIT 1", .@tier$, .@name$;
+			if (.@tier$ != "") {
+				// Warp boss to town center (with small random offset to avoid stacking)
+				.@offset_x = rand(-3, 3);
+				.@offset_y = rand(-3, 3);
+				unitwarp .@gids[.@i], $@InvasionMap$, $@InvasionCenterX + .@offset_x, $@InvasionCenterY + .@offset_y;
+				if (.@gathered > 0) .@boss_names$ = .@boss_names$ + ", ";
+				.@boss_names$ = .@boss_names$ + .@name$;
+				.@gathered++;
+			}
+		}
+		if (.@gathered > 0) {
+			announce "[TownInvasion] >> " + .@boss_names$ + " summoned to town center! <<", bc_all, 0xFF0000;
+			announce "[TownInvasion] Location: " + $@InvasionTownName$ + " (" + $@InvasionCenterX + ", " + $@InvasionCenterY + ")", bc_all, 0xFF8800;
+		}
+		$@InvasionLastBossGather = gettimetick(2);
+		$@InvasionLastAnnounce = gettimetick(2);  // Also reset announce timer
+	}
+
+	// Check for periodic reminder (every 5 min when no bosses)
 	if (gettimetick(2) - $@InvasionLastAnnounce >= 300) {
 		.@remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
 		if (.@remaining > 0) {
 			.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
-			.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
 			if (.@boss_left > 0) {
-				announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + .@regular_left + " monsters + " + .@boss_left + " bosses remaining!", bc_all, 0xFF8800;
+				announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + .@regular_left + " mobs + " + .@boss_left + " bosses remaining!", bc_all, 0xFF8800;
 			} else {
 				announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + .@regular_left + " monsters remaining!", bc_all, 0xFF8800;
 			}
@@ -459,6 +487,7 @@ S_SpawnWave:
 	$@InvasionWaveBossKills = 0;
 	$@InvasionWaveRegularSpawns = .@regular_spawned;
 	$@InvasionWaveRegularKills = 0;
+	$@InvasionLastBossGather = gettimetick(2);  // Reset boss gather timer for new wave
 	debugmes "[TownInvasion] S_SpawnWave - Bosses: " + .@boss_spawned + ", Regular: " + .@regular_spawned;
 
 	// Make all spawned monsters aggressive using getmapunits
@@ -906,6 +935,7 @@ S_ResetState:
 	$@InvasionEndTime = 0;
 	$@InvasionNextWaveTime = 0;
 	$@InvasionEventInstanceID = 0;
+	$@InvasionLastBossGather = 0;
 	return;
 
 // ============================================================

@@ -30,7 +30,14 @@ prontera,149,193,5	script	Defense Coordinator	4_M_JOB_KNIGHT2,{
 		.@remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
 		mes "Wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
 		mes "Time left: ^FF8800" + .@remaining + " minutes^000000";
-		mes "Kills: " + $@InvasionMonstersKilled + "/" + $@InvasionMonstersSpawned;
+		// Show wave-specific remaining monsters
+		.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
+		.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+		if (.@boss_left > 0) {
+			mes "Remaining: ^FF0000" + .@regular_left + "^000000 mobs + ^FF8800" + .@boss_left + "^000000 boss";
+		} else {
+			mes "Remaining: ^FF0000" + .@regular_left + "^000000 monsters";
+		}
 		next;
 	} else {
 		mes "[Defense Coordinator]";
@@ -50,6 +57,7 @@ prontera,149,193,5	script	Defense Coordinator	4_M_JOB_KNIGHT2,{
 	.@menu$ = "";
 	if ($@InvasionActive) {
 		.@menu$ = "^FF0000[!] Warp to Invasion^000000:";
+		.@menu$ = .@menu$ + "^FFAA00[!] Locate Monsters^000000:";
 	}
 	if (.@pending_points > 0) {
 		.@menu$ = .@menu$ + "^00AA00[!] Claim Rewards (" + .@pending_points + " pts)^000000:";
@@ -71,6 +79,8 @@ prontera,149,193,5	script	Defense Coordinator	4_M_JOB_KNIGHT2,{
 	.@idx = 1;
 	if ($@InvasionActive) {
 		if (.@choice == .@idx) goto L_WarpToInvasion;
+		.@idx++;
+		if (.@choice == .@idx) goto L_LocateMonsters;
 		.@idx++;
 	}
 	if (.@pending_points > 0) {
@@ -138,6 +148,138 @@ L_WarpToInvasion:
 	close2;
 	warp $@InvasionMap$, $@InvasionSafeX, $@InvasionSafeY;
 	end;
+
+// ============================================================
+// LOCATE MONSTERS
+// ============================================================
+L_LocateMonsters:
+	if (!$@InvasionActive) {
+		mes "[Defense Coordinator]";
+		mes "The invasion has ended.";
+		close;
+	}
+
+	mes "[Defense Coordinator]";
+	mes "^0000FFMonster Locations^000000";
+	mes "Map: " + $@InvasionTownName$;
+	mes "---------------------";
+
+	// Get all monsters on the invasion map
+	.@mob_count = getmapunits(BL_MOB, $@InvasionMap$, .@gids[0]);
+
+	if (.@mob_count == 0) {
+		mes "^00AA00No monsters detected!^000000";
+		mes " ";
+		mes "The wave may be clearing...";
+		close;
+	}
+
+	// Separate bosses and regular monsters
+	// Check each monster against our invasion theme's monster list
+	.@boss_count = 0;
+	.@regular_count = 0;
+
+	for (.@i = 0; .@i < .@mob_count; .@i++) {
+		.@gid = .@gids[.@i];
+		.@mob_id = getunitdata(.@gid, UMOB_CLASS);
+		.@x = getunitdata(.@gid, UMOB_X);
+		.@y = getunitdata(.@gid, UMOB_Y);
+
+		// Check if this is a boss/miniboss from our theme
+		query_sql "SELECT tier, mob_name FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND mob_id = " + .@mob_id + " LIMIT 1", .@tier$, .@name$;
+
+		// Fallback name if not in theme (shouldn't happen but safety first)
+		if (.@name$ == "") .@name$ = "Monster";
+
+		if (.@tier$ == "mvp" || .@tier$ == "miniboss") {
+			// Store boss info
+			.@boss_names$[.@boss_count] = .@name$;
+			.@boss_x[.@boss_count] = .@x;
+			.@boss_y[.@boss_count] = .@y;
+			.@boss_tier$[.@boss_count] = .@tier$;
+			.@boss_count++;
+		} else {
+			// Store regular monster info (up to 20 for display)
+			if (.@regular_count < 20) {
+				.@reg_x[.@regular_count] = .@x;
+				.@reg_y[.@regular_count] = .@y;
+				.@reg_names$[.@regular_count] = .@name$;
+			}
+			.@regular_count++;
+		}
+	}
+
+	// Always show boss locations first (they're required kills)
+	if (.@boss_count > 0) {
+		mes "^FF0000== PRIORITY TARGETS ==^000000";
+		for (.@i = 0; .@i < .@boss_count; .@i++) {
+			if (.@boss_tier$[.@i] == "mvp") {
+				mes "^FF0000[MVP]^000000 " + .@boss_names$[.@i];
+			} else {
+				mes "^FF8800[MINI]^000000 " + .@boss_names$[.@i];
+			}
+			mes "  → ^0000FF" + .@boss_x[.@i] + ", " + .@boss_y[.@i] + "^000000";
+		}
+		mes " ";
+	}
+
+	// Show regular monster info
+	if (.@regular_count > 0) {
+		// Very few monsters - show with names and exact coords
+		if (.@regular_count <= 5) {
+			if (.@regular_count <= 3) {
+				mes "^FF0000== LAST " + .@regular_count + " MONSTERS! ==^000000";
+			} else {
+				mes "^FFAA00== " + .@regular_count + " REMAINING ==^000000";
+			}
+			for (.@i = 0; .@i < .@regular_count; .@i++) {
+				mes "^FFAA00" + .@reg_names$[.@i] + "^000000";
+				mes "  → ^0000FF" + .@reg_x[.@i] + ", " + .@reg_y[.@i] + "^000000";
+			}
+		}
+		// Moderate amount - show just coordinates
+		else if (.@regular_count <= 10) {
+			mes "^888888Regular monsters: " + .@regular_count + "^000000";
+			mes "^FFAA00== REMAINING MOBS ==^000000";
+			for (.@i = 0; .@i < .@regular_count; .@i++) {
+				mes "  → ^0000FF" + .@reg_x[.@i] + ", " + .@reg_y[.@i] + "^000000";
+			}
+		} else {
+			// Many monsters - show quadrant summary
+			mes "^888888Regular monsters: " + .@regular_count + "^000000";
+			// Calculate quadrants based on spawn center
+			.@nw = 0; .@ne = 0; .@sw = 0; .@se = 0;
+			for (.@i = 0; .@i < .@regular_count && .@i < 20; .@i++) {
+				if (.@reg_x[.@i] < $@InvasionCenterX) {
+					if (.@reg_y[.@i] >= $@InvasionCenterY) .@nw++;
+					else .@sw++;
+				} else {
+					if (.@reg_y[.@i] >= $@InvasionCenterY) .@ne++;
+					else .@se++;
+				}
+			}
+			// Scale up if we only sampled 20
+			if (.@regular_count > 20) {
+				.@scale = .@regular_count / 20;
+				.@nw = .@nw * .@scale;
+				.@ne = .@ne * .@scale;
+				.@sw = .@sw * .@scale;
+				.@se = .@se * .@scale;
+			}
+			mes "^FFAA00== AREA DENSITY ==^000000";
+			mes "NW: ~" + .@nw + "  |  NE: ~" + .@ne;
+			mes "SW: ~" + .@sw + "  |  SE: ~" + .@se;
+			mes "^888888(relative to town center)^000000";
+		}
+	}
+
+	next;
+	mes "[Defense Coordinator]";
+	mes "^888888Tip: Use /where to check";
+	mes "your current coordinates.^000000";
+	mes " ";
+	mes "Town center: " + $@InvasionCenterX + ", " + $@InvasionCenterY;
+	close;
 
 // ============================================================
 // CLAIM REWARDS
@@ -211,7 +353,15 @@ L_ViewStatus:
 		mes "Location: " + $@InvasionTownName$;
 		mes "Wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
 		mes "Time: " + .@remaining + " min remaining";
-		mes "Kills: " + $@InvasionMonstersKilled;
+		// Show wave-specific remaining monsters
+		.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
+		.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+		if (.@boss_left > 0) {
+			mes "Remaining: ^FF0000" + .@regular_left + "^000000 + ^FF8800" + .@boss_left + " boss^000000";
+		} else {
+			mes "Remaining: ^FF0000" + .@regular_left + "^000000 monsters";
+		}
+		mes "Total kills: " + $@InvasionMonstersKilled;
 	} else {
 		mes "^00AA00NO ACTIVE INVASION^000000";
 		mes "---------------------";
@@ -339,7 +489,15 @@ L_GMMenu:
 		mes "Location: " + $@InvasionTownName$;
 		mes "Wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
 		mes "Time left: " + .@remaining + " min";
-		mes "Kills: " + $@InvasionMonstersKilled;
+		// Show wave-specific remaining
+		.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
+		.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+		if (.@boss_left > 0) {
+			mes "Wave: ^FF0000" + .@regular_left + "^000000 mobs + ^FF8800" + .@boss_left + "^000000 boss left";
+		} else {
+			mes "Wave: ^FF0000" + .@regular_left + "^000000 monsters left";
+		}
+		mes "Total kills: " + $@InvasionMonstersKilled;
 	} else {
 		mes "^00AA00Status: No active invasion^000000";
 
@@ -416,7 +574,15 @@ L_GM_StopMenu:
 	mes "Threat: " + .@threat_name$;
 	mes "Wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
 	mes "Time: " + .@remaining + " min left";
-	mes "Kills: " + $@InvasionMonstersKilled + "/" + $@InvasionMonstersSpawned;
+	// Show wave-specific remaining
+	.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
+	.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+	if (.@boss_left > 0) {
+		mes "Remaining: " + .@regular_left + " mobs + " + .@boss_left + " boss";
+	} else {
+		mes "Remaining: " + .@regular_left + " monsters";
+	}
+	mes "Total: " + $@InvasionMonstersKilled + "/" + $@InvasionMonstersSpawned + " killed";
 	next;
 
 	switch(select("Force Wave Clear:Cancel Invasion:Back")) {
