@@ -1974,7 +1974,7 @@ prt_fild05,272,206,4	duplicate(BountyBoard)	Bounty Board#prt_fild05	4_BOARD3
 prt_fild05,150,150,4	duplicate(BountyBoard)	Bounty Board#prt_fild05_2	4_BOARD3
 prt_fild08,231,22,4	duplicate(BountyBoard)	Bounty Board#prt_fild08	4_BOARD3
 prt_fild08,180,180,4	duplicate(BountyBoard)	Bounty Board#prt_fild08_2	4_BOARD3
-gef_fild00,42,197,4	duplicate(BountyBoard)	Bounty Board#gef_fild00	4_BOARD3
+gef_fild00,52,197,4	duplicate(BountyBoard)	Bounty Board#gef_fild00	4_BOARD3
 gef_fild00,200,150,4	duplicate(BountyBoard)	Bounty Board#gef_fild00_2	4_BOARD3
 mjolnir_01,282,23,4	duplicate(BountyBoard)	Bounty Board#mjolnir_01	4_BOARD3
 mjolnir_01,200,180,4	duplicate(BountyBoard)	Bounty Board#mjolnir_01_2	4_BOARD3
@@ -2014,12 +2014,12 @@ pay_dun01,21,35,4	duplicate(BountyBoard)	Bounty Board#pay_dun01	4_BOARD3
 pay_dun01,150,100,4	duplicate(BountyBoard)	Bounty Board#pay_dun01_2	4_BOARD3
 
 // Mid Fields (Lv 30-50)
-gef_fild02,16,80,4	duplicate(BountyBoard)	Bounty Board#gef_fild02	4_BOARD3
-gef_fild02,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild02_2	4_BOARD3
-gef_fild03,377,79,4	duplicate(BountyBoard)	Bounty Board#gef_fild03	4_BOARD3
+gef_fild02,28,84,4	duplicate(BountyBoard)	Bounty Board#gef_fild02	4_BOARD3
+gef_fild02,198,197,4	duplicate(BountyBoard)	Bounty Board#gef_fild02_2	4_BOARD3
+gef_fild03,367,89,4	duplicate(BountyBoard)	Bounty Board#gef_fild03	4_BOARD3
 gef_fild03,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild03_2	4_BOARD3
-gef_fild10,365,58,4	duplicate(BountyBoard)	Bounty Board#gef_fild10	4_BOARD3
-gef_fild10,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild10_2	4_BOARD3
+gef_fild10,355,68,4	duplicate(BountyBoard)	Bounty Board#gef_fild10	4_BOARD3
+gef_fild10,231,196,4	duplicate(BountyBoard)	Bounty Board#gef_fild10_2	4_BOARD3
 
 // Mid Dungeons (Lv 30-55)
 orcsdun01,34,170,4	duplicate(BountyBoard)	Bounty Board#orcsdun01	4_BOARD3
@@ -2439,97 +2439,97 @@ ve_fild07,180,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild07_2	4_BOARD3
 // ==================== COMODO REGION FIELDS ====================
 
 // cmd_fild01 - Papuchicha Forest (entry from cmd_fild02 at 222,24)
-cmd_fild01,222,24,4	duplicate(BountyBoard)	Bounty Board#cmd_fild01	4_BOARD3
+cmd_fild01,221,30,4	duplicate(BountyBoard)	Bounty Board#cmd_fild01	4_BOARD3
 cmd_fild01,190,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild01_2	4_BOARD3
 
 // cmd_fild02 - Kokomo Beach (entry from cmd_fild01 at 222,376)
-cmd_fild02,222,376,4	duplicate(BountyBoard)	Bounty Board#cmd_fild02	4_BOARD3
-cmd_fild02,200,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild02_2	4_BOARD3
+cmd_fild02,218,369,4	duplicate(BountyBoard)	Bounty Board#cmd_fild02	4_BOARD3
+cmd_fild02,239,143,4	duplicate(BountyBoard)	Bounty Board#cmd_fild02_2	4_BOARD3
 
 // cmd_fild03 - Zenhai Marsh (entry from cmd_fild05 at 23,68)
-cmd_fild03,23,68,4	duplicate(BountyBoard)	Bounty Board#cmd_fild03	4_BOARD3
-cmd_fild03,200,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild03_2	4_BOARD3
+cmd_fild03,29,71,4	duplicate(BountyBoard)	Bounty Board#cmd_fild03	4_BOARD3
+cmd_fild03,191,202,4	duplicate(BountyBoard)	Bounty Board#cmd_fild03_2	4_BOARD3
 
 // cmd_fild04 - Kokomo Beach (entry from cmd_fild02 at 21,275)
-cmd_fild04,21,275,4	duplicate(BountyBoard)	Bounty Board#cmd_fild04	4_BOARD3
-cmd_fild04,200,150,4	duplicate(BountyBoard)	Bounty Board#cmd_fild04_2	4_BOARD3
+cmd_fild04,30,277,4	duplicate(BountyBoard)	Bounty Board#cmd_fild04	4_BOARD3
+cmd_fild04,202,145,4	duplicate(BountyBoard)	Bounty Board#cmd_fild04_2	4_BOARD3
 
 // cmd_fild05 - Papuchicha Forest (entry from cmd_fild03 at 21,163)
-cmd_fild05,21,163,4	duplicate(BountyBoard)	Bounty Board#cmd_fild05	4_BOARD3
-cmd_fild05,150,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild05_2	4_BOARD3
+cmd_fild05,29,155,4	duplicate(BountyBoard)	Bounty Board#cmd_fild05	4_BOARD3
+cmd_fild05,257,216,4	duplicate(BountyBoard)	Bounty Board#cmd_fild05_2	4_BOARD3
 
 // cmd_fild06 - Fortress St. Darmain West (entry from cmd_fild04 at 21,285)
-cmd_fild06,21,285,4	duplicate(BountyBoard)	Bounty Board#cmd_fild06	4_BOARD3
-cmd_fild06,200,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild06_2	4_BOARD3
+cmd_fild06,29,291,4	duplicate(BountyBoard)	Bounty Board#cmd_fild06	4_BOARD3
+cmd_fild06,109,132,4	duplicate(BountyBoard)	Bounty Board#cmd_fild06_2	4_BOARD3
 
 // cmd_fild07 - Pharos Beacon Island (entry from cmd_fild06 at 149,379)
-cmd_fild07,149,379,4	duplicate(BountyBoard)	Bounty Board#cmd_fild07	4_BOARD3
-cmd_fild07,250,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild07_2	4_BOARD3
+cmd_fild07,141,370,4	duplicate(BountyBoard)	Bounty Board#cmd_fild07	4_BOARD3
+cmd_fild07,254,113,4	duplicate(BountyBoard)	Bounty Board#cmd_fild07_2	4_BOARD3
 
 // cmd_fild08 - Fortress St. Darmain East (entry from cmd_fild06 at 15,102)
-cmd_fild08,15,102,4	duplicate(BountyBoard)	Bounty Board#cmd_fild08	4_BOARD3
-cmd_fild08,150,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild08_2	4_BOARD3
+cmd_fild08,321,337,4	duplicate(BountyBoard)	Bounty Board#cmd_fild08	4_BOARD3
+cmd_fild08,114,152,4	duplicate(BountyBoard)	Bounty Board#cmd_fild08_2	4_BOARD3
 
 // cmd_fild09 - Fortress St. Darmain South (entry from cmd_fild07 at 12,170)
-cmd_fild09,12,170,4	duplicate(BountyBoard)	Bounty Board#cmd_fild09	4_BOARD3
-cmd_fild09,200,250,4	duplicate(BountyBoard)	Bounty Board#cmd_fild09_2	4_BOARD3
+cmd_fild09,357,168,4	duplicate(BountyBoard)	Bounty Board#cmd_fild09	4_BOARD3
+cmd_fild09,145,164,4	duplicate(BountyBoard)	Bounty Board#cmd_fild09_2	4_BOARD3
 
 
 // ==================== GEFFEN REGION FIELDS (MISSING) ====================
 
 // gef_fild01 - Geffen Field (exit to prt_fild04 at 382,111)
-gef_fild01,382,111,4	duplicate(BountyBoard)	Bounty Board#gef_fild01	4_BOARD3
-gef_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild01_2	4_BOARD3
+gef_fild01,372,117,4	duplicate(BountyBoard)	Bounty Board#gef_fild01	4_BOARD3
+gef_fild01,210,180,4	duplicate(BountyBoard)	Bounty Board#gef_fild01_2	4_BOARD3
 
 // gef_fild04 - Geffen Field (exit to Geffen at 187,39)
-gef_fild04,187,39,4	duplicate(BountyBoard)	Bounty Board#gef_fild04	4_BOARD3
+gef_fild04,187,49,4	duplicate(BountyBoard)	Bounty Board#gef_fild04	4_BOARD3
 gef_fild04,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild04_2	4_BOARD3
 
 // gef_fild05 - Geffen Field (entry from gef_fild06 at 15,201)
-gef_fild05,15,201,4	duplicate(BountyBoard)	Bounty Board#gef_fild05	4_BOARD3
-gef_fild05,200,250,4	duplicate(BountyBoard)	Bounty Board#gef_fild05_2	4_BOARD3
+gef_fild05,25,201,4	duplicate(BountyBoard)	Bounty Board#gef_fild05	4_BOARD3
+gef_fild05,199,240,4	duplicate(BountyBoard)	Bounty Board#gef_fild05_2	4_BOARD3
 
 // gef_fild06 - Geffen Field (exit to gef_fild05 at 382,211)
-gef_fild06,382,211,4	duplicate(BountyBoard)	Bounty Board#gef_fild06	4_BOARD3
-gef_fild06,250,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild06_2	4_BOARD3
+gef_fild06,372,211,4	duplicate(BountyBoard)	Bounty Board#gef_fild06	4_BOARD3
+gef_fild06,215,29,4	duplicate(BountyBoard)	Bounty Board#gef_fild06_2	4_BOARD3
 
 // gef_fild07 - Geffen Field (exit to Geffen at 339,187)
-gef_fild07,339,187,4	duplicate(BountyBoard)	Bounty Board#gef_fild07	4_BOARD3
+gef_fild07,329,187,4	duplicate(BountyBoard)	Bounty Board#gef_fild07	4_BOARD3
 gef_fild07,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild07_2	4_BOARD3
 
 // gef_fild08 - Geffen Field (entry from gef_fild06 at 200,355)
-gef_fild08,200,355,4	duplicate(BountyBoard)	Bounty Board#gef_fild08	4_BOARD3
-gef_fild08,250,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild08_2	4_BOARD3
+gef_fild08,200,345,4	duplicate(BountyBoard)	Bounty Board#gef_fild08	4_BOARD3
+gef_fild08,231,149,4	duplicate(BountyBoard)	Bounty Board#gef_fild08_2	4_BOARD3
 
 // gef_fild09 - Geffen Field (entry from gef_fild13 at 23,56)
-gef_fild09,23,56,4	duplicate(BountyBoard)	Bounty Board#gef_fild09	4_BOARD3
-gef_fild09,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild09_2	4_BOARD3
+gef_fild09,33,66,4	duplicate(BountyBoard)	Bounty Board#gef_fild09	4_BOARD3
+gef_fild09,219,50,4	duplicate(BountyBoard)	Bounty Board#gef_fild09_2	4_BOARD3
 
 // gef_fild11 - Geffen Field Goblins (exit to prt_fild11 at 377,293)
-gef_fild11,377,293,4	duplicate(BountyBoard)	Bounty Board#gef_fild11	4_BOARD3
+gef_fild11,119,359,4	duplicate(BountyBoard)	Bounty Board#gef_fild11	4_BOARD3
 gef_fild11,200,150,4	duplicate(BountyBoard)	Bounty Board#gef_fild11_2	4_BOARD3
 
 // gef_fild12 - Kordt Forest (entry from gef_fild08 at 221,374)
-gef_fild12,221,374,4	duplicate(BountyBoard)	Bounty Board#gef_fild12	4_BOARD3
-gef_fild12,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild12_2	4_BOARD3
+gef_fild12,221,364,4	duplicate(BountyBoard)	Bounty Board#gef_fild12	4_BOARD3
+gef_fild12,199,226,4	duplicate(BountyBoard)	Bounty Board#gef_fild12_2	4_BOARD3
 
 // gef_fild13 - Britoniah (exit to gef_fild09 at 380,56)
-gef_fild13,380,56,4	duplicate(BountyBoard)	Bounty Board#gef_fild13	4_BOARD3
-gef_fild13,200,200,4	duplicate(BountyBoard)	Bounty Board#gef_fild13_2	4_BOARD3
+gef_fild13,370,66,4	duplicate(BountyBoard)	Bounty Board#gef_fild13	4_BOARD3
+gef_fild13,187,240,4	duplicate(BountyBoard)	Bounty Board#gef_fild13_2	4_BOARD3
 
 // gef_fild14 - West Orc Village (exit to gef_fild13 at 180,360)
-gef_fild14,180,360,4	duplicate(BountyBoard)	Bounty Board#gef_fild14	4_BOARD3
-gef_fild14,250,250,4	duplicate(BountyBoard)	Bounty Board#gef_fild14_2	4_BOARD3
+gef_fild14,180,350,4	duplicate(BountyBoard)	Bounty Board#gef_fild14	4_BOARD3
+gef_fild14,362,223,4	duplicate(BountyBoard)	Bounty Board#gef_fild14_2	4_BOARD3
 
 
 // ==================== LOUYANG & AMATSU FIELDS ====================
 
 // lou_fild01 - Luoyang Field
-lou_fild01,150,200,4	duplicate(BountyBoard)	Bounty Board#lou_fild01	4_BOARD3
+lou_fild01,160,200,4	duplicate(BountyBoard)	Bounty Board#lou_fild01	4_BOARD3
 lou_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#lou_fild01_2	4_BOARD3
 
 // ama_fild01 - Amatsu Field
-ama_fild01,200,150,4	duplicate(BountyBoard)	Bounty Board#ama_fild01	4_BOARD3
+ama_fild01,200,160,4	duplicate(BountyBoard)	Bounty Board#ama_fild01	4_BOARD3
 ama_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#ama_fild01_2	4_BOARD3
 
 
