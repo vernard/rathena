@@ -2549,12 +2549,12 @@ gef_fild14,362,223,4	duplicate(BountyBoard)	Bounty Board#gef_fild14_2	4_BOARD3
 // ==================== LOUYANG & AMATSU FIELDS ====================
 
 // lou_fild01 - Luoyang Field
-lou_fild01,160,200,4	duplicate(BountyBoard)	Bounty Board#lou_fild01	4_BOARD3
-lou_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#lou_fild01_2	4_BOARD3
+lou_fild01,205,114,4	duplicate(BountyBoard)	Bounty Board#lou_fild01	4_BOARD3
+lou_fild01,237,349,4	duplicate(BountyBoard)	Bounty Board#lou_fild01_2	4_BOARD3
 
 // ama_fild01 - Amatsu Field
-ama_fild01,200,160,4	duplicate(BountyBoard)	Bounty Board#ama_fild01	4_BOARD3
-ama_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#ama_fild01_2	4_BOARD3
+ama_fild01,71,45,4	duplicate(BountyBoard)	Bounty Board#ama_fild01	4_BOARD3
+ama_fild01,169,326,4	duplicate(BountyBoard)	Bounty Board#ama_fild01_2	4_BOARD3
 
 
 // ==================== MONSTER HUNTER GUILD SHOP ====================

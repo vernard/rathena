@@ -1417,24 +1417,6 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 240;
 
 	QWS_Make_Field_Menu 45;
-//----------------LOU FIELD 01 - Luoyang Field
-	setarray @pFmenuitems$[@Fi], "lou_fild01 - Luoyang Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "lou_fild01";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 40;
-//----------------AMA FIELD 01 - Amatsu Field
-	setarray @pFmenuitems$[@Fi], "ama_fild01 - Amatsu Field";
-	setarray @pFprice[@Fi], $QW_FW_PRICE;
-
-	setarray @pFmap$[@Fi], "ama_fild01";
-	setarray @pFXcoords[@Fi], 202;
-	setarray @pFYcoords[@Fi], 200;
-
-	QWS_Make_Field_Menu 41;
 //----------------YUNO FIELD 03 - El Mes Plateau
 	setarray @pFmenuitems$[@Fi], "yuno_fild03 - El Mes Plateau";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
@@ -2577,7 +2559,3 @@ gef_fild09,221,50,4	script	Field Warpra#gf09	112,{ callfunc "QWS_Field_Warpra",3
 gef_fild10,233,196,4	script	Field Warpra#gf10	112,{ callfunc "QWS_Field_Warpra",44,"gef_fild10 - Geffen Field"; close; }
 gef_fild12,201,226,4	script	Field Warpra#gf12	112,{ callfunc "QWS_Field_Warpra",39,"gef_fild12 - Kordt Forest"; close; }
 gef_fild13,189,240,4	script	Field Warpra#gf13	112,{ callfunc "QWS_Field_Warpra",45,"gef_fild13 - Britoniah"; close; }
-
-// Louyang & Amatsu - 2 fields
-lou_fild01,202,200,4	script	Field Warpra#lf01	112,{ callfunc "QWS_Field_Warpra",40,"lou_fild01 - Luoyang Field"; close; }
-ama_fild01,202,200,4	script	Field Warpra#af01	112,{ callfunc "QWS_Field_Warpra",41,"ama_fild01 - Amatsu Field"; close; }
