@@ -813,12 +813,33 @@ S_CheckInvasionTrigger:
 // Generate MOTD Schedule (called daily at midnight and on init)
 // ============================================================
 OnClock0000:
+	// At midnight, always regenerate (this is the normal daily refresh)
+	set .@force_regen, 1;
+	goto L_GenerateMOTD;
+
 OnGenerateMOTDSchedule:
+	// On init/reload, preserve existing schedule if valid
+	set .@force_regen, 0;
+
+L_GenerateMOTD:
 	// Check if MOTD is enabled
 	query_sql "SELECT enabled FROM event_types WHERE code = 'motd'", .@enabled;
 	if (!.@enabled) {
 		debugmes "[EventScheduler] MOTD disabled, skipping schedule generation";
 		end;
+	}
+
+	// Check if we already have a valid schedule for the current time
+	// (skip regeneration on restart/reload to preserve MOTD continuity)
+	if (!.@force_regen) {
+		query_sql "SELECT COUNT(*) FROM event_motd_schedule WHERE NOW() BETWEEN start_time AND end_time", .@has_current;
+		query_sql "SELECT COUNT(*) FROM event_motd_schedule WHERE DATE(start_time) = CURDATE()", .@today_slots;
+		if (.@has_current > 0 && .@today_slots > 0) {
+			debugmes "[EventScheduler] MOTD schedule already exists, skipping regeneration";
+			// Just ensure we pick up the current MOTD
+			callsub S_CheckMOTDRotation;
+			end;
+		}
 	}
 
 	// Get configuration

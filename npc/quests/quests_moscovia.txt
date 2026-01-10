@@ -266,10 +266,56 @@ moscovia,135,52,0	script	Bulletin Board#npc	2_BULLETIN_BOARD,{
 	mes "[Charabel Schedule]";
 	mes "The Charabel can depart";
 	mes "between the following times:";
-	mes "^0000FF12:00am PST^000000 to ^0000FF3:00am PST";
-	mes "^0000FF6:00am PST^000000 to ^0000FF9:00am PST";
-	mes "^0000FF12:00pm PST^000000 to ^0000FF3:00pm PST";
-	mes "^0000FF6:00pm PST^000000 to ^0000FF9:00pm PST";
+	mes "^0000FF12:00am^000000 to ^0000FF3:00am^000000 (Server Time)";
+	mes "^0000FF6:00am^000000 to ^0000FF9:00am^000000 (Server Time)";
+	mes "^0000FF12:00pm^000000 to ^0000FF3:00pm^000000 (Server Time)";
+	mes "^0000FF6:00pm^000000 to ^0000FF9:00pm^000000 (Server Time)";
+	next;
+	// Calculate current status and time until next window
+	.@hour = gettime(DT_HOUR);
+	.@min = gettime(DT_MINUTE);
+	.@total_min = .@hour * 60 + .@min;
+
+	// Windows: 0:00-3:00, 6:00-9:00, 12:00-15:00, 18:00-21:00
+	// In minutes: 0-180, 360-540, 720-900, 1080-1260
+	if ((.@total_min >= 0 && .@total_min < 180) ||
+	    (.@total_min >= 360 && .@total_min < 540) ||
+	    (.@total_min >= 720 && .@total_min < 900) ||
+	    (.@total_min >= 1080 && .@total_min < 1260)) {
+		// Currently in a valid window
+		if (.@total_min < 180) .@end_min = 180;
+		else if (.@total_min < 540) .@end_min = 540;
+		else if (.@total_min < 900) .@end_min = 900;
+		else .@end_min = 1260;
+		.@remain = .@end_min - .@total_min;
+		.@remain_h = .@remain / 60;
+		.@remain_m = .@remain % 60;
+		mes "[Charabel Schedule]";
+		mes "^00FF00The tide is currently LOW!^000000";
+		mes "The Charabel can depart now.";
+		mes " ";
+		if (.@remain_h > 0)
+			mes "Window closes in ^FF6600" + .@remain_h + "h " + .@remain_m + "m^000000.";
+		else
+			mes "Window closes in ^FF6600" + .@remain_m + " minutes^000000.";
+	} else {
+		// Not in a valid window - calculate next one
+		if (.@total_min < 360) .@next_min = 360;
+		else if (.@total_min < 720) .@next_min = 720;
+		else if (.@total_min < 1080) .@next_min = 1080;
+		else .@next_min = 1440; // midnight (next day's 0:00)
+		.@wait = .@next_min - .@total_min;
+		.@wait_h = .@wait / 60;
+		.@wait_m = .@wait % 60;
+		mes "[Charabel Schedule]";
+		mes "^FF0000The tide is currently HIGH.^000000";
+		mes "The Charabel cannot depart yet.";
+		mes " ";
+		if (.@wait_h > 0)
+			mes "Next low tide in ^00FF00" + .@wait_h + "h " + .@wait_m + "m^000000.";
+		else
+			mes "Next low tide in ^00FF00" + .@wait_m + " minutes^000000.";
+	}
 	close;
 }
 
@@ -10651,15 +10697,15 @@ mosk_dun02,57,220,0	script	House Ghost Jar#rus43	HIDDEN_NPC,{
 			cutin "",255;
 			switch( .@rucard_game01 ) {
 			case 1:
-				cutin "Æ÷¸µÄ«µå",4; // Poring Card
+				cutin "ï¿½ï¿½ï¿½ï¿½Ä«ï¿½ï¿½",4; // Poring Card
 				.@win_string$ = "You are good. Can you do it next time?";
 				break;
 			case 2:
-				cutin "¿£Á©¸µÄ«µå",4; // Angeling Card
+				cutin "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä«ï¿½ï¿½",4; // Angeling Card
 				.@win_string$ = "You are pretty good at this. Ok, but can you do it again?";
 				break;
 			case 3:
-				cutin "°í½ºÆ®¸µÄ«µå",4; // Ghostring Card
+				cutin "ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½Ä«ï¿½ï¿½",4; // Ghostring Card
 				.@win_string$ = "You are pretty good at this. Ok, but can you do it again?";
 				break;
 			}
