@@ -527,6 +527,16 @@ S_SpawnWave:
 // ============================================================
 OnMonsterKilled:
 	if (!$@InvasionActive) end;
+
+	// When killmonster is called (wave clear/invasion end), this triggers
+	// for each monster but without a player attached. Skip player logic.
+	if (!playerattached()) {
+		// Still count the kill for wave tracking
+		$@InvasionMonstersKilled++;
+		$@InvasionWaveKills++;
+		end;
+	}
+
 	if (strcharinfo(3) != $@InvasionMap$) end;
 
 	$@InvasionMonstersKilled++;
