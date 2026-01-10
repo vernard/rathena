@@ -74,7 +74,30 @@ OnTimer10000:
 		end;
 	}
 
+	// FAILSAFE: Use mobcount() to get actual living monsters
+	// This catches kills that didn't trigger OnMonsterKilled (traps, falcon, homunculus, etc.)
+	.@actual_alive = mobcount($@InvasionMap$, "TownInvasion::OnMonsterKilled");
+
+	// Check if we've hit the 90% clear threshold based on actual mobcount
+	// Wave clears when: all bosses dead AND 90% of regular monsters dead
+	if ($@InvasionWaveMonsters > 0 && $@InvasionActive) {
+		// Get the clear threshold (default 90%)
+		query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_wave_clear_percent'", .@threshold$;
+		.@threshold = (.@threshold$ != "") ? atoi(.@threshold$) : 90;
+
+		// Calculate how many can remain (10% if threshold is 90%)
+		.@max_remaining = ($@InvasionWaveMonsters * (100 - .@threshold)) / 100;
+
+		// If actual alive is at or below threshold, trigger wave clear
+		if (.@actual_alive <= .@max_remaining) {
+			debugmes "[TownInvasion] Failsafe: mobcount=" + .@actual_alive + " <= " + .@max_remaining + " (threshold " + .@threshold + "%), forcing completion";
+			donpcevent "TownInvasion::OnWaveCleared";
+			end;
+		}
+	}
+
 	// Boss gathering - every 60 seconds, teleport bosses to town center
+	// Use mobcount for accurate boss check (not just our tracked kills)
 	.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
 	if (.@boss_left > 0 && gettimetick(2) - $@InvasionLastBossGather >= 60) {
 		// Find and gather all bosses to town center
@@ -105,13 +128,9 @@ OnTimer10000:
 	// Check for periodic reminder (every 5 min when no bosses)
 	if (gettimetick(2) - $@InvasionLastAnnounce >= 300) {
 		.@remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
-		if (.@remaining > 0) {
-			.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
-			if (.@boss_left > 0) {
-				announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + .@regular_left + " mobs + " + .@boss_left + " bosses remaining!", bc_all, 0xFF8800;
-			} else {
-				announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + .@regular_left + " monsters remaining!", bc_all, 0xFF8800;
-			}
+		if (.@remaining > 0 && .@actual_alive > 0) {
+			// Use actual mobcount for accurate display
+			announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + .@actual_alive + " monsters remaining!", bc_all, 0xFF8800;
 			$@InvasionLastAnnounce = gettimetick(2);
 		}
 	}
@@ -620,13 +639,14 @@ OnMonsterKilled:
 	dispbottom "[Invasion] +" + .@kill_whole + "." + .@kill_dec + " pts (Pending: " + .@pend_whole + "." + .@pend_dec + ")", 0x00CC00;
 
 	// Party kill sharing - give credit to nearby party members
+	.@killer_aid = getcharid(3);  // Save killer's account ID before loop (detachrid clears attachment)
 	if (getcharid(1) > 0) {
 		// Get party members on same map within range
 		getpartymember getcharid(1), 0;
 		getpartymember getcharid(1), 1;
 		getpartymember getcharid(1), 2;
 		for (.@i = 0; .@i < $@partymembercount; .@i++) {
-			if ($@partymemberaid[.@i] != getcharid(3) && isloggedin($@partymemberaid[.@i])) {
+			if ($@partymemberaid[.@i] != .@killer_aid && isloggedin($@partymemberaid[.@i])) {
 				// Check if on same map
 				if (attachrid($@partymemberaid[.@i])) {
 					if (strcharinfo(3) == $@InvasionMap$) {
@@ -635,6 +655,7 @@ OnMonsterKilled:
 						query_sql "INSERT INTO event_invasion_contributions (invasion_id, char_id, char_name, kills, waves_participated) VALUES (" + $@InvasionID + ", " + getcharid(0) + ", '" + escape_sql(strcharinfo(0)) + "', 0, 1) ON DUPLICATE KEY UPDATE waves_participated = GREATEST(waves_participated, 1)";
 					}
 					detachrid;
+					attachrid(.@killer_aid);  // Re-attach to killer for next iteration
 				}
 			}
 		}

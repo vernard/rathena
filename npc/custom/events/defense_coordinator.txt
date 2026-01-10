@@ -30,13 +30,12 @@ prontera,149,193,5	script	Defense Coordinator	4_M_JOB_KNIGHT2,{
 		.@remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
 		mes "Wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
 		mes "Time left: ^FF8800" + .@remaining + " minutes^000000";
-		// Show wave-specific remaining monsters
-		.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
-		.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
-		if (.@boss_left > 0) {
-			mes "Remaining: ^FF0000" + .@regular_left + "^000000 mobs + ^FF8800" + .@boss_left + "^000000 boss";
+		// Use mobcount() for accurate remaining (catches untracked kills)
+		.@actual_alive = mobcount($@InvasionMap$, "TownInvasion::OnMonsterKilled");
+		if (.@actual_alive > 0) {
+			mes "Remaining: ^FF0000" + .@actual_alive + "^000000 monsters";
 		} else {
-			mes "Remaining: ^FF0000" + .@regular_left + "^000000 monsters";
+			mes "Remaining: ^00AA00Wave clearing...^000000";
 		}
 		next;
 	} else {
@@ -353,13 +352,12 @@ L_ViewStatus:
 		mes "Location: " + $@InvasionTownName$;
 		mes "Wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
 		mes "Time: " + .@remaining + " min remaining";
-		// Show wave-specific remaining monsters
-		.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
-		.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
-		if (.@boss_left > 0) {
-			mes "Remaining: ^FF0000" + .@regular_left + "^000000 + ^FF8800" + .@boss_left + " boss^000000";
+		// Use mobcount() for accurate remaining
+		.@actual_alive = mobcount($@InvasionMap$, "TownInvasion::OnMonsterKilled");
+		if (.@actual_alive > 0) {
+			mes "Remaining: ^FF0000" + .@actual_alive + "^000000 monsters";
 		} else {
-			mes "Remaining: ^FF0000" + .@regular_left + "^000000 monsters";
+			mes "Remaining: ^00AA00Wave clearing...^000000";
 		}
 		mes "Total kills: " + $@InvasionMonstersKilled;
 	} else {
@@ -489,13 +487,12 @@ L_GMMenu:
 		mes "Location: " + $@InvasionTownName$;
 		mes "Wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
 		mes "Time left: " + .@remaining + " min";
-		// Show wave-specific remaining
-		.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
-		.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
-		if (.@boss_left > 0) {
-			mes "Wave: ^FF0000" + .@regular_left + "^000000 mobs + ^FF8800" + .@boss_left + "^000000 boss left";
+		// Use mobcount() for accurate remaining
+		.@actual_alive = mobcount($@InvasionMap$, "TownInvasion::OnMonsterKilled");
+		if (.@actual_alive > 0) {
+			mes "Remaining: ^FF0000" + .@actual_alive + "^000000 monsters";
 		} else {
-			mes "Wave: ^FF0000" + .@regular_left + "^000000 monsters left";
+			mes "Remaining: ^00AA00Wave clearing...^000000";
 		}
 		mes "Total kills: " + $@InvasionMonstersKilled;
 	} else {
@@ -574,13 +571,12 @@ L_GM_StopMenu:
 	mes "Threat: " + .@threat_name$;
 	mes "Wave: " + $@InvasionWave + "/" + $@InvasionTotalWaves;
 	mes "Time: " + .@remaining + " min left";
-	// Show wave-specific remaining
-	.@regular_left = $@InvasionWaveRegularSpawns - $@InvasionWaveRegularKills;
-	.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
-	if (.@boss_left > 0) {
-		mes "Remaining: " + .@regular_left + " mobs + " + .@boss_left + " boss";
+	// Use mobcount() for accurate remaining
+	.@actual_alive = mobcount($@InvasionMap$, "TownInvasion::OnMonsterKilled");
+	if (.@actual_alive > 0) {
+		mes "Remaining: " + .@actual_alive + " monsters";
 	} else {
-		mes "Remaining: " + .@regular_left + " monsters";
+		mes "Remaining: Wave clearing...";
 	}
 	mes "Total: " + $@InvasionMonstersKilled + "/" + $@InvasionMonstersSpawned + " killed";
 	next;
