@@ -854,12 +854,13 @@ L_GenerateMOTD:
 	if (.@duration < 1) set .@duration, 1;
 	if (.@duration > 6) set .@duration, 6;
 
-	// Clear today's and tomorrow's schedule
-	query_sql "DELETE FROM event_motd_schedule WHERE DATE(start_time) IN (CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 DAY))";
+	// Clear schedule for the next 7 days
+	query_sql "DELETE FROM event_motd_schedule WHERE DATE(start_time) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 6 DAY)";
 
 	// Generate slots based on duration (24 / duration = number of slots per day)
 	set .@slots_per_day, 24 / .@duration;
-	set .@total_slots, .@slots_per_day * 2; // 2 days
+	set .@days_ahead, 7;  // Generate 7 days of schedule (~56 slots at 3hr duration)
+	set .@total_slots, .@slots_per_day * .@days_ahead;
 
 	// Pre-fetch all monsters at once (much faster than ORDER BY RAND() per slot)
 	if (.@mode$ == "tier_rotation") {
@@ -875,9 +876,9 @@ L_GenerateMOTD:
 		set .@rand_idx, 0;
 	}
 
-	// Generate 2 days worth of schedule using pre-fetched monsters
+	// Generate schedule using pre-fetched monsters
 	set .@slot_num, 0;
-	for (set .@day, 0; .@day < 2; set .@day, .@day + 1) {
+	for (set .@day, 0; .@day < .@days_ahead; set .@day, .@day + 1) {
 		for (set .@i, 0; .@i < .@slots_per_day; set .@i, .@i + 1) {
 			set .@hour, .@i * .@duration;
 
@@ -911,7 +912,7 @@ L_GenerateMOTD:
 		}
 	}
 
-	debugmes "[EventScheduler] Generated MOTD schedule for today and tomorrow";
+	debugmes "[EventScheduler] Generated MOTD schedule for "+.@days_ahead+" days ("+.@total_slots+" slots)";
 
 	// Immediately check for MOTD rotation (in case we just generated for current slot)
 	callsub S_CheckMOTDRotation;

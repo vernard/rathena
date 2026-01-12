@@ -85,35 +85,78 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 		next;
 	}
 
-	// Get upcoming monsters with locations (count from config)
+	// Get upcoming monsters with locations (configurable, up to 50, paginated)
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'motd_upcoming_count'", .@upcoming_count$;
-	if (.@upcoming_count$ == "") set .@upcoming_count, 10; else set .@upcoming_count, atoi(.@upcoming_count$);
-	if (.@upcoming_count < 5) set .@upcoming_count, 5;
-	if (.@upcoming_count > 20) set .@upcoming_count, 20;
+	if (.@upcoming_count$ == "") set .@max_upcoming, 20; else set .@max_upcoming, atoi(.@upcoming_count$);
+	if (.@max_upcoming < 10) set .@max_upcoming, 10;
+	if (.@max_upcoming > 50) set .@max_upcoming, 50;
+	.@per_page = 10;
 
+	query_sql "SELECT ms.mob_id, ms.mob_name, TIMESTAMPDIFF(MINUTE, NOW(), ms.start_time), COALESCE(mm.map_display, '') FROM event_motd_schedule ms LEFT JOIN event_motd_monsters mm ON ms.mob_id = mm.mob_id WHERE ms.start_time > NOW() ORDER BY ms.start_time LIMIT " + .@max_upcoming, .@up_ids, .@up_names$, .@up_mins, .@up_locs$;
+
+	.@total = getarraysize(.@up_ids);
+	.@page = 0;
+
+L_ShowUpcoming:
 	mes "[Upcoming Monsters]";
-	query_sql "SELECT ms.mob_id, ms.mob_name, TIMESTAMPDIFF(MINUTE, NOW(), ms.start_time), COALESCE(mm.map_display, '') FROM event_motd_schedule ms LEFT JOIN event_motd_monsters mm ON ms.mob_id = mm.mob_id WHERE ms.start_time > NOW() ORDER BY ms.start_time LIMIT " + .@upcoming_count, .@up_ids, .@up_names$, .@up_mins, .@up_locs$;
 
-	if (getarraysize(.@up_ids) == 0) {
+	if (.@total == 0) {
 		mes "^888888No upcoming monsters scheduled.^000000";
-	} else {
-		for (set .@i, 0; .@i < getarraysize(.@up_ids); set .@i, .@i + 1) {
-			// Format time until
-			if (.@up_mins[.@i] >= 60) {
-				set .@until$, (.@up_mins[.@i] / 60)+"h "+(.@up_mins[.@i] % 60)+"m";
-			} else {
-				set .@until$, .@up_mins[.@i]+"m";
-			}
+		next;
+		goto L_AfterUpcoming;
+	}
 
-			// Get level for display
-			.@up_lv = getmonsterinfo(.@up_ids[.@i], MOB_LV);
-			mes "^0055FF"+.@up_names$[.@i]+"^000000 ["+.@up_ids[.@i]+"] Lv"+.@up_lv+" - in "+.@until$;
-			if (.@up_locs$[.@i] != "") {
-				mes "  ^777777@ "+.@up_locs$[.@i]+"^000000";
-			}
+	.@start = .@page * .@per_page;
+	.@end = .@start + .@per_page;
+	if (.@end > .@total) .@end = .@total;
+	.@total_pages = (.@total + .@per_page - 1) / .@per_page;
+
+	mes "Page " + (.@page + 1) + " of " + .@total_pages + " ^888888(" + .@total + " total)^000000";
+	mes " ";
+
+	for (set .@i, .@start; .@i < .@end; set .@i, .@i + 1) {
+		// Format time until
+		if (.@up_mins[.@i] >= 60) {
+			set .@until$, (.@up_mins[.@i] / 60)+"h "+(.@up_mins[.@i] % 60)+"m";
+		} else {
+			set .@until$, .@up_mins[.@i]+"m";
+		}
+
+		// Get level for display
+		.@up_lv = getmonsterinfo(.@up_ids[.@i], MOB_LV);
+		mes "^0055FF"+.@up_names$[.@i]+"^000000 Lv"+.@up_lv+" - in "+.@until$;
+		if (.@up_locs$[.@i] != "") {
+			mes "  ^777777@ "+.@up_locs$[.@i]+"^000000";
 		}
 	}
 	next;
+
+	// Pagination menu
+	.@menu$ = "";
+	if (.@page > 0) .@menu$ = .@menu$ + "< Previous Page:";
+	if (.@page < .@total_pages - 1) .@menu$ = .@menu$ + "Next Page >:";
+	.@menu$ = .@menu$ + "Continue";
+
+	.@choice = select(.@menu$);
+	.@idx = 1;
+
+	if (.@page > 0) {
+		if (.@choice == .@idx) {
+			.@page--;
+			goto L_ShowUpcoming;
+		}
+		.@idx++;
+	}
+	if (.@page < .@total_pages - 1) {
+		if (.@choice == .@idx) {
+			.@page++;
+			goto L_ShowUpcoming;
+		}
+		.@idx++;
+	}
+	// Continue selected
+
+L_AfterUpcoming:
 
 	// Menu options
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'crowdfund_motd_enabled'", .@reshuffle_enabled$;
@@ -532,10 +575,10 @@ L_GM_Config:
 			close;
 
 		case 3:
-			mes "Enter upcoming count (5-20):";
+			mes "Enter upcoming count (10-50):";
 			input .@val;
-			if (.@val < 5) .@val = 5;
-			if (.@val > 20) .@val = 20;
+			if (.@val < 10) .@val = 10;
+			if (.@val > 50) .@val = 50;
 			query_sql "UPDATE event_config SET config_value = '" + .@val + "' WHERE config_key = 'motd_upcoming_count'";
 			mes "[Monster Hunter Board]";
 			mes "Upcoming count set to " + .@val + ".";

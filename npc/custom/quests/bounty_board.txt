@@ -164,8 +164,8 @@ function	script	F_BuildSuggestions	{
 		}
 	}
 
-	// Copy to output arrays (all 20 monsters)
-	for (.@j = 0; .@j < .@total && @suggest_count < 20; .@j++) {
+	// Copy to output arrays (up to 50 monsters)
+	for (.@j = 0; .@j < .@total && @suggest_count < 50; .@j++) {
 		@suggest_mob[@suggest_count] = .@c_mob[.@j];
 		@suggest_lv[@suggest_count] = .@c_lv[.@j];
 		@suggest_map$[@suggest_count] = .@c_map$[.@j];
