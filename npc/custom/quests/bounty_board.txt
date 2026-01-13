@@ -80,6 +80,7 @@ function	script	F_CooldownTimeLeft	{
 // Build bounty suggestions for a player based on their level
 // Called synchronously by both BountyBoard and Monster Hunter Guild NPCs
 // Stores results in @suggest_* player variables
+// Uses O(n) bucket categorization instead of O(n²) sorting to avoid script limits
 function	script	F_BuildSuggestions	{
 	@suggest_count = 0;
 	if (!playerattached()) return;
@@ -87,47 +88,56 @@ function	script	F_BuildSuggestions	{
 	if (.@plv < 1) return;
 
 	// Build LOCAL map+monster arrays based on player level
-	// Can't access NPC arrays via doevent, so we hardcode the high-value targets
+	// Arrays are pre-sorted by level (highest first) so bucket output maintains value order
 	.@cd_seconds = 259200;
-	.@collect = 0;
 
 	if (.@plv >= 70) {
-		// End-game monsters (Lv 60-91)
-		setarray .@m_id[0],   1867, 1864, 1831, 1833, 1837, 1219, 1098, 1869, 1865, 1777, 1775, 1778, 1163, 1132, 1276, 1208, 1197, 1201, 1384, 1382;
-		setarray .@m_lv[0],     81,   77,   91,   85,   76,   79,   75,   60,   75,   60,   60,   55,   52,   63,   55,   74,   53,   71,   66,   67;
-		setarray .@m_map$[0], "abbey02", "abbey01", "thor_v01", "thor_v01", "thor_v01", "gl_cas02", "in_sphinx4", "abbey03", "abbey02", "ice_dun02", "ice_dun02", "ice_dun03", "gl_knt01", "gl_knt02", "gl_knt01", "gl_cas02", "gl_prison", "gl_prison", "mag_dun02", "mag_dun02";
-		setarray .@m_loc$[0], "Abbey F2", "Abbey F1", "Thor F1", "Thor F1", "Thor F1", "GH Castle F2", "Sphinx F4", "Abbey F3", "Abbey F2", "Ice Cave F2", "Ice Cave F2", "Ice Cave F3", "GH Chivalry F1", "GH Chivalry F2", "GH Chivalry F1", "GH Castle F2", "GH Underprison", "GH Underprison", "Magma F2", "Magma F2";
-		.@total = 20;
+		// End-game monsters (Lv 55-91) - 50 monsters, sorted by level desc
+		setarray .@m_id[0],   1831, 1833, 1867, 1219, 1379, 1864, 1366, 1837, 1098, 1865, 1208, 1202, 1319, 1866, 1201, 1315, 1316, 1401, 1618, 1318, 1382, 1384, 1405, 1774, 1884, 1132, 1314, 1772, 1883, 1154, 1207, 1206, 1321, 1773, 1777, 1775, 1869, 1072, 1692, 1194, 1260, 1771, 1322, 1117, 1195, 1780, 1376, 1778, 1276, 1310;
+		setarray .@m_lv[0],     91,   85,   81,   79,   78,   77,   77,   76,   75,   75,   74,   73,   72,   71,   71,   71,   70,   69,   69,   68,   67,   66,   65,   65,   63,   63,   63,   62,   61,   61,   61,   61,   61,   61,   60,   60,   60,   60,   60,   59,   59,   59,   58,   58,   58,   57,   57,   55,   55,   55;
+		setarray .@m_map$[0], "thor_v01", "thor_v01", "abbey02", "gl_cas02", "mag_dun02", "abbey01", "mag_dun01", "thor_v01", "in_sphinx4", "abbey02", "gl_cas02", "gl_prison1", "tur_dun02", "abbey01", "gl_prison", "tur_dun03", "tur_dun02", "ama_dun03", "ein_fild02", "tur_dun03", "mag_dun02", "mag_dun02", "ama_dun03", "ra_san03", "mosk_dun03", "gl_knt02", "tur_dun01", "ra_san01", "mosk_dun02", "in_sphinx5", "gl_sew03", "gl_sew04", "tur_dun01", "ra_san01", "ice_dun02", "ice_dun02", "abbey03", "mag_dun01", "hu_fild01", "gl_dun01", "gl_in01", "ra_san01", "tur_dun01", "gl_chyard", "c_tower1", "ra_fild01", "yuno_fild07", "ice_dun03", "gl_knt01", "gl_dun02";
+		setarray .@m_loc$[0], "Thor F1", "Thor F1", "Abbey F2", "GH Castle F2", "Magma F2", "Abbey F1", "Magma F1", "Thor F1", "Sphinx F4", "Abbey F2", "GH Castle F2", "GH Prison", "Turtle F2", "Abbey F1", "GH Underprison", "Turtle F3", "Turtle F2", "Amatsu F3", "Einbroch Field", "Turtle F3", "Magma F2", "Magma F2", "Amatsu F3", "Rachel Sanc F3", "Moscovia F3", "GH Chivalry F2", "Turtle F1", "Rachel Sanc F1", "Moscovia F2", "Sphinx F5", "GH Culvert F3", "GH Culvert F4", "Turtle F1", "Rachel Sanc F1", "Ice Cave F2", "Ice Cave F2", "Abbey F3", "Magma F1", "Hugel Field", "GH Cave F1", "GH Inner", "Rachel Sanc F1", "Turtle F1", "GH Churchyard", "Clock Tower F1", "Rachel Field", "Yuno Field", "Ice Cave F3", "GH Chivalry F1", "GH Cave F2";
+		.@total = 50;
 	} else if (.@plv >= 50) {
-		// Mid-high monsters (Lv 40-65)
-		setarray .@m_id[0],   1163, 1132, 1207, 1206, 1194, 1149, 1154, 1193, 1195, 1170, 1180, 1110, 1143, 1179, 1061, 1130, 1253, 1192, 1117, 1036;
-		setarray .@m_lv[0],     52,   63,   61,   61,   59,   52,   61,   53,   58,   40,   53,   33,   41,   34,   43,   38,   48,   53,   58,   40;
-		setarray .@m_map$[0], "gl_cas01", "gl_knt01", "gl_sew03", "gl_sew04", "gl_dun01", "in_sphinx4", "in_sphinx5", "c_tower3", "c_tower1", "pay_dun03", "pay_dun04", "pay_dun04", "gl_in01", "gef_dun02", "gef_dun01", "gef_dun01", "gl_sew01", "gl_chyard", "gl_chyard", "gl_chyard";
-		setarray .@m_loc$[0], "GH Castle F1", "GH Chivalry F1", "GH Culvert F3", "GH Culvert F4", "GH Cave F1", "Sphinx F4", "Sphinx F5", "Clock Tower F3", "Clock Tower F1", "Payon Cave F4", "Payon Cave F5", "Payon Cave F5", "GH Inner", "Geffen Dungeon F3", "Geffen Dungeon F2", "Geffen Dungeon F2", "GH Culvert F1", "GH Churchyard", "GH Churchyard", "GH Churchyard";
-		.@total = 20;
+		// Mid-high monsters (Lv 40-65) - 50 monsters, sorted by level desc
+		setarray .@m_id[0],   1132, 1207, 1206, 1194, 1154, 1195, 1117, 1780, 1376, 1386, 1193, 1180, 1197, 1163, 1149, 1715, 1192, 1257, 1369, 1882, 1253, 1029, 1681, 1680, 1155, 1129, 1372, 1494, 1403, 1165, 1781, 1143, 1209, 1139, 1170, 1880, 1061, 1882, 1130, 1378, 1156, 1037, 1776, 1036, 1179, 1110, 1271, 1881, 1162, 1368;
+		setarray .@m_lv[0],     63,   61,   61,   59,   61,   58,   58,   57,   57,   54,   53,   53,   53,   52,   52,   50,   53,   51,   50,   49,   48,   47,   46,   45,   44,   44,   43,   47,   47,   46,   46,   41,   41,   40,   40,   42,   43,   49,   38,   39,   38,   37,   42,   40,   34,   33,   40,   39,   35,   36;
+		setarray .@m_map$[0], "gl_knt01", "gl_sew03", "gl_sew04", "gl_dun01", "in_sphinx5", "c_tower1", "gl_chyard", "ra_fild01", "yuno_fild07", "yuno_fild06", "c_tower3", "pay_dun04", "gl_prison", "gl_cas01", "in_sphinx4", "hu_fild03", "gl_chyard", "gl_prison1", "yuno_fild08", "mosk_dun02", "gl_sew01", "moc_pryd04", "ra_fild02", "ra_fild05", "mjolnir_02", "pay_dun04", "yuno_fild06", "yuno_fild02", "ama_dun03", "ve_fild03", "ra_fild02", "gl_in01", "gl_sew02", "lou_fild01", "pay_dun03", "mosk_dun01", "gef_dun01", "mosk_dun03", "gef_dun01", "yuno_fild12", "gef_fild06", "in_sphinx5", "ice_dun01", "gl_chyard", "gef_dun02", "pay_dun04", "cmd_fild01", "mosk_dun01", "yuno_fild05", "yuno_fild03";
+		setarray .@m_loc$[0], "GH Chivalry F1", "GH Culvert F3", "GH Culvert F4", "GH Cave F1", "Sphinx F5", "Clock Tower F1", "GH Churchyard", "Rachel Field", "Yuno Field", "Yuno Field", "Clock Tower F3", "Payon Cave F5", "GH Underprison", "GH Castle F1", "Sphinx F4", "Hugel Field", "GH Churchyard", "GH Prison", "Yuno Field", "Moscovia F2", "GH Culvert F1", "Pyramid F4", "Rachel Field", "Rachel Field", "Mt. Mjolnir", "Payon Cave F5", "Yuno Field", "Yuno Field", "Amatsu F3", "Veins Field", "Rachel Field", "GH Inner", "GH Culvert F2", "Louyang Field", "Payon Cave F4", "Moscovia F1", "Geffen Dungeon F2", "Moscovia F3", "Geffen Dungeon F2", "Yuno Field", "Geffen Field", "Sphinx F5", "Ice Cave F1", "GH Churchyard", "Geffen Dungeon F3", "Payon Cave F5", "Comodo Field", "Moscovia F1", "Yuno Field", "Yuno Field";
+		.@total = 50;
 	} else if (.@plv >= 30) {
-		// Mid-level monsters (Lv 20-45)
-		setarray .@m_id[0],   1023, 1152, 1153, 1026, 1188, 1035, 1077, 1066, 1067, 1068, 1069, 1264, 1028, 1016, 1116, 1095, 1176, 1105, 1160, 1166;
-		setarray .@m_lv[0],     24,   36,   35,   30,   32,   28,   26,   23,   25,   23,   30,   42,   32,   31,   29,   20,   25,   21,   20,   27;
-		setarray .@m_map$[0], "gef_fild02", "orcsdun02", "orcsdun01", "pay_dun02", "pay_dun02", "gef_dun00", "gef_dun00", "iz_dun01", "iz_dun01", "iz_dun02", "iz_dun03", "iz_dun03", "pay_dun01", "pay_dun01", "pay_dun01", "anthell02", "anthell02", "anthell01", "anthell01", "gef_fild03";
-		setarray .@m_loc$[0], "Geffen Field", "Orc Dungeon F2", "Orc Dungeon F1", "Payon Cave F3", "Payon Cave F3", "Geffen Dungeon F1", "Geffen Dungeon F1", "Byalan F2", "Byalan F2", "Byalan F3", "Byalan F4", "Byalan F4", "Payon Cave F2", "Payon Cave F2", "Payon Cave F2", "Ant Hell F2", "Ant Hell F2", "Ant Hell F1", "Ant Hell F1", "Geffen Field";
-		.@total = 20;
+		// Mid-level monsters (Lv 20-45) - 50 monsters, sorted by level desc
+		setarray .@m_id[0],   1264, 1155, 1152, 1153, 1189, 1188, 1026, 1028, 1782, 1029, 1016, 1114, 1035, 1166, 1118, 1077, 1076, 1023, 1784, 1068, 1067, 1127, 1055, 1105, 1160, 1095, 1024, 1019, 1128, 1042, 1025, 1103, 1015, 1018, 1012, 1031, 1119, 1030, 1057, 1094, 1266, 1282, 1258, 1134, 1133, 1040, 1139, 1317, 1273, 1261;
+		setarray .@m_lv[0],     42,   44,   36,   35,   54,   32,   30,   32,   31,   47,   31,   29,   28,   27,   26,   26,   15,   24,   23,   23,   25,   23,   17,   21,   20,   20,   16,   19,   18,   17,   16,   15,   14,   16,    9,   11,   30,   23,   21,   37,   17,   36,   33,   36,   36,   40,   40,   43,   52,   47;
+		setarray .@m_map$[0], "iz_dun03", "mjolnir_02", "orcsdun02", "orcsdun01", "gef_fild14", "pay_dun02", "pay_dun02", "pay_dun01", "ra_fild03", "moc_pryd04", "pay_dun01", "yuno_fild01", "gef_dun00", "gef_fild03", "mjolnir_02", "gef_dun00", "pay_dun00", "gef_fild02", "ra_fild04", "iz_dun02", "iz_dun01", "moc_fild17", "moc_fild02", "anthell01", "anthell01", "anthell02", "pay_fild06", "moc_fild02", "mjolnir_01", "moc_fild18", "mjolnir_02", "mjolnir_01", "pay_dun00", "gef_fild13", "gef_fild01", "yuno_fild01", "cmd_fild05", "cmd_fild09", "gef_fild02", "gef_fild09", "cmd_fild04", "cmd_fild06", "cmd_fild06", "gef_fild12", "gef_fild06", "gef_fild08", "gef_fild06", "cmd_fild02", "gef_fild10", "gef_fild05";
+		setarray .@m_loc$[0], "Byalan F4", "Mt. Mjolnir", "Orc Dungeon F2", "Orc Dungeon F1", "Geffen Field", "Payon Cave F3", "Payon Cave F3", "Payon Cave F2", "Rachel Field", "Pyramid F4", "Payon Cave F2", "Yuno Field", "Geffen Dungeon F1", "Geffen Field", "Mt. Mjolnir", "Geffen Dungeon F1", "Payon Cave F1", "Geffen Field", "Rachel Field", "Byalan F3", "Byalan F2", "Sograt Desert", "Sograt Desert", "Ant Hell F1", "Ant Hell F1", "Ant Hell F2", "Payon Forest", "Sograt Desert", "Mt. Mjolnir", "Sograt Desert", "Mt. Mjolnir", "Mt. Mjolnir", "Payon Cave F1", "Geffen Field", "Geffen Field", "Yuno Field", "Comodo Field", "Comodo Field", "Geffen Field", "Geffen Field", "Comodo Field", "Comodo Field", "Comodo Field", "Geffen Field", "Geffen Field", "Geffen Field", "Geffen Field", "Comodo Field", "Geffen Field", "Geffen Field";
+		.@total = 50;
 	} else {
-		// Beginner monsters (Lv 1-25)
-		setarray .@m_id[0],   1002, 1113, 1063, 1007, 1014, 1048, 1051, 1076, 1015, 1160, 1105, 1167, 1011, 1104, 1103, 1055, 1009, 1127, 1042, 1025;
-		setarray .@m_lv[0],      1,    3,    1,    2,    5,    1,    6,   15,   14,   20,   21,    7,   10,   18,   16,   17,    5,   23,   17,   16;
-		setarray .@m_map$[0], "prt_fild08", "prt_fild05", "prt_fild08", "gef_fild00", "pay_fild01", "prt_sewb1", "prt_sewb1", "pay_dun00", "pay_dun00", "anthell01", "anthell01", "pay_fild01", "mjolnir_01", "mjolnir_01", "mjolnir_01", "moc_fild02", "moc_fild01", "moc_fild17", "moc_fild18", "mjolnir_02";
-		setarray .@m_loc$[0], "Prontera Field", "Prontera Field", "Prontera Field", "Geffen Field", "Payon Forest", "Prontera Culvert F1", "Prontera Culvert F1", "Payon Cave F1", "Payon Cave F1", "Ant Hell F1", "Ant Hell F1", "Payon Forest", "Mt. Mjolnir", "Mt. Mjolnir", "Mt. Mjolnir", "Sograt Desert", "Sograt Desert", "Sograt Desert", "Sograt Desert", "Mt. Mjolnir";
-		.@total = 20;
+		// Beginner monsters (Lv 1-25) - 50 monsters, sorted by level desc
+		setarray .@m_id[0],   1127, 1105, 1160, 1019, 1104, 1055, 1042, 1025, 1103, 1076, 1015, 1167, 1024, 1011, 1128, 1107, 1014, 1051, 1009, 1048, 1008, 1113, 1007, 1063, 1002, 1010, 1018, 1012, 1069, 1066, 1067, 1068, 1031, 1057, 1005, 1053, 1004, 1174, 1116, 1060, 1406, 1400, 1613, 1619, 1074, 1254, 1266, 1628, 1627, 1782;
+		setarray .@m_lv[0],     23,   21,   20,   19,   18,   17,   17,   16,   15,   15,   14,    7,   16,   10,   18,    9,    5,    6,    5,    1,    3,    3,    2,    1,    1,    4,   16,    9,   30,   23,   25,   23,   11,   21,    5,   17,    8,   19,   29,   31,   41,   43,   26,   28,   26,   23,   17,   36,   23,   31;
+		setarray .@m_map$[0], "moc_fild17", "anthell01", "anthell01", "moc_fild02", "mjolnir_01", "moc_fild02", "moc_fild18", "mjolnir_02", "mjolnir_01", "pay_dun00", "pay_dun00", "pay_fild01", "pay_fild06", "mjolnir_01", "mjolnir_01", "moc_fild01", "pay_fild01", "prt_sewb1", "moc_fild01", "prt_sewb1", "gef_fild00", "prt_fild05", "gef_fild00", "prt_fild08", "prt_fild08", "pay_fild01", "gef_fild13", "gef_fild01", "iz_dun03", "iz_dun01", "iz_dun01", "iz_dun02", "moc_pryd01", "gef_fild02", "prt_sewb2", "prt_sewb2", "mjolnir_01", "yuno_fild09", "pay_dun01", "ama_fild01", "ama_fild01", "ama_fild01", "ein_fild03", "ein_fild08", "cmd_fild02", "cmd_fild02", "cmd_fild04", "hu_fild06", "hu_fild02", "ra_fild03";
+		setarray .@m_loc$[0], "Sograt Desert", "Ant Hell F1", "Ant Hell F1", "Sograt Desert", "Mt. Mjolnir", "Sograt Desert", "Sograt Desert", "Mt. Mjolnir", "Mt. Mjolnir", "Payon Cave F1", "Payon Cave F1", "Payon Forest", "Payon Forest", "Mt. Mjolnir", "Mt. Mjolnir", "Sograt Desert", "Payon Forest", "Prontera Culvert F1", "Sograt Desert", "Prontera Culvert F1", "Geffen Field", "Prontera Field", "Geffen Field", "Prontera Field", "Prontera Field", "Payon Forest", "Geffen Field", "Geffen Field", "Byalan F4", "Byalan F2", "Byalan F2", "Byalan F3", "Pyramid F1", "Geffen Field", "Prontera Culvert F2", "Prontera Culvert F2", "Mt. Mjolnir", "Yuno Field", "Payon Cave F2", "Amatsu Field", "Amatsu Field", "Amatsu Field", "Einbroch Field", "Einbroch Field", "Comodo Field", "Comodo Field", "Comodo Field", "Hugel Field", "Hugel Field", "Rachel Field";
+		.@total = 50;
 	}
 
 	.@next_exp = (NextBaseExp > 0) ? NextBaseExp : 1;
 	.@exp_rate = getbattleflag("base_exp_rate");
 	if (.@exp_rate < 1) .@exp_rate = 100;
 
-	// Calculate EXP with cooldowns for each monster
+	// Get current MOTD monster for prioritization
+	.@motd_id = callfunc("F_GetCurrentMOTD");
+	.@motd_enabled = callfunc("F_IsMOTDEnabled");
+
+	// O(n) bucket categorization - Discovery (300%) > MOTD > Regular
+	// This replaces the O(n²) selection sort that caused infinity loop with 50 items
+	.@disc_cnt = 0;
+	.@motd_cnt = 0;
+	.@reg_cnt = 0;
+
 	for (.@j = 0; .@j < .@total; .@j++) {
 		.@cd_pct = callfunc("F_BountyCooldown", getcharid(0), .@m_id[.@j], .@cd_seconds);
+		.@is_motd = (.@motd_enabled && .@m_id[.@j] == .@motd_id);
 
 		.@exp_scale = (.@m_lv[.@j] > 10) ? ((.@m_lv[.@j] - 10) * (.@m_lv[.@j] - 10) / 98) : 1;
 		if (.@exp_scale < 1) .@exp_scale = 1;
@@ -137,42 +147,72 @@ function	script	F_BuildSuggestions	{
 		.@exp_pct = .@base_exp * 100 / .@next_exp;
 		.@zeny = ((20 + .@m_lv[.@j]) * 50 * 100 * .@cd_pct / 100) / 5;
 
-		.@c_mob[.@j] = .@m_id[.@j];
-		.@c_lv[.@j] = .@m_lv[.@j];
-		.@c_map$[.@j] = .@m_map$[.@j];
-		.@c_loc$[.@j] = .@m_loc$[.@j];
-		.@c_exp[.@j] = .@exp_pct;
-		.@c_zeny[.@j] = .@zeny;
-		.@c_cd[.@j] = .@cd_pct;
+		// Categorize into priority buckets
+		if (.@cd_pct >= 300) {
+			// Discovery bucket - first time hunting this monster (3x bonus)
+			.@d_mob[.@disc_cnt] = .@m_id[.@j];
+			.@d_lv[.@disc_cnt] = .@m_lv[.@j];
+			.@d_map$[.@disc_cnt] = .@m_map$[.@j];
+			.@d_loc$[.@disc_cnt] = .@m_loc$[.@j];
+			.@d_exp[.@disc_cnt] = .@exp_pct;
+			.@d_zeny[.@disc_cnt] = .@zeny;
+			.@d_cd[.@disc_cnt] = .@cd_pct;
+			.@disc_cnt++;
+		} else if (.@is_motd) {
+			// MOTD bucket - current Monster of the Day
+			.@o_mob[.@motd_cnt] = .@m_id[.@j];
+			.@o_lv[.@motd_cnt] = .@m_lv[.@j];
+			.@o_map$[.@motd_cnt] = .@m_map$[.@j];
+			.@o_loc$[.@motd_cnt] = .@m_loc$[.@j];
+			.@o_exp[.@motd_cnt] = .@exp_pct;
+			.@o_zeny[.@motd_cnt] = .@zeny;
+			.@o_cd[.@motd_cnt] = .@cd_pct;
+			.@motd_cnt++;
+		} else {
+			// Regular bucket
+			.@r_mob[.@reg_cnt] = .@m_id[.@j];
+			.@r_lv[.@reg_cnt] = .@m_lv[.@j];
+			.@r_map$[.@reg_cnt] = .@m_map$[.@j];
+			.@r_loc$[.@reg_cnt] = .@m_loc$[.@j];
+			.@r_exp[.@reg_cnt] = .@exp_pct;
+			.@r_zeny[.@reg_cnt] = .@zeny;
+			.@r_cd[.@reg_cnt] = .@cd_pct;
+			.@reg_cnt++;
+		}
 	}
 
-	// Sort by EXP descending
-	for (.@i = 0; .@i < .@total - 1; .@i++) {
-		.@best = .@i;
-		for (.@k = .@i + 1; .@k < .@total; .@k++) {
-			if (.@c_exp[.@k] > .@c_exp[.@best])
-				.@best = .@k;
-		}
-		if (.@best != .@i) {
-			.@tmp = .@c_mob[.@i]; .@c_mob[.@i] = .@c_mob[.@best]; .@c_mob[.@best] = .@tmp;
-			.@tmp = .@c_lv[.@i]; .@c_lv[.@i] = .@c_lv[.@best]; .@c_lv[.@best] = .@tmp;
-			.@tmp = .@c_exp[.@i]; .@c_exp[.@i] = .@c_exp[.@best]; .@c_exp[.@best] = .@tmp;
-			.@tmp = .@c_zeny[.@i]; .@c_zeny[.@i] = .@c_zeny[.@best]; .@c_zeny[.@best] = .@tmp;
-			.@tmp = .@c_cd[.@i]; .@c_cd[.@i] = .@c_cd[.@best]; .@c_cd[.@best] = .@tmp;
-			.@tmp$ = .@c_map$[.@i]; .@c_map$[.@i] = .@c_map$[.@best]; .@c_map$[.@best] = .@tmp$;
-			.@tmp$ = .@c_loc$[.@i]; .@c_loc$[.@i] = .@c_loc$[.@best]; .@c_loc$[.@best] = .@tmp$;
-		}
+	// Copy buckets to output in priority order: Discovery > MOTD > Regular
+	// Discovery bucket first (3x bonus monsters)
+	for (.@j = 0; .@j < .@disc_cnt && @suggest_count < 50; .@j++) {
+		@suggest_mob[@suggest_count] = .@d_mob[.@j];
+		@suggest_lv[@suggest_count] = .@d_lv[.@j];
+		@suggest_map$[@suggest_count] = .@d_map$[.@j];
+		@suggest_loc$[@suggest_count] = .@d_loc$[.@j];
+		@suggest_exp[@suggest_count] = .@d_exp[.@j];
+		@suggest_zeny[@suggest_count] = .@d_zeny[.@j];
+		@suggest_cd[@suggest_count] = .@d_cd[.@j];
+		@suggest_count++;
 	}
-
-	// Copy to output arrays (up to 50 monsters)
-	for (.@j = 0; .@j < .@total && @suggest_count < 50; .@j++) {
-		@suggest_mob[@suggest_count] = .@c_mob[.@j];
-		@suggest_lv[@suggest_count] = .@c_lv[.@j];
-		@suggest_map$[@suggest_count] = .@c_map$[.@j];
-		@suggest_loc$[@suggest_count] = .@c_loc$[.@j];
-		@suggest_exp[@suggest_count] = .@c_exp[.@j];
-		@suggest_zeny[@suggest_count] = .@c_zeny[.@j];
-		@suggest_cd[@suggest_count] = .@c_cd[.@j];
+	// MOTD bucket
+	for (.@j = 0; .@j < .@motd_cnt && @suggest_count < 50; .@j++) {
+		@suggest_mob[@suggest_count] = .@o_mob[.@j];
+		@suggest_lv[@suggest_count] = .@o_lv[.@j];
+		@suggest_map$[@suggest_count] = .@o_map$[.@j];
+		@suggest_loc$[@suggest_count] = .@o_loc$[.@j];
+		@suggest_exp[@suggest_count] = .@o_exp[.@j];
+		@suggest_zeny[@suggest_count] = .@o_zeny[.@j];
+		@suggest_cd[@suggest_count] = .@o_cd[.@j];
+		@suggest_count++;
+	}
+	// Regular bucket
+	for (.@j = 0; .@j < .@reg_cnt && @suggest_count < 50; .@j++) {
+		@suggest_mob[@suggest_count] = .@r_mob[.@j];
+		@suggest_lv[@suggest_count] = .@r_lv[.@j];
+		@suggest_map$[@suggest_count] = .@r_map$[.@j];
+		@suggest_loc$[@suggest_count] = .@r_loc$[.@j];
+		@suggest_exp[@suggest_count] = .@r_exp[.@j];
+		@suggest_zeny[@suggest_count] = .@r_zeny[.@j];
+		@suggest_cd[@suggest_count] = .@r_cd[.@j];
 		@suggest_count++;
 	}
 	return;
@@ -2976,7 +3016,9 @@ L_SuggestDisplay:
 	// Show more option if there are more
 	if (@suggest_shown < @suggest_count) {
 		next;
-		if (select(" ~ Show " + (@suggest_count - @suggest_shown) + " more: ~ Done") == 1) {
+		.@remaining = @suggest_count - @suggest_shown;
+		.@show_next = (.@remaining > 10) ? 10 : .@remaining;
+		if (select(" ~ Show " + .@show_next + " more: ~ Done") == 1) {
 			goto L_SuggestDisplay;
 		}
 	}
