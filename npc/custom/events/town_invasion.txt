@@ -330,6 +330,9 @@ S_LoadAndStartInvasion:
 
 	debugmes "[TownInvasion] S_LoadAndStartInvasion - Globals set, setting mapflag...";
 
+	// Clean up any leftover monsters from previous invasions
+	killmonsterall $@InvasionMap$;
+
 	// Set no-penalty mapflag
 	setmapflag $@InvasionMap$, mf_nopenalty;
 
