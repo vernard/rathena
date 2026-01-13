@@ -78,11 +78,19 @@ OnTimer10000:
 		end;
 	}
 
-	// FAILSAFE: Use mobcount() to get actual living monsters
-	// This catches kills that didn't trigger OnMonsterKilled (traps, falcon, homunculus, etc.)
-	.@actual_alive = mobcount($@InvasionMap$, "TownInvasion::OnMonsterKilled");
+	// FAILSAFE: Use getmapunits() instead of mobcount() for reliability
+	// mobcount() only counts monsters with specific event label, but that registration
+	// can fail for FAKE_NPC type scripts. getmapunits() counts ALL monsters on the map,
+	// which is fine since invasion maps (towns) don't have permanent monster spawns.
+	.@actual_alive = getmapunits(BL_MOB, $@InvasionMap$, .@mob_gids[0]);
 
-	// Check if we've hit the 90% clear threshold based on actual mobcount
+	// Also get mobcount for comparison debugging
+	.@mobcount_val = mobcount($@InvasionMap$, "TownInvasion::OnMonsterKilled");
+	if (.@actual_alive != .@mobcount_val) {
+		debugmes "[TownInvasion] Mobcount mismatch! getmapunits=" + .@actual_alive + " mobcount=" + .@mobcount_val;
+	}
+
+	// Check if we've hit the 90% clear threshold based on actual monster count
 	// Wave clears when: all bosses dead AND 90% of regular monsters dead
 	if ($@InvasionWaveMonsters > 0 && $@InvasionActive) {
 		// Get the clear threshold (default 90%)
@@ -131,10 +139,10 @@ OnTimer10000:
 
 	// Check for periodic reminder (every 5 min when no bosses)
 	if (gettimetick(2) - $@InvasionLastAnnounce >= 300) {
-		.@remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
-		if (.@remaining > 0 && .@actual_alive > 0) {
-			// Use actual mobcount for accurate display
-			announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@remaining + " min left. " + .@actual_alive + " monsters remaining!", bc_all, 0xFF8800;
+		.@time_remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
+		if (.@time_remaining > 0 && .@actual_alive > 0) {
+			// Use getmapunits count for accurate display
+			announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@time_remaining + " min left. " + .@actual_alive + " monsters remaining!", bc_all, 0xFF8800;
 			$@InvasionLastAnnounce = gettimetick(2);
 		}
 	}
@@ -633,14 +641,16 @@ OnMonsterKilled:
 	// Points stored as 10x for decimal support
 	query_sql "INSERT INTO event_invasion_contributions (invasion_id, char_id, char_name, kills, waves_participated, points_earned) VALUES (" + $@InvasionID + ", " + .@char_id + ", '" + escape_sql(.@char_name$) + "', 1, 1, " + .@kill_pts + ") ON DUPLICATE KEY UPDATE kills = kills + 1, points_earned = points_earned + " + .@kill_pts;
 
-	// Show pending points with decimals (stored as 10x)
+	// Show pending points with decimals (stored as 10x) AND remaining monster count
 	query_sql "SELECT points_earned FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_id, .@pending;
 	// Format as X.Y for both kill pts and pending
 	.@kill_whole = .@kill_pts / 10;
 	.@kill_dec = .@kill_pts % 10;
 	.@pend_whole = .@pending / 10;
 	.@pend_dec = .@pending % 10;
-	dispbottom "[Invasion] +" + .@kill_whole + "." + .@kill_dec + " pts (Pending: " + .@pend_whole + "." + .@pend_dec + ")", 0x00CC00;
+	// Get remaining monster count for player feedback (use getmapunits for reliability)
+	.@remaining = getmapunits(BL_MOB, $@InvasionMap$, .@rem_gids[0]);
+	dispbottom "[Invasion] +" + .@kill_whole + "." + .@kill_dec + " pts | Pending: " + .@pend_whole + "." + .@pend_dec + " | Remaining: " + .@remaining, 0x00CC00;
 
 	// Party kill sharing - give credit to nearby party members
 	.@killer_aid = getcharid(3);  // Save killer's account ID before loop (detachrid clears attachment)
