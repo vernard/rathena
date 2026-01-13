@@ -65,6 +65,10 @@ OnTimer10000:
 	if ($@InvasionNextWaveTime > 0 && gettimetick(2) >= $@InvasionNextWaveTime) {
 		$@InvasionNextWaveTime = 0;
 		callsub S_SpawnWave;
+		// IMPORTANT: End here to let monsters register before mobcount check
+		// The next timer tick will handle the failsafe check
+		initnpctimer;
+		end;
 	}
 
 	// Check for timeout
