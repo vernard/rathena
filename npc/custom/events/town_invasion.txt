@@ -696,6 +696,10 @@ OnMonsterKilled:
 OnWaveCleared:
 	if (!$@InvasionActive) end;
 
+	// IMPORTANT: Reset wave monster count FIRST to prevent failsafe from re-triggering
+	// during the countdown period before the next wave spawns
+	$@InvasionWaveMonsters = 0;
+
 	// Clean up remaining monsters from this wave (both methods for robustness)
 	killmonster $@InvasionMap$, "TownInvasion::OnMonsterKilled";
 	killmonsterall $@InvasionMap$;
