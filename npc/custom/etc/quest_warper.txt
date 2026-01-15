@@ -1440,8 +1440,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "yuno_fild07";
-	setarray @pFXcoords[@Fi], 184;
-	setarray @pFYcoords[@Fi], 347;
+	setarray @pFXcoords[@Fi], 210;
+	setarray @pFYcoords[@Fi], 178;
 
 	QWS_Make_Field_Menu 4;
 //----------------YUNO FIELD 08 - Kiel Academy
@@ -1449,10 +1449,19 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "yuno_fild08";
-	setarray @pFXcoords[@Fi], 225;
-	setarray @pFYcoords[@Fi], 202;
+	setarray @pFXcoords[@Fi], 161;
+	setarray @pFYcoords[@Fi], 194;
 
 	QWS_Make_Field_Menu 5;
+//----------------YUNO FIELD 02 - Kiel Villa
+	setarray @pFmenuitems$[@Fi], "yuno_fild02 - Kiel Villa";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "yuno_fild02";
+	setarray @pFXcoords[@Fi], 91;
+	setarray @pFYcoords[@Fi], 207;
+
+	QWS_Make_Field_Menu 46;
 //----------------YUNO FIELD 09 - Guards Camp
 	setarray @pFmenuitems$[@Fi], "yuno_fild09 - Guards Camp";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
@@ -1897,8 +1906,8 @@ function	script	QWS_Darray	{
 
 	setarray @DGat$[@Dref], "kh_dun01", "kh_dun02";
 	setarray @DLevelName$[@Dref], "1st Floor", "2nd Floor";
-	setarray @DXcoords[@Dref], 63, 42;
-	setarray @DYcoords[@Dref], 10, 197;
+	setarray @DXcoords[@Dref], 17, 42;
+	setarray @DYcoords[@Dref], 219, 197;
 	setarray @DDepth[@Dref], 0, 1;
 
 	QWS_Make_Dungeon_Menu 28;
@@ -2465,7 +2474,7 @@ gl_sew03,167,281,3	script	Warpra Helper#33	112,{ callfunc "QWS_Dungeon_Warpra",3
 gl_dun02,224,268,3	script	Warpra Helper#34	112,{ callfunc "QWS_Dungeon_Warpra",34,"GH Lowest Cave"; close; }
 gon_dun01,167,273,4	script	Warpra Helper#12	112,{ callfunc "QWS_Dungeon_Warpra",12,"Kunlun Dungeon"; close; }
 juperos_02,127,154,5	script	Warpra Helper#13	112,{ callfunc "QWS_Dungeon_Warpra",14,"Juperos Cave"; close; }
-kh_dun01,14,224,3	script	Warpra Helper#14	112,{ callfunc "QWS_Dungeon_Warpra",28,"Kiel Dungeon"; close; }
+kh_dun02,47,199,4	script	Warpra Helper#14	112,{ callfunc "QWS_Dungeon_Warpra",28,"Kiel Dungeon"; close; }
 lhz_dun02,156,151,5	script	Warpra Helper#15	112,{ callfunc "QWS_Dungeon_Warpra",15,"Lighthalzen Bio Lab"; close; }
 lou_dun02,168,264,4	script	Warpra Helper#16	112,{ callfunc "QWS_Dungeon_Warpra",16,"Luoyang Dungeon"; close; }
 mag_dun02,46,41,3	script	Warpra Helper#17	112,{ callfunc "QWS_Dungeon_Warpra",17,"Magma Dungeon"; close; }
@@ -2492,16 +2501,17 @@ abbey02,149,20,3	script	Warpra Helper#40	112,{ callfunc "QWS_Dungeon_Warpra",40,
 // Field Warpras that unlock field locations for the "Warp to Fields" menu.
 // Position: +2 X from bounty board (so players warp next to both NPCs)
 //
-// Yuno Region - 6 fields:
+// Yuno Region - 7 fields:
 // - 2-portal rule: yuno_fild03, fild05 (from Yuno), fild09, fild12 (from Alde)
-// - Dungeon access: fild07 (Juperos entrance), fild08 (Kiel Factory entrance)
+// - Dungeon/Quest access: fild07 (Juperos), fild08 (Kiel Academy), fild02 (Kiel Villa)
 //==================================================================
 yuno_fild03,182,200,4	script	Field Warpra#yf03	112,{ callfunc "QWS_Field_Warpra",0,"yuno_fild03 - El Mes Plateau"; close; }
 yuno_fild05,238,235,4	script	Field Warpra#yf05	112,{ callfunc "QWS_Field_Warpra",1,"yuno_fild05 - El Mes Plateau"; close; }
 yuno_fild09,219,250,4	script	Field Warpra#yf09	112,{ callfunc "QWS_Field_Warpra",2,"yuno_fild09 - Guards Camp"; close; }
 yuno_fild12,201,302,4	script	Field Warpra#yf12	112,{ callfunc "QWS_Field_Warpra",3,"yuno_fild12 - Border Checkpoint"; close; }
-yuno_fild07,184,347,4	script	Field Warpra#yf07	112,{ callfunc "QWS_Field_Warpra",4,"yuno_fild07 - El Mes Gorge"; close; }
-yuno_fild08,225,202,4	script	Field Warpra#yf08	112,{ callfunc "QWS_Field_Warpra",5,"yuno_fild08 - Kiel Academy"; close; }
+yuno_fild07,210,178,4	script	Field Warpra#yf07	112,{ callfunc "QWS_Field_Warpra",4,"yuno_fild07 - El Mes Gorge"; close; }
+yuno_fild08,161,194,4	script	Field Warpra#yf08	112,{ callfunc "QWS_Field_Warpra",5,"yuno_fild08 - Kiel Academy"; close; }
+yuno_fild02,91,207,4	script	Field Warpra#yf02	112,{ callfunc "QWS_Field_Warpra",46,"yuno_fild02 - Kiel Villa"; close; }
 
 // Einbroch Region - 7 fields:
 // - Yuno expansion: ein_fild01 (from yuno_fild05), ein_fild02 (from yuno_fild04), ein_fild06 (from yuno)

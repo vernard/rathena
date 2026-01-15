@@ -247,3 +247,7 @@ moc_fild04,212,331,4	duplicate(Healer)	Healer#moc_fld04	569
 moc_fild19,111,97,4	duplicate(Healer)	Healer#moc_fld19	569
 prt_fild05,278,215,4	duplicate(Healer)	Healer#prt_fld	569
 yuno_fild03,42,135,4	duplicate(Healer)	Healer#yuno_fld	569
+
+// Quest Area Healers
+//============================================================
+kh_kiehl02,48,38,4	duplicate(Healer)	Healer#kh_kiehl	569
