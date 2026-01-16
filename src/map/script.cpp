@@ -22209,17 +22209,23 @@ BUILDIN_FUNC(getrandgroupitem) {
 				if (pc_candrop(sd,&item_tmp))
 					map_addflooritem(&item_tmp,item_tmp.amount,sd->bl.m,sd->bl.x,sd->bl.y,0,0,0,0,0);
 			}
-			// PATCH START: Rare drop tracking for boss/MVP cards from item boxes
+			// PATCH START: Rare drop tracking for cards from item boxes
 			else {
 				// Item was successfully added to inventory
-				// Only announce boss/MVP cards (not all cards from OCA)
-				if (raredrop_is_boss_card(entry->nameid)) {
-					std::shared_ptr<item_data> i_data = item_db.find(entry->nameid);
-					// sd->itemid is set by pc_useitem() before running the script
-					t_itemid source_item_id = sd->itemid;
-					std::shared_ptr<item_data> source_data = item_db.find(source_item_id);
+				std::shared_ptr<item_data> i_data = item_db.find(entry->nameid);
+				// sd->itemid is set by pc_useitem() before running the script
+				t_itemid source_item_id = sd->itemid;
+				std::shared_ptr<item_data> source_data = item_db.find(source_item_id);
 
-					if (i_data != nullptr && source_data != nullptr) {
+				if (i_data != nullptr && source_data != nullptr) {
+					// Check if it's a card
+					bool is_card = (i_data->type == IT_CARD);
+					// Old Card Album = 616
+					bool is_oca = (source_item_id == 616);
+					bool is_boss_card = raredrop_is_boss_card(entry->nameid);
+
+					// Announce ALL cards from any item box source
+					if (is_card) {
 						// Use a fixed rate (100 = 1%) since OCA cards have equal chance
 						// For item boxes, drop_rate = base_rate (no Bubblegum effect)
 						raredrop_record_and_announce(sd, entry->nameid, i_data->ename.c_str(),
@@ -22228,7 +22234,7 @@ BUILDIN_FUNC(getrandgroupitem) {
 					}
 				}
 			}
-			// PATCH END: Rare drop tracking for boss/MVP cards from item boxes
+			// PATCH END: Rare drop tracking for cards from item boxes
 		}
 	}
 
