@@ -1,0 +1,635 @@
+//===== rAthena Script =======================================
+//= Headgear Quest Reward NPC
+//===== Description: =========================================
+//= NPC that gives players headgears based on completed quests.
+//= Located in Prontera, center left of the Banker NPC.
+//=
+//= Rewards are tracked using:
+//= - Bitmask (HeadgearRewards char variable) for fast in-game checks
+//= - SQL table (headgear_quest_rewards) for website queries with timestamps
+//=
+//= Reward IDs (bit positions):
+//= - 0: Kiel Hyre Quest - Robo Eyes (5325) + Enriched Ores
+//= - 1: The Sign Quest - Valkyrie Helmet (5826)
+//=
+//= Requirements:
+//= - Kiel Hyre: Luxurious Keycard (7509)
+//= - The Sign: The Sign accessory (2644) + sign_q >= 141
+//=
+//= Helper System:
+//= - Players who completed quests can register as helpers
+//= - New players can request help from registered helpers
+//= - Helpers get notified based on their preference (immediate/passive)
+//============================================================
+
+prontera,140,172,4	script	Quest Headgear Collector	4_M_ZONDAMAN,{
+	// Auto-cleanup: Expire old help requests (older than 24 hours)
+	query_sql "UPDATE `quest_help_requests` SET status = 'expired' WHERE status = 'pending' AND TIMESTAMPDIFF(HOUR, created_at, NOW()) > 24";
+
+	mes "[Quest Headgear Collector]";
+	mes "Greetings, adventurer!";
+	mes "I help reward brave souls who";
+	mes "complete dangerous quests, and";
+	mes "I also coordinate a helper network";
+	mes "for those seeking guidance.";
+	next;
+
+	// Check if player has completed any quests
+	set .@hasCompleted, (HeadgearRewards > 0);
+
+	// Build main menu
+	set .@mainMenu$, "Claim Quest Rewards:";
+	if (.@hasCompleted) {
+		set .@mainMenu$, .@mainMenu$ + "Helper System:";
+	} else {
+		set .@mainMenu$, .@mainMenu$ + "Request Help:";
+	}
+	set .@mainMenu$, .@mainMenu$ + "View Available Rewards:Cancel";
+
+	set .@mainChoice, select(.@mainMenu$);
+
+	// Handle main menu choice
+	switch (.@mainChoice) {
+		case 1: goto L_ClaimRewards;
+		case 2:
+			if (.@hasCompleted) {
+				goto L_HelperSystem;
+			} else {
+				goto L_RequestHelp;
+			}
+		case 3: goto L_ViewRewards;
+		case 4:
+			mes "[Quest Headgear Collector]";
+			mes "Come back anytime!";
+			close;
+	}
+
+L_ClaimRewards:
+
+	// Initialize menu options
+	set .@menu$, "";
+	set .@menuCount, 0;
+
+	// Check Kiel Hyre Quest completion (Reward ID: 0)
+	if (countitem(7509) > 0 && !(HeadgearRewards & (1 << 0))) {
+		set .@menu$, .@menu$ + "Kiel Hyre Quest - Robo Eyes:";
+		set .@rewardMap[.@menuCount], 0;
+		set .@menuCount, .@menuCount + 1;
+	}
+
+	// Check The Sign Quest completion (Reward ID: 1)
+	if (countitem(2644) > 0 && sign_q >= 141 && !(HeadgearRewards & (1 << 1))) {
+		set .@menu$, .@menu$ + "The Sign Quest - Valkyrie Helmet:";
+		set .@rewardMap[.@menuCount], 1;
+		set .@menuCount, .@menuCount + 1;
+	}
+
+	// No available rewards
+	if (.@menuCount == 0) {
+		mes "[Quest Headgear Collector]";
+		mes "Hmm... It seems you haven't";
+		mes "completed any eligible quests yet,";
+		mes "or you've already claimed all";
+		mes "available rewards.";
+		next;
+		goto L_ViewRewards;
+	}
+
+	// Add cancel option
+	set .@menu$, .@menu$ + "Cancel";
+
+	// Show menu
+	set .@choice, select(.@menu$) - 1;
+
+	// Handle cancel
+	if (.@choice >= .@menuCount) {
+		mes "[Quest Headgear Collector]";
+		mes "Come back anytime you want";
+		mes "to claim your rewards!";
+		close;
+	}
+
+	// Get the actual reward ID from the map
+	set .@rewardId, .@rewardMap[.@choice];
+
+	// Process reward based on ID
+	switch (.@rewardId) {
+		case 0: // Kiel Hyre Quest - Robo Eyes + Materials
+			mes "[Quest Headgear Collector]";
+			mes "Ah, the ^FF0000Kiel Hyre Quest^000000!";
+			mes "That was quite a dangerous";
+			mes "investigation into the robot";
+			mes "factory. You've earned this";
+			mes "special ^0000FFRobo Eyes^000000 headgear!";
+			next;
+
+			mes "[Quest Headgear Collector]";
+			mes "In addition, I'm giving you some";
+			mes "high-quality refining materials";
+			mes "as thanks for your service:";
+			mes "^0000FF5x Enriched Elunium^000000";
+			mes "^0000FF5x Enriched Oridecon^000000";
+			next;
+
+			mes "[Quest Headgear Collector]";
+			mes "The headgear is account-bound,";
+			mes "so you can transfer it between";
+			mes "your characters through storage.";
+			mes "However, you can only receive";
+			mes "this reward once per character.";
+			next;
+
+			mes "[Quest Headgear Collector]";
+			mes "Would you like to claim your";
+			mes "rewards now?";
+			next;
+
+			if (select("Yes, please!:No, maybe later.") == 2) {
+				mes "[Quest Headgear Collector]";
+				mes "No problem! Come back whenever";
+				mes "you're ready to claim it.";
+				close;
+			}
+
+			// Check inventory space (1 headgear + 5 elu + 5 ori = 11 items)
+			if (checkweight(5325, 1) == 0 || checkweight(7620, 5) == 0 || checkweight(7619, 5) == 0) {
+				mes "[Quest Headgear Collector]";
+				mes "Oh no! Your inventory is too";
+				mes "heavy or full. Please make";
+				mes "some space and come back.";
+				close;
+			}
+
+			// Give rewards and mark as claimed
+			getitembound 5325, 1, BOUND_ACCOUNT; // Robo_Eye (Account-bound)
+			getitem 7620, 5; // Enriched_Elunium
+			getitem 7619, 5; // Enriched_Oridecon
+			set HeadgearRewards, HeadgearRewards | (1 << 0);
+
+			// Log to SQL for website
+			query_sql "INSERT INTO `headgear_quest_rewards` (`account_id`, `char_id`, `reward_id`, `reward_name`, `item_id`) VALUES (" + getcharid(3) + ", " + getcharid(0) + ", 0, 'Robo Eyes + Materials', 5325)";
+
+			mes "[Quest Headgear Collector]";
+			mes "Congratulations!";
+			mes "You've received ^0000FFRobo Eyes^000000,";
+			mes "^0000FF5x Enriched Elunium^000000, and";
+			mes "^0000FF5x Enriched Oridecon^000000!";
+			mes "Wear it with pride, adventurer!";
+			next;
+
+			// Ask if they want to help others
+			mes "[Quest Headgear Collector]";
+			mes "Since you've completed this quest,";
+			mes "would you like to volunteer to";
+			mes "help other players who are";
+			mes "struggling with it?";
+			next;
+
+			if (select("Yes, I'll help!:No thanks, maybe later") == 2) {
+				mes "[Quest Headgear Collector]";
+				mes "No problem! You can always";
+				mes "register later through the";
+				mes "Helper System menu.";
+				close;
+			}
+
+			// Ask notification preference
+			mes "[Quest Headgear Collector]";
+			mes "Excellent! How would you like";
+			mes "to be notified when players";
+			mes "need help?";
+			next;
+
+			mes "[Quest Headgear Collector]";
+			mes "^0000FFImmediate Notification^000000";
+			mes "  You'll get a whisper right away";
+			mes " ";
+			mes "^0000FFPassive Board^000000";
+			mes "  Check help requests at your leisure";
+			next;
+
+			set .@helperNotify, select("Immediate Notification:Passive Board") - 1;
+			set .@notifyImmediate, (.@helperNotify == 0) ? 1 : 0;
+
+			// Update their helper status
+			query_sql "UPDATE `headgear_quest_rewards` SET willing_to_help = 1, notify_immediately = " + .@notifyImmediate + " WHERE char_id = " + getcharid(0) + " AND reward_id = 0";
+
+			mes "[Quest Headgear Collector]";
+			mes "^00FF00Thank you for volunteering!^000000";
+			mes "You're now registered as a helper";
+			mes "for the Kiel Hyre Quest.";
+			close;
+
+		case 1: // The Sign Quest - Valkyrie Helmet
+			mes "[Quest Headgear Collector]";
+			mes "Ah, ^FF0000The Sign Quest^000000!";
+			mes "You've completed one of the most";
+			mes "legendary adventures and helped";
+			mes "reveal the secrets of the gods!";
+			mes "You've earned the prestigious";
+			mes "^0000FFValkyrie Helmet^000000!";
+			next;
+
+			mes "[Quest Headgear Collector]";
+			mes "This legendary helm was blessed";
+			mes "by the Valkyries themselves.";
+			mes "It grants enhanced strength,";
+			mes "intelligence, dexterity, agility,";
+			mes "attack speed, and casting speed!";
+			next;
+
+			mes "[Quest Headgear Collector]";
+			mes "This is an account-bound item,";
+			mes "so you can transfer it between";
+			mes "your characters through storage.";
+			mes "However, you can only receive";
+			mes "this reward once per character.";
+			next;
+
+			mes "[Quest Headgear Collector]";
+			mes "Would you like to claim your";
+			mes "^0000FFValkyrie Helmet^000000 reward now?";
+			next;
+
+			if (select("Yes, please!:No, maybe later.") == 2) {
+				mes "[Quest Headgear Collector]";
+				mes "No problem! Come back whenever";
+				mes "you're ready to claim it.";
+				close;
+			}
+
+			// Check inventory space
+			if (checkweight(5826, 1) == 0) {
+				mes "[Quest Headgear Collector]";
+				mes "Oh no! Your inventory is too";
+				mes "heavy or full. Please make";
+				mes "some space and come back.";
+				close;
+			}
+
+			// Give reward and mark as claimed
+			getitembound 5826, 1, BOUND_ACCOUNT; // Valkyrie_Helmet (Account-bound)
+			set HeadgearRewards, HeadgearRewards | (1 << 1);
+
+			// Log to SQL for website
+			query_sql "INSERT INTO `headgear_quest_rewards` (`account_id`, `char_id`, `reward_id`, `reward_name`, `item_id`) VALUES (" + getcharid(3) + ", " + getcharid(0) + ", 1, 'Valkyrie Helmet', 5826)";
+
+			mes "[Quest Headgear Collector]";
+			mes "Congratulations!";
+			mes "You've received the ^0000FFValkyrie Helmet^000000!";
+			mes "May the blessings of the";
+			mes "Valkyries guide you in battle!";
+			next;
+
+			// Ask if they want to help others
+			mes "[Quest Headgear Collector]";
+			mes "You've completed one of the most";
+			mes "difficult quests in our world.";
+			mes "Would you like to volunteer to";
+			mes "guide others on this legendary path?";
+			next;
+
+			if (select("Yes, I'll be a guide!:No thanks, maybe later") == 2) {
+				mes "[Quest Headgear Collector]";
+				mes "No problem! You can always";
+				mes "register later through the";
+				mes "Helper System menu.";
+				close;
+			}
+
+			// Ask notification preference
+			mes "[Quest Headgear Collector]";
+			mes "Excellent! How would you like";
+			mes "to be notified when players";
+			mes "need guidance?";
+			next;
+
+			mes "[Quest Headgear Collector]";
+			mes "^0000FFImmediate Notification^000000";
+			mes "  You'll get a whisper right away";
+			mes " ";
+			mes "^0000FFPassive Board^000000";
+			mes "  Check help requests at your leisure";
+			next;
+
+			set .@helperNotify, select("Immediate Notification:Passive Board") - 1;
+			set .@notifyImmediate, (.@helperNotify == 0) ? 1 : 0;
+
+			// Update their helper status
+			query_sql "UPDATE `headgear_quest_rewards` SET willing_to_help = 1, notify_immediately = " + .@notifyImmediate + " WHERE char_id = " + getcharid(0) + " AND reward_id = 1";
+
+			mes "[Quest Headgear Collector]";
+			mes "^00FF00Thank you for volunteering!^000000";
+			mes "You're now registered as a guide";
+			mes "for The Sign Quest.";
+			close;
+	}
+
+	// Fallback (should never reach here)
+	mes "[Quest Headgear Collector]";
+	mes "Something went wrong...";
+	mes "Please contact a GM.";
+	close;
+
+// ============================================================
+// View Available Rewards
+// ============================================================
+L_ViewRewards:
+	mes "[Quest Headgear Collector]";
+	mes "^0000FFCurrently available rewards:^000000";
+	mes " ";
+	mes "^FF0000Robo Eyes + Materials^000000";
+	mes "  Quest: Kiel Hyre Quest";
+	mes "  Proof: Luxurious Keycard";
+	mes " ";
+	mes "^FF0000Valkyrie Helmet^000000";
+	mes "  Quest: The Sign Quest";
+	mes "  Proof: The Sign accessory";
+	close;
+
+// ============================================================
+// Helper System (for quest veterans)
+// ============================================================
+L_HelperSystem:
+	mes "[Quest Headgear Collector]";
+	mes "Welcome to the Helper System!";
+	mes "As a quest veteran, you can";
+	mes "volunteer to help other players";
+	mes "with quests you've completed.";
+	next;
+
+	// Count pending help requests
+	query_sql "SELECT COUNT(*) FROM `quest_help_requests` WHERE status = 'pending' AND reward_id IN (SELECT reward_id FROM `headgear_quest_rewards` WHERE char_id = " + getcharid(0) + ")", .@pendingCount;
+
+	// Check helper status
+	query_sql "SELECT COUNT(*) FROM `headgear_quest_rewards` WHERE char_id = " + getcharid(0) + " AND willing_to_help = 1", .@isHelper;
+
+	mes "[Quest Headgear Collector]";
+	if (.@isHelper > 0) {
+		mes "^00FF00You are registered as a helper!^000000";
+	} else {
+		mes "^FF0000Not yet registered as helper.^000000";
+	}
+	mes " ";
+	mes "^0000FFPending help requests: " + .@pendingCount + "^000000";
+	next;
+
+	// Build helper menu
+	set .@helperMenu$, "";
+	if (.@isHelper > 0) {
+		set .@helperMenu$, "View Help Requests (" + .@pendingCount + "):Manage Helper Settings:";
+	} else {
+		set .@helperMenu$, "Register as Helper:";
+	}
+	set .@helperMenu$, .@helperMenu$ + "Cancel";
+
+	set .@helperChoice, select(.@helperMenu$);
+
+	if (.@isHelper > 0) {
+		switch (.@helperChoice) {
+			case 1: goto L_ViewHelpRequests;
+			case 2: goto L_ManageHelperSettings;
+			case 3: close;
+		}
+	} else {
+		switch (.@helperChoice) {
+			case 1: goto L_RegisterHelper;
+			case 2: close;
+		}
+	}
+
+L_RegisterHelper:
+	mes "[Quest Headgear Collector]";
+	mes "Thank you for volunteering!";
+	mes "How would you like to receive";
+	mes "notifications when players";
+	mes "request help?";
+	next;
+
+	mes "[Quest Headgear Collector]";
+	mes "^0000FFImmediate Notification^000000";
+	mes "  - You'll get a whisper immediately";
+	mes "  - Best if you're actively helping";
+	mes " ";
+	mes "^0000FFPassive Board^000000";
+	mes "  - Check the board at your leisure";
+	mes "  - Less intrusive";
+	next;
+
+	set .@notifyChoice, select("Immediate Notification:Passive Board:Cancel");
+	if (.@notifyChoice == 3) {
+		mes "[Quest Headgear Collector]";
+		mes "No problem! Come back anytime.";
+		close;
+	}
+
+	set .@notifyImmediately, (.@notifyChoice == 1) ? 1 : 0;
+
+	// Register all completed quests as willing to help
+	query_sql "UPDATE `headgear_quest_rewards` SET willing_to_help = 1, notify_immediately = " + .@notifyImmediately + " WHERE char_id = " + getcharid(0);
+
+	mes "[Quest Headgear Collector]";
+	mes "^00FF00Registration complete!^000000";
+	mes "Thank you for joining our";
+	mes "helper network. May your";
+	mes "guidance light the path for";
+	mes "others!";
+	close;
+
+L_ManageHelperSettings:
+	mes "[Quest Headgear Collector]";
+	mes "Current Settings:";
+	next;
+
+	// Get current settings
+	query_sql "SELECT notify_immediately, help_count FROM `headgear_quest_rewards` WHERE char_id = " + getcharid(0) + " AND willing_to_help = 1 LIMIT 1", .@currentNotify, .@helpCount;
+
+	mes "[Quest Headgear Collector]";
+	mes "^0000FFNotification Mode:^000000";
+	if (.@currentNotify > 0) {
+		mes "  Immediate (whisper)";
+	} else {
+		mes "  Passive (check board)";
+	}
+	mes " ";
+	mes "^0000FFTotal players helped: " + .@helpCount + "^000000";
+	next;
+
+	set .@settingChoice, select("Change Notification Mode:Unregister as Helper:Back");
+
+	switch (.@settingChoice) {
+		case 1:
+			set .@newNotify, (.@currentNotify > 0) ? 0 : 1;
+			query_sql "UPDATE `headgear_quest_rewards` SET notify_immediately = " + .@newNotify + " WHERE char_id = " + getcharid(0) + " AND willing_to_help = 1";
+			mes "[Quest Headgear Collector]";
+			mes "^00FF00Settings updated!^000000";
+			close;
+		case 2:
+			mes "[Quest Headgear Collector]";
+			mes "Are you sure you want to";
+			mes "unregister as a helper?";
+			next;
+			if (select("Yes, unregister:No, keep me registered") == 1) {
+				query_sql "UPDATE `headgear_quest_rewards` SET willing_to_help = 0, notify_immediately = 0 WHERE char_id = " + getcharid(0);
+				mes "[Quest Headgear Collector]";
+				mes "You've been unregistered.";
+				mes "You can register again anytime!";
+			}
+			close;
+		case 3:
+			goto L_HelperSystem;
+	}
+
+L_ViewHelpRequests:
+	mes "[Quest Headgear Collector]";
+	mes "Loading help requests...";
+	next;
+
+	// Get help requests for quests this player completed
+	query_sql "SELECT r.id, c.name, r.reward_id, r.message, TIMESTAMPDIFF(HOUR, r.created_at, NOW()) FROM `quest_help_requests` r JOIN `char` c ON r.char_id = c.char_id WHERE r.status = 'pending' AND r.reward_id IN (SELECT reward_id FROM `headgear_quest_rewards` WHERE char_id = " + getcharid(0) + ") ORDER BY r.created_at ASC LIMIT 10", .@reqId, .@reqName$, .@reqRewardId, .@reqMsg$, .@reqHours;
+
+	set .@reqCount, getarraysize(.@reqId);
+
+	if (.@reqCount == 0) {
+		mes "[Quest Headgear Collector]";
+		mes "No pending help requests at";
+		mes "the moment. Check back later!";
+		close;
+	}
+
+	mes "[Quest Headgear Collector]";
+	mes "^0000FFPending Help Requests:^000000";
+	mes " ";
+
+	// Build request menu
+	set .@reqMenu$, "";
+	for (set .@i, 0; .@i < .@reqCount; set .@i, .@i + 1) {
+		set .@questName$, (.@reqRewardId[.@i] == 0) ? "Kiel Hyre" : "The Sign";
+		set .@reqMenu$, .@reqMenu$ + .@reqName$[.@i] + " (" + .@questName$ + " - " + .@reqHours[.@i] + "h ago):";
+	}
+	set .@reqMenu$, .@reqMenu$ + "Cancel";
+
+	set .@reqChoice, select(.@reqMenu$) - 1;
+
+	if (.@reqChoice >= .@reqCount) {
+		close;
+	}
+
+	// Show request details
+	mes "[Quest Headgear Collector]";
+	mes "^0000FFRequest Details:^000000";
+	mes " ";
+	mes "Player: ^FF0000" + .@reqName$[.@reqChoice] + "^000000";
+	set .@questName$, (.@reqRewardId[.@reqChoice] == 0) ? "Kiel Hyre Quest" : "The Sign Quest";
+	mes "Quest: " + .@questName$;
+	mes "Time: " + .@reqHours[.@reqChoice] + " hours ago";
+	if (.@reqMsg$[.@reqChoice] != "") {
+		mes "Message: " + .@reqMsg$[.@reqChoice];
+	}
+	next;
+
+	mes "[Quest Headgear Collector]";
+	mes "Would you like to help this player?";
+	mes "^FFAA00Contact them via whisper: /w " + .@reqName$[.@reqChoice] + "^000000";
+	next;
+
+	if (select("Mark as Helped:Back") == 1) {
+		goto L_MarkAsHelped;
+	}
+	goto L_ViewHelpRequests;
+
+L_MarkAsHelped:
+	// Mark the request as helped
+	query_sql "UPDATE `quest_help_requests` SET status = 'helped', helped_by_char_id = " + getcharid(0) + ", helped_at = NOW() WHERE id = " + .@reqId[.@reqChoice];
+
+	// Increment helper's help count
+	query_sql "UPDATE `headgear_quest_rewards` SET help_count = help_count + 1, last_helped = NOW() WHERE char_id = " + getcharid(0) + " AND reward_id = " + .@reqRewardId[.@reqChoice];
+
+	mes "[Quest Headgear Collector]";
+	mes "^00FF00Thank you for helping!^000000";
+	mes "Your assistance has been recorded.";
+	mes "The community appreciates your";
+	mes "dedication!";
+	close;
+
+// ============================================================
+// Request Help (for new players)
+// ============================================================
+L_RequestHelp:
+	mes "[Quest Headgear Collector]";
+	mes "Need help with a difficult quest?";
+	mes "Our veteran adventurers are";
+	mes "here to assist you!";
+	next;
+
+	mes "[Quest Headgear Collector]";
+	mes "Which quest do you need help with?";
+	next;
+
+	set .@questChoice, select("Kiel Hyre Quest:The Sign Quest:Cancel");
+
+	if (.@questChoice == 3) {
+		close;
+	}
+
+	set .@requestRewardId, .@questChoice - 1;
+
+	// Check if already has pending request for this quest
+	query_sql "SELECT COUNT(*) FROM `quest_help_requests` WHERE char_id = " + getcharid(0) + " AND reward_id = " + .@requestRewardId + " AND status = 'pending'", .@hasPending;
+
+	if (.@hasPending > 0) {
+		mes "[Quest Headgear Collector]";
+		mes "You already have a pending";
+		mes "help request for this quest!";
+		mes "Please wait for a helper to";
+		mes "respond.";
+		close;
+	}
+
+	mes "[Quest Headgear Collector]";
+	mes "Would you like to add a short";
+	mes "message? (Optional)";
+	mes "Example: 'Need help with Stage 50'";
+	next;
+
+	set .@msgChoice, select("Yes, add message:No message");
+
+	set .@message$, "";
+	if (.@msgChoice == 1) {
+		mes "[Quest Headgear Collector]";
+		mes "Enter your message:";
+		mes "(Max 100 characters)";
+		input .@message$, 0, 100;
+	}
+
+	// Insert help request
+	query_sql "INSERT INTO `quest_help_requests` (`char_id`, `reward_id`, `message`, `status`) VALUES (" + getcharid(0) + ", " + .@requestRewardId + ", '" + escape_sql(.@message$) + "', 'pending')";
+
+	mes "[Quest Headgear Collector]";
+	mes "^00FF00Help request submitted!^000000";
+	next;
+
+	// Notify immediate helpers
+	query_sql "SELECT c.name FROM `headgear_quest_rewards` h JOIN `char` c ON h.char_id = c.char_id WHERE h.reward_id = " + .@requestRewardId + " AND h.willing_to_help = 1 AND h.notify_immediately = 1", .@helper$;
+
+	set .@helperCount, getarraysize(.@helper$);
+
+	if (.@helperCount > 0) {
+		set .@questName$, (.@requestRewardId == 0) ? "Kiel Hyre Quest" : "The Sign Quest";
+		for (set .@i, 0; .@i < .@helperCount; set .@i, .@i + 1) {
+			if (isloggedin(getcharid(3, .@helper$[.@i]), getcharid(0, .@helper$[.@i]))) {
+				message .@helper$[.@i], "[Quest Helper] " + strcharinfo(0) + " needs help with " + .@questName$ + "!";
+			}
+		}
+		mes "[Quest Headgear Collector]";
+		mes "I've notified " + .@helperCount + " active";
+		mes "helper(s). They should contact";
+		mes "you soon!";
+	} else {
+		mes "[Quest Headgear Collector]";
+		mes "Your request has been posted.";
+		mes "Helpers will see it when they";
+		mes "check the board.";
+	}
+	close;
+}
