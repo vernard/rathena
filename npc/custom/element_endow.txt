@@ -182,6 +182,7 @@ amatsu,202,79,4	duplicate(Enchanter)	Enchanter#ama	4_M_SAGE_A
 ayothaya,209,169,6	duplicate(Enchanter)	Enchanter#ayo	4_M_SAGE_A
 comodo,186,158,6	duplicate(Enchanter)	Enchanter#com	4_M_SAGE_A
 einbech,59,36,6	duplicate(Enchanter)	Enchanter#einbe	4_M_SAGE_A
+einbech,177,131,4	duplicate(Enchanter)	Enchanter#einbe2	4_M_SAGE_A
 einbroch,75,202,6	duplicate(Enchanter)	Enchanter#einbr	4_M_SAGE_A
 geffen,117,72,6	duplicate(Enchanter)	Enchanter#gef	4_M_SAGE_A
 gonryun,158,122,6	duplicate(Enchanter)	Enchanter#gon	4_M_SAGE_A
