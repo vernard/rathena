@@ -1,7 +1,7 @@
 //===== rAthena Script =======================================
-//= Headgear Quest Reward NPC
+//= Quest Gear Collector NPC
 //===== Description: =========================================
-//= NPC that gives players headgears based on completed quests.
+//= NPC that gives players gear based on completed quests.
 //= Located in Prontera, center left of the Banker NPC.
 //=
 //= Rewards are tracked using:
@@ -22,11 +22,11 @@
 //= - Helpers get notified based on their preference (immediate/passive)
 //============================================================
 
-prontera,140,172,4	script	Quest Headgear Collector	4_M_ZONDAMAN,{
+prontera,140,172,4	script	Quest Gear Collector	4_M_ZONDAMAN,{
 	// Auto-cleanup: Expire old help requests (older than 24 hours)
 	query_sql "UPDATE `quest_help_requests` SET status = 'expired' WHERE status = 'pending' AND TIMESTAMPDIFF(HOUR, created_at, NOW()) > 24";
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Greetings, adventurer!";
 	mes "I help reward brave souls who";
 	mes "complete dangerous quests, and";
@@ -59,7 +59,7 @@ prontera,140,172,4	script	Quest Headgear Collector	4_M_ZONDAMAN,{
 			}
 		case 3: goto L_ViewRewards;
 		case 4:
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Come back anytime!";
 			close;
 	}
@@ -78,15 +78,17 @@ L_ClaimRewards:
 	}
 
 	// Check The Sign Quest completion (Reward ID: 1)
-	if (countitem(2644) > 0 && sign_q >= 141 && !(HeadgearRewards & (1 << 1))) {
-		set .@menu$, .@menu$ + "The Sign Quest - Valkyrie Helmet:";
-		set .@rewardMap[.@menuCount], 1;
-		set .@menuCount, .@menuCount + 1;
-	}
+	// TEMPORARILY DISABLED - Valkyrie Helmet too OP, may unbalance other headgears
+	// To re-enable: uncomment the block below
+	// if (countitem(2644) > 0 && sign_q >= 141 && !(HeadgearRewards & (1 << 1))) {
+	// 	set .@menu$, .@menu$ + "The Sign Quest - Valkyrie Helmet:";
+	// 	set .@rewardMap[.@menuCount], 1;
+	// 	set .@menuCount, .@menuCount + 1;
+	// }
 
 	// No available rewards
 	if (.@menuCount == 0) {
-		mes "[Quest Headgear Collector]";
+		mes "[Quest Gear Collector]";
 		mes "Hmm... It seems you haven't";
 		mes "completed any eligible quests yet,";
 		mes "or you've already claimed all";
@@ -103,7 +105,7 @@ L_ClaimRewards:
 
 	// Handle cancel
 	if (.@choice >= .@menuCount) {
-		mes "[Quest Headgear Collector]";
+		mes "[Quest Gear Collector]";
 		mes "Come back anytime you want";
 		mes "to claim your rewards!";
 		close;
@@ -115,7 +117,7 @@ L_ClaimRewards:
 	// Process reward based on ID
 	switch (.@rewardId) {
 		case 0: // Kiel Hyre Quest - Robo Eyes + Materials
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Ah, the ^FF0000Kiel Hyre Quest^000000!";
 			mes "That was quite a dangerous";
 			mes "investigation into the robot";
@@ -123,7 +125,7 @@ L_ClaimRewards:
 			mes "special ^0000FFRobo Eyes^000000 headgear!";
 			next;
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "In addition, I'm giving you some";
 			mes "high-quality refining materials";
 			mes "as thanks for your service:";
@@ -131,7 +133,7 @@ L_ClaimRewards:
 			mes "^0000FF5x Enriched Oridecon^000000";
 			next;
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "The headgear is account-bound,";
 			mes "so you can transfer it between";
 			mes "your characters through storage.";
@@ -139,13 +141,13 @@ L_ClaimRewards:
 			mes "this reward once per character.";
 			next;
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Would you like to claim your";
 			mes "rewards now?";
 			next;
 
 			if (select("Yes, please!:No, maybe later.") == 2) {
-				mes "[Quest Headgear Collector]";
+				mes "[Quest Gear Collector]";
 				mes "No problem! Come back whenever";
 				mes "you're ready to claim it.";
 				close;
@@ -153,7 +155,7 @@ L_ClaimRewards:
 
 			// Check inventory space (1 headgear + 5 elu + 5 ori = 11 items)
 			if (checkweight(5325, 1) == 0 || checkweight(7620, 5) == 0 || checkweight(7619, 5) == 0) {
-				mes "[Quest Headgear Collector]";
+				mes "[Quest Gear Collector]";
 				mes "Oh no! Your inventory is too";
 				mes "heavy or full. Please make";
 				mes "some space and come back.";
@@ -169,7 +171,7 @@ L_ClaimRewards:
 			// Log to SQL for website
 			query_sql "INSERT INTO `headgear_quest_rewards` (`account_id`, `char_id`, `reward_id`, `reward_name`, `item_id`) VALUES (" + getcharid(3) + ", " + getcharid(0) + ", 0, 'Robo Eyes + Materials', 5325)";
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Congratulations!";
 			mes "You've received ^0000FFRobo Eyes^000000,";
 			mes "^0000FF5x Enriched Elunium^000000, and";
@@ -178,7 +180,7 @@ L_ClaimRewards:
 			next;
 
 			// Ask if they want to help others
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Since you've completed this quest,";
 			mes "would you like to volunteer to";
 			mes "help other players who are";
@@ -186,7 +188,7 @@ L_ClaimRewards:
 			next;
 
 			if (select("Yes, I'll help!:No thanks, maybe later") == 2) {
-				mes "[Quest Headgear Collector]";
+				mes "[Quest Gear Collector]";
 				mes "No problem! You can always";
 				mes "register later through the";
 				mes "Helper System menu.";
@@ -194,13 +196,13 @@ L_ClaimRewards:
 			}
 
 			// Ask notification preference
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Excellent! How would you like";
 			mes "to be notified when players";
 			mes "need help?";
 			next;
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "^0000FFImmediate Notification^000000";
 			mes "  You'll get a whisper right away";
 			mes " ";
@@ -214,14 +216,14 @@ L_ClaimRewards:
 			// Update their helper status
 			query_sql "UPDATE `headgear_quest_rewards` SET willing_to_help = 1, notify_immediately = " + .@notifyImmediate + " WHERE char_id = " + getcharid(0) + " AND reward_id = 0";
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "^00FF00Thank you for volunteering!^000000";
 			mes "You're now registered as a helper";
 			mes "for the Kiel Hyre Quest.";
 			close;
 
 		case 1: // The Sign Quest - Valkyrie Helmet
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Ah, ^FF0000The Sign Quest^000000!";
 			mes "You've completed one of the most";
 			mes "legendary adventures and helped";
@@ -230,7 +232,7 @@ L_ClaimRewards:
 			mes "^0000FFValkyrie Helmet^000000!";
 			next;
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "This legendary helm was blessed";
 			mes "by the Valkyries themselves.";
 			mes "It grants enhanced strength,";
@@ -238,7 +240,7 @@ L_ClaimRewards:
 			mes "attack speed, and casting speed!";
 			next;
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "This is an account-bound item,";
 			mes "so you can transfer it between";
 			mes "your characters through storage.";
@@ -246,13 +248,13 @@ L_ClaimRewards:
 			mes "this reward once per character.";
 			next;
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Would you like to claim your";
 			mes "^0000FFValkyrie Helmet^000000 reward now?";
 			next;
 
 			if (select("Yes, please!:No, maybe later.") == 2) {
-				mes "[Quest Headgear Collector]";
+				mes "[Quest Gear Collector]";
 				mes "No problem! Come back whenever";
 				mes "you're ready to claim it.";
 				close;
@@ -260,7 +262,7 @@ L_ClaimRewards:
 
 			// Check inventory space
 			if (checkweight(5826, 1) == 0) {
-				mes "[Quest Headgear Collector]";
+				mes "[Quest Gear Collector]";
 				mes "Oh no! Your inventory is too";
 				mes "heavy or full. Please make";
 				mes "some space and come back.";
@@ -274,7 +276,7 @@ L_ClaimRewards:
 			// Log to SQL for website
 			query_sql "INSERT INTO `headgear_quest_rewards` (`account_id`, `char_id`, `reward_id`, `reward_name`, `item_id`) VALUES (" + getcharid(3) + ", " + getcharid(0) + ", 1, 'Valkyrie Helmet', 5826)";
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Congratulations!";
 			mes "You've received the ^0000FFValkyrie Helmet^000000!";
 			mes "May the blessings of the";
@@ -282,7 +284,7 @@ L_ClaimRewards:
 			next;
 
 			// Ask if they want to help others
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "You've completed one of the most";
 			mes "difficult quests in our world.";
 			mes "Would you like to volunteer to";
@@ -290,7 +292,7 @@ L_ClaimRewards:
 			next;
 
 			if (select("Yes, I'll be a guide!:No thanks, maybe later") == 2) {
-				mes "[Quest Headgear Collector]";
+				mes "[Quest Gear Collector]";
 				mes "No problem! You can always";
 				mes "register later through the";
 				mes "Helper System menu.";
@@ -298,13 +300,13 @@ L_ClaimRewards:
 			}
 
 			// Ask notification preference
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Excellent! How would you like";
 			mes "to be notified when players";
 			mes "need guidance?";
 			next;
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "^0000FFImmediate Notification^000000";
 			mes "  You'll get a whisper right away";
 			mes " ";
@@ -318,7 +320,7 @@ L_ClaimRewards:
 			// Update their helper status
 			query_sql "UPDATE `headgear_quest_rewards` SET willing_to_help = 1, notify_immediately = " + .@notifyImmediate + " WHERE char_id = " + getcharid(0) + " AND reward_id = 1";
 
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "^00FF00Thank you for volunteering!^000000";
 			mes "You're now registered as a guide";
 			mes "for The Sign Quest.";
@@ -326,7 +328,7 @@ L_ClaimRewards:
 	}
 
 	// Fallback (should never reach here)
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Something went wrong...";
 	mes "Please contact a GM.";
 	close;
@@ -335,23 +337,24 @@ L_ClaimRewards:
 // View Available Rewards
 // ============================================================
 L_ViewRewards:
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "^0000FFCurrently available rewards:^000000";
 	mes " ";
 	mes "^FF0000Robo Eyes + Materials^000000";
 	mes "  Quest: Kiel Hyre Quest";
 	mes "  Proof: Luxurious Keycard";
-	mes " ";
-	mes "^FF0000Valkyrie Helmet^000000";
-	mes "  Quest: The Sign Quest";
-	mes "  Proof: The Sign accessory";
+	// TEMPORARILY DISABLED - Valkyrie Helmet
+	// mes " ";
+	// mes "^FF0000Valkyrie Helmet^000000";
+	// mes "  Quest: The Sign Quest";
+	// mes "  Proof: The Sign accessory";
 	close;
 
 // ============================================================
 // Helper System (for quest veterans)
 // ============================================================
 L_HelperSystem:
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Welcome to the Helper System!";
 	mes "As a quest veteran, you can";
 	mes "volunteer to help other players";
@@ -364,7 +367,7 @@ L_HelperSystem:
 	// Check helper status
 	query_sql "SELECT COUNT(*) FROM `headgear_quest_rewards` WHERE char_id = " + getcharid(0) + " AND willing_to_help = 1", .@isHelper;
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	if (.@isHelper > 0) {
 		mes "^00FF00You are registered as a helper!^000000";
 	} else {
@@ -399,14 +402,14 @@ L_HelperSystem:
 	}
 
 L_RegisterHelper:
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Thank you for volunteering!";
 	mes "How would you like to receive";
 	mes "notifications when players";
 	mes "request help?";
 	next;
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "^0000FFImmediate Notification^000000";
 	mes "  - You'll get a whisper immediately";
 	mes "  - Best if you're actively helping";
@@ -418,7 +421,7 @@ L_RegisterHelper:
 
 	set .@notifyChoice, select("Immediate Notification:Passive Board:Cancel");
 	if (.@notifyChoice == 3) {
-		mes "[Quest Headgear Collector]";
+		mes "[Quest Gear Collector]";
 		mes "No problem! Come back anytime.";
 		close;
 	}
@@ -428,7 +431,7 @@ L_RegisterHelper:
 	// Register all completed quests as willing to help
 	query_sql "UPDATE `headgear_quest_rewards` SET willing_to_help = 1, notify_immediately = " + .@notifyImmediately + " WHERE char_id = " + getcharid(0);
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "^00FF00Registration complete!^000000";
 	mes "Thank you for joining our";
 	mes "helper network. May your";
@@ -437,14 +440,14 @@ L_RegisterHelper:
 	close;
 
 L_ManageHelperSettings:
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Current Settings:";
 	next;
 
 	// Get current settings
 	query_sql "SELECT notify_immediately, help_count FROM `headgear_quest_rewards` WHERE char_id = " + getcharid(0) + " AND willing_to_help = 1 LIMIT 1", .@currentNotify, .@helpCount;
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "^0000FFNotification Mode:^000000";
 	if (.@currentNotify > 0) {
 		mes "  Immediate (whisper)";
@@ -461,17 +464,17 @@ L_ManageHelperSettings:
 		case 1:
 			set .@newNotify, (.@currentNotify > 0) ? 0 : 1;
 			query_sql "UPDATE `headgear_quest_rewards` SET notify_immediately = " + .@newNotify + " WHERE char_id = " + getcharid(0) + " AND willing_to_help = 1";
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "^00FF00Settings updated!^000000";
 			close;
 		case 2:
-			mes "[Quest Headgear Collector]";
+			mes "[Quest Gear Collector]";
 			mes "Are you sure you want to";
 			mes "unregister as a helper?";
 			next;
 			if (select("Yes, unregister:No, keep me registered") == 1) {
 				query_sql "UPDATE `headgear_quest_rewards` SET willing_to_help = 0, notify_immediately = 0 WHERE char_id = " + getcharid(0);
-				mes "[Quest Headgear Collector]";
+				mes "[Quest Gear Collector]";
 				mes "You've been unregistered.";
 				mes "You can register again anytime!";
 			}
@@ -481,7 +484,7 @@ L_ManageHelperSettings:
 	}
 
 L_ViewHelpRequests:
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Loading help requests...";
 	next;
 
@@ -491,13 +494,13 @@ L_ViewHelpRequests:
 	set .@reqCount, getarraysize(.@reqId);
 
 	if (.@reqCount == 0) {
-		mes "[Quest Headgear Collector]";
+		mes "[Quest Gear Collector]";
 		mes "No pending help requests at";
 		mes "the moment. Check back later!";
 		close;
 	}
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "^0000FFPending Help Requests:^000000";
 	mes " ";
 
@@ -516,7 +519,7 @@ L_ViewHelpRequests:
 	}
 
 	// Show request details
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "^0000FFRequest Details:^000000";
 	mes " ";
 	mes "Player: ^FF0000" + .@reqName$[.@reqChoice] + "^000000";
@@ -528,7 +531,7 @@ L_ViewHelpRequests:
 	}
 	next;
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Would you like to help this player?";
 	mes "^FFAA00Contact them via whisper: /w " + .@reqName$[.@reqChoice] + "^000000";
 	next;
@@ -545,7 +548,7 @@ L_MarkAsHelped:
 	// Increment helper's help count
 	query_sql "UPDATE `headgear_quest_rewards` SET help_count = help_count + 1, last_helped = NOW() WHERE char_id = " + getcharid(0) + " AND reward_id = " + .@reqRewardId[.@reqChoice];
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "^00FF00Thank you for helping!^000000";
 	mes "Your assistance has been recorded.";
 	mes "The community appreciates your";
@@ -556,29 +559,30 @@ L_MarkAsHelped:
 // Request Help (for new players)
 // ============================================================
 L_RequestHelp:
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Need help with a difficult quest?";
 	mes "Our veteran adventurers are";
 	mes "here to assist you!";
 	next;
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Which quest do you need help with?";
 	next;
 
-	set .@questChoice, select("Kiel Hyre Quest:The Sign Quest:Cancel");
+	// TEMPORARILY: Only Kiel Hyre available (Valkyrie Helmet disabled)
+	set .@questChoice, select("Kiel Hyre Quest:Cancel");
 
-	if (.@questChoice == 3) {
+	if (.@questChoice == 2) {
 		close;
 	}
 
-	set .@requestRewardId, .@questChoice - 1;
+	set .@requestRewardId, 0;  // Only Kiel Hyre (reward ID 0) for now
 
 	// Check if already has pending request for this quest
 	query_sql "SELECT COUNT(*) FROM `quest_help_requests` WHERE char_id = " + getcharid(0) + " AND reward_id = " + .@requestRewardId + " AND status = 'pending'", .@hasPending;
 
 	if (.@hasPending > 0) {
-		mes "[Quest Headgear Collector]";
+		mes "[Quest Gear Collector]";
 		mes "You already have a pending";
 		mes "help request for this quest!";
 		mes "Please wait for a helper to";
@@ -586,7 +590,7 @@ L_RequestHelp:
 		close;
 	}
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "Would you like to add a short";
 	mes "message? (Optional)";
 	mes "Example: 'Need help with Stage 50'";
@@ -596,7 +600,7 @@ L_RequestHelp:
 
 	set .@message$, "";
 	if (.@msgChoice == 1) {
-		mes "[Quest Headgear Collector]";
+		mes "[Quest Gear Collector]";
 		mes "Enter your message:";
 		mes "(Max 100 characters)";
 		input .@message$, 0, 100;
@@ -605,7 +609,7 @@ L_RequestHelp:
 	// Insert help request
 	query_sql "INSERT INTO `quest_help_requests` (`char_id`, `reward_id`, `message`, `status`) VALUES (" + getcharid(0) + ", " + .@requestRewardId + ", '" + escape_sql(.@message$) + "', 'pending')";
 
-	mes "[Quest Headgear Collector]";
+	mes "[Quest Gear Collector]";
 	mes "^00FF00Help request submitted!^000000";
 	next;
 
@@ -621,12 +625,12 @@ L_RequestHelp:
 				message .@helper$[.@i], "[Quest Helper] " + strcharinfo(0) + " needs help with " + .@questName$ + "!";
 			}
 		}
-		mes "[Quest Headgear Collector]";
+		mes "[Quest Gear Collector]";
 		mes "I've notified " + .@helperCount + " active";
 		mes "helper(s). They should contact";
 		mes "you soon!";
 	} else {
-		mes "[Quest Headgear Collector]";
+		mes "[Quest Gear Collector]";
 		mes "Your request has been posted.";
 		mes "Helpers will see it when they";
 		mes "check the board.";
