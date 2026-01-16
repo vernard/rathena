@@ -118,11 +118,11 @@ prontera,141,172,5	script	Events Manager	4_M_MINSTREL,{
 		for (.@i = 0; .@i < getarraysize(.@inv_times_fmt$); .@i++) {
 			// Get threat name
 			switch(.@inv_threats[.@i]) {
-				case 0: .@threat$ = "Wolf"; break;
-				case 1: .@threat$ = "Tiger"; break;
-				case 2: .@threat$ = "Demon"; break;
-				case 3: .@threat$ = "Dragon"; break;
-				case 4: .@threat$ = "God"; break;
+				case 0: .@threat$ = "Wolf (Easy)"; break;
+				case 1: .@threat$ = "Tiger (Medium)"; break;
+				case 2: .@threat$ = "Demon (Hard)"; break;
+				case 3: .@threat$ = "Dragon (V.Hard)"; break;
+				case 4: .@threat$ = "God (Extreme)"; break;
 				default: .@threat$ = "Random"; break;
 			}
 			// Get town name
@@ -1142,8 +1142,8 @@ L_Inv_Start:
 	mes "Select theme:";
 	next;
 
-	// Get available themes
-	query_sql "SELECT id, name, icon FROM event_invasion_themes ORDER BY id", .@theme_ids, .@theme_names$, .@theme_icons$;
+	// Get available themes (sorted alphabetically)
+	query_sql "SELECT id, name, icon FROM event_invasion_themes ORDER BY name", .@theme_ids, .@theme_names$, .@theme_icons$;
 
 	.@menu$ = "";
 	for (.@i = 0; .@i < getarraysize(.@theme_ids); .@i++) {
@@ -1255,7 +1255,7 @@ L_Inv_Schedule_OneTime:
 	mes "Select theme:";
 	next;
 
-	query_sql "SELECT id, name, icon FROM event_invasion_themes ORDER BY id", .@theme_ids, .@theme_names$, .@theme_icons$;
+	query_sql "SELECT id, name, icon FROM event_invasion_themes ORDER BY name", .@theme_ids, .@theme_names$, .@theme_icons$;
 	.@menu$ = "Random:";
 	for (.@i = 0; .@i < getarraysize(.@theme_ids); .@i++) {
 		.@menu$ = .@menu$ + .@theme_icons$[.@i] + " " + .@theme_names$[.@i] + ":";
@@ -1548,11 +1548,11 @@ L_HistoryDisplay:
 
 				// Get threat name
 				switch(.@threat) {
-					case 0: .@threat$ = "Wolf"; break;
-					case 1: .@threat$ = "Tiger"; break;
-					case 2: .@threat$ = "Demon"; break;
-					case 3: .@threat$ = "Dragon"; break;
-					case 4: .@threat$ = "God"; break;
+					case 0: .@threat$ = "Wolf (Easy)"; break;
+					case 1: .@threat$ = "Tiger (Medium)"; break;
+					case 2: .@threat$ = "Demon (Hard)"; break;
+					case 3: .@threat$ = "Dragon (V.Hard)"; break;
+					case 4: .@threat$ = "God (Extreme)"; break;
 					default: .@threat$ = "?"; break;
 				}
 
