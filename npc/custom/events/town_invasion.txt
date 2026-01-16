@@ -17,6 +17,17 @@
 // INITIALIZATION
 // ============================================================
 OnInit:
+	// Debug mode - set to 1 to enable verbose logging
+	$@InvasionDebug = 1;
+
+	// Announcement settings (for tuning/debugging)
+	$@InvasionAnnounceEvery = 5;       // Announce remaining every X kills (default: 5, set to 1 for every kill)
+	$@InvasionAnnounceLocBelow = 5;    // Show locations when remaining is below this (default: 5)
+	$@InvasionAnnounceCountPercent = 50; // Announce every kill when remaining <= this % of wave (default: 50)
+	$@InvasionAnnounceLocInterval = 15; // When overtime, announce locations every X seconds
+	$@InvasionWaveOvertimeThreshold = 60; // After this many seconds, start announcing locations (default: 60 for testing, 300 for prod)
+	$@InvasionWaveOvertimeAnnounced = 0; // Track if overtime announcement was made this wave
+
 	// Global state variables
 	$@InvasionActive = 0;
 	$@InvasionID = 0;
@@ -37,7 +48,9 @@ OnInit:
 	$@InvasionWaveBossKills = 0;     // MVP + miniboss killed this wave
 	$@InvasionWaveRegularSpawns = 0; // Non-boss monsters spawned
 	$@InvasionWaveRegularKills = 0;  // Non-boss monsters killed
-	$@InvasionLastBossGather = 0;    // Last time bosses were gathered to center
+	$@InvasionLastBossGather = 0;    // Last time bosses were announced (if outside radius)
+	$@InvasionLastLocAnnounce = 0;   // Last time straggler locations were announced
+	$@InvasionWaveStartTime = 0;     // When current wave started (for overtime detection)
 
 	// Cancel any active invasions from before server restart
 	// (We don't restore mid-invasion state - GMs can manually restart if needed)
@@ -78,19 +91,14 @@ OnTimer10000:
 		end;
 	}
 
-	// FAILSAFE: Use getmapunits() instead of mobcount() for reliability
-	// mobcount() only counts monsters with specific event label, but that registration
-	// can fail for FAKE_NPC type scripts. getmapunits() counts ALL monsters on the map,
-	// which is fine since invasion maps (towns) don't have permanent monster spawns.
-	.@actual_alive = getmapunits(BL_MOB, $@InvasionMap$, .@mob_gids[0]);
+	// Use tracked counts for accurate invasion monster count (ignores non-invasion mobs like Wild Rose)
+	.@tracked_remaining = $@InvasionWaveMonsters - $@InvasionWaveKills;
+	if (.@tracked_remaining < 0) .@tracked_remaining = 0;
 
-	// Also get mobcount for comparison debugging
-	.@mobcount_val = mobcount($@InvasionMap$, "TownInvasion::OnMonsterKilled");
-	if (.@actual_alive != .@mobcount_val) {
-		debugmes "[TownInvasion] Mobcount mismatch! getmapunits=" + .@actual_alive + " mobcount=" + .@mobcount_val;
-	}
+	// Also get getmapunits for GID array (needed for location lookups), but not for counting
+	.@raw_count = getmapunits(BL_MOB, $@InvasionMap$, .@mob_gids[0]);
 
-	// Check if we've hit the 90% clear threshold based on actual monster count
+	// Check if we've hit the 90% clear threshold based on tracked count
 	// Wave clears when: all bosses dead AND 90% of regular monsters dead
 	if ($@InvasionWaveMonsters > 0 && $@InvasionActive) {
 		// Get the clear threshold (default 90%)
@@ -100,49 +108,138 @@ OnTimer10000:
 		// Calculate how many can remain (10% if threshold is 90%)
 		.@max_remaining = ($@InvasionWaveMonsters * (100 - .@threshold)) / 100;
 
-		// If actual alive is at or below threshold, trigger wave clear
-		if (.@actual_alive <= .@max_remaining) {
-			debugmes "[TownInvasion] Failsafe: mobcount=" + .@actual_alive + " <= " + .@max_remaining + " (threshold " + .@threshold + "%), forcing completion";
+		// Check if all bosses are dead
+		.@bosses_clear = ($@InvasionWaveBossKills >= $@InvasionWaveBossSpawns);
+
+		// If all bosses dead AND tracked remaining is at or below threshold, trigger wave clear
+		if (.@bosses_clear && .@tracked_remaining <= .@max_remaining) {
+			debugmes "[TownInvasion] Failsafe: bosses_clear=1, tracked_remaining=" + .@tracked_remaining + " <= " + .@max_remaining + " (threshold " + .@threshold + "%), forcing completion";
 			donpcevent "TownInvasion::OnWaveCleared";
 			end;
+		} else if (!.@bosses_clear && .@tracked_remaining <= .@max_remaining) {
+			// 90% cleared but bosses still alive - don't clear, just log
+			if ($@InvasionDebug) {
+				.@boss_remaining = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+				debugmes "[TownInvasion] Failsafe skipped: " + .@boss_remaining + " boss(es) still alive";
+			}
 		}
 	}
 
-	// Boss gathering - every 60 seconds, teleport bosses to town center
-	// Use mobcount for accurate boss check (not just our tracked kills)
-	.@boss_left = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
-	if (.@boss_left > 0 && gettimetick(2) - $@InvasionLastBossGather >= 60) {
-		// Find and gather all bosses to town center
-		.@mob_count = getmapunits(BL_MOB, $@InvasionMap$, .@gids[0]);
-		.@gathered = 0;
-		.@boss_names$ = "";
-		for (.@i = 0; .@i < .@mob_count; .@i++) {
-			.@mob_id = getunitdata(.@gids[.@i], UMOB_CLASS);
-			query_sql "SELECT tier, mob_name FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND mob_id = " + .@mob_id + " AND tier IN ('mvp', 'miniboss') LIMIT 1", .@tier$, .@name$;
-			if (.@tier$ != "") {
-				// Warp boss to town center (with small random offset to avoid stacking)
-				.@offset_x = rand(-3, 3);
-				.@offset_y = rand(-3, 3);
-				unitwarp .@gids[.@i], $@InvasionMap$, $@InvasionCenterX + .@offset_x, $@InvasionCenterY + .@offset_y;
-				if (.@gathered > 0) .@boss_names$ = .@boss_names$ + ", ";
-				.@boss_names$ = .@boss_names$ + .@name$;
-				.@gathered++;
+	// Periodic straggler location announcement when wave is overtime
+	// Helps players find remaining monsters when they're struggling
+	.@wave_overtime = ($@InvasionWaveStartTime > 0 && gettimetick(2) - $@InvasionWaveStartTime >= $@InvasionWaveOvertimeThreshold);
+
+	// Global announcement when overtime starts (only once per wave) - timer check version
+	if (.@wave_overtime && !$@InvasionWaveOvertimeAnnounced) {
+		$@InvasionWaveOvertimeAnnounced = 1;
+		// Calculate remaining breakdown for announcement
+		.@ot_boss_remaining = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+		.@ot_regular_remaining = .@tracked_remaining - .@ot_boss_remaining;
+		if (.@ot_regular_remaining < 0) .@ot_regular_remaining = 0;
+		.@ot_msg$ = "[TownInvasion] Wave " + $@InvasionWave + " OVERTIME! " + .@tracked_remaining + " remaining";
+		if (.@ot_boss_remaining > 0 || .@ot_regular_remaining > 0) {
+			.@ot_msg$ = .@ot_msg$ + " (";
+			if (.@ot_boss_remaining > 0) {
+				.@ot_msg$ = .@ot_msg$ + .@ot_boss_remaining + " boss";
+				if (.@ot_boss_remaining != 1) .@ot_msg$ = .@ot_msg$ + "es";
+			}
+			if (.@ot_boss_remaining > 0 && .@ot_regular_remaining > 0) .@ot_msg$ = .@ot_msg$ + ", ";
+			if (.@ot_regular_remaining > 0) {
+				.@ot_msg$ = .@ot_msg$ + .@ot_regular_remaining + " mob";
+				if (.@ot_regular_remaining != 1) .@ot_msg$ = .@ot_msg$ + "s";
+			}
+			.@ot_msg$ = .@ot_msg$ + ")";
+		}
+		.@ot_msg$ = .@ot_msg$ + " - Locations revealed every " + $@InvasionAnnounceLocInterval + "s!";
+		announce .@ot_msg$, bc_all, 0xFF6600;
+	}
+
+	if ($@InvasionWaveMonsters > 0 && .@tracked_remaining > 0 && .@wave_overtime && gettimetick(2) - $@InvasionLastLocAnnounce >= $@InvasionAnnounceLocInterval) {
+		// Get all monster GIDs on map (for location lookups), filter to invasion mobs below
+		.@loc_count = getmapunits(BL_MOB, $@InvasionMap$, .@timer_gids[0]);
+		.@locations$ = "";
+		.@shown = 0;
+		// Track navigation target (prioritize bosses)
+		.@nav_x = 0;
+		.@nav_y = 0;
+		.@nav_name$ = "";
+		.@nav_is_boss = 0;
+		// Cap display at tracked remaining count (not raw map count) to avoid showing stale monsters
+		.@max_show = (.@tracked_remaining < 5) ? .@tracked_remaining : 5;
+		if ($@InvasionDebug) debugmes "[InvasionDebug] Periodic location announce (overtime): tracked=" + .@tracked_remaining + " max_show=" + .@max_show + " raw=" + .@loc_count;
+		// Iterate through ALL monsters but stop once we've shown enough
+		for (.@k = 0; .@k < .@loc_count && .@shown < .@max_show; .@k++) {
+			.@gid = .@timer_gids[.@k];
+			// Use array form of getunitdata
+			deletearray .@mobdata;
+			getunitdata .@gid, .@mobdata;
+			.@mob_id = .@mobdata[UMOB_CLASS];
+			.@mx = .@mobdata[UMOB_X];
+			.@my = .@mobdata[UMOB_Y];
+			// Skip monsters with invalid coordinates (teleporting MVPs may have 0,0)
+			if (.@mx == 0 && .@my == 0) continue;
+			// Check if this monster is part of our invasion theme (filter out non-invasion mobs)
+			// IMPORTANT: Clear variable first - query_sql doesn't clear it when no rows returned
+			.@mname$ = "";
+			.@mtier$ = "";
+			query_sql "SELECT mob_name, tier FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND mob_id = " + .@mob_id + " LIMIT 1", .@mname$, .@mtier$;
+			if (.@mname$ == "") continue;
+			if (.@shown > 0) .@locations$ = .@locations$ + ", ";
+			.@locations$ = .@locations$ + .@mname$ + " (" + .@mx + ", " + .@my + ")";
+			// Track nav target - prioritize bosses (miniboss/mvp tier)
+			.@is_boss = (.@mtier$ == "miniboss" || .@mtier$ == "mvp");
+			if (.@nav_x == 0 || (.@is_boss && !.@nav_is_boss)) {
+				.@nav_x = .@mx;
+				.@nav_y = .@my;
+				.@nav_name$ = .@mname$;
+				.@nav_is_boss = .@is_boss;
+			}
+			.@shown++;
+		}
+		if (.@locations$ != "") {
+			// Build message with boss/mob breakdown
+			.@timer_boss_rem = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+			.@timer_reg_rem = .@tracked_remaining - .@timer_boss_rem;
+			if (.@timer_reg_rem < 0) .@timer_reg_rem = 0;
+			.@loc_msg$ = "[Invasion] " + .@tracked_remaining + "/" + $@InvasionWaveMonsters + " remaining";
+			if (.@timer_boss_rem > 0 || .@timer_reg_rem > 0) {
+				.@loc_msg$ = .@loc_msg$ + " (";
+				if (.@timer_boss_rem > 0) {
+					.@loc_msg$ = .@loc_msg$ + .@timer_boss_rem + " boss";
+					if (.@timer_boss_rem != 1) .@loc_msg$ = .@loc_msg$ + "es";
+				}
+				if (.@timer_boss_rem > 0 && .@timer_reg_rem > 0) .@loc_msg$ = .@loc_msg$ + ", ";
+				if (.@timer_reg_rem > 0) {
+					.@loc_msg$ = .@loc_msg$ + .@timer_reg_rem + " mob";
+					if (.@timer_reg_rem != 1) .@loc_msg$ = .@loc_msg$ + "s";
+				}
+				.@loc_msg$ = .@loc_msg$ + ")";
+			}
+			.@loc_msg$ = .@loc_msg$ + ": " + .@locations$;
+			mapannounce $@InvasionMap$, .@loc_msg$, bc_map, 0xFFAA00;
+
+			// Auto-navigate all players on map to the target (prioritizes bosses)
+			if (.@nav_x > 0) {
+				.@pc_count = getmapunits(BL_PC, $@InvasionMap$, .@nav_pcs[0]);
+				for (.@p = 0; .@p < .@pc_count; .@p++) {
+					if (attachrid(.@nav_pcs[.@p])) {
+						navigateto $@InvasionMap$, .@nav_x, .@nav_y;
+						dispbottom "[Invasion] Auto-navigating to " + .@nav_name$ + "...", 0x00CCFF;
+					}
+				}
+				// Detach to return to NPC context
+				detachrid;
 			}
 		}
-		if (.@gathered > 0) {
-			announce "[TownInvasion] >> " + .@boss_names$ + " summoned to town center! <<", bc_all, 0xFF0000;
-			announce "[TownInvasion] Location: " + $@InvasionTownName$ + " (" + $@InvasionCenterX + ", " + $@InvasionCenterY + ")", bc_all, 0xFF8800;
-		}
-		$@InvasionLastBossGather = gettimetick(2);
-		$@InvasionLastAnnounce = gettimetick(2);  // Also reset announce timer
+		$@InvasionLastLocAnnounce = gettimetick(2);
 	}
 
 	// Check for periodic reminder (every 5 min when no bosses)
 	if (gettimetick(2) - $@InvasionLastAnnounce >= 300) {
 		.@time_remaining = ($@InvasionEndTime - gettimetick(2)) / 60;
-		if (.@time_remaining > 0 && .@actual_alive > 0) {
-			// Use getmapunits count for accurate display
-			announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@time_remaining + " min left. " + .@actual_alive + " monsters remaining!", bc_all, 0xFF8800;
+		if (.@time_remaining > 0 && .@tracked_remaining > 0) {
+			// Use tracked count for accurate display
+			announce "[TownInvasion] " + $@InvasionThemeName$ + " in " + $@InvasionTownName$ + "! " + .@time_remaining + " min left. " + .@tracked_remaining + " monsters remaining!", bc_all, 0xFF8800;
 			$@InvasionLastAnnounce = gettimetick(2);
 		}
 	}
@@ -333,8 +430,9 @@ S_LoadAndStartInvasion:
 	// Clean up any leftover monsters from previous invasions
 	killmonsterall $@InvasionMap$;
 
-	// Set no-penalty mapflag
+	// Set invasion mapflags (no death penalty + allow teleport for mobility)
 	setmapflag $@InvasionMap$, mf_nopenalty;
+	removemapflag $@InvasionMap$, mf_noteleport;
 
 	// Get duration for announcements
 	query_sql "SELECT config_value FROM event_config WHERE config_key = 'invasion_duration_minutes'", .@duration$;
@@ -343,7 +441,7 @@ S_LoadAndStartInvasion:
 	// Announce invasion start
 	.@threat_name$ = callsub(S_GetThreatName, .@threat);
 	announce "[TownInvasion] " + .@threat_name$ + " threat! " + .@theme_name$ + " attacking " + .@town_name$ + "!", bc_all, 0xFF4444;
-	announce "[TownInvasion] Defend for " + .@duration + " minutes! No EXP loss during invasion!", bc_all, 0xFF8800;
+	announce "[TownInvasion] Defend for " + .@duration + " minutes! No EXP loss + Teleport enabled!", bc_all, 0xFF8800;
 
 	// Queue Discord webhook
 	callsub S_QueueDiscordStart;
@@ -469,6 +567,9 @@ S_SpawnWave:
 		if (.@count < 1 && .@base_count > 0) .@count = 1; // At least 1 if base > 0
 
 		// Get random monsters of this tier from the theme
+		// IMPORTANT: Clear arrays first to prevent leftover values from previous tier iterations
+		deletearray .@mob_ids;
+		deletearray .@mob_names$;
 		query_sql "SELECT mob_id, mob_name FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND tier = '" + .@tier$ + "' ORDER BY RAND()", .@mob_ids, .@mob_names$;
 
 		if (getarraysize(.@mob_ids) == 0) {
@@ -489,6 +590,10 @@ S_SpawnWave:
 			if (.@j < .@remainder) .@spawn_count++;
 
 			if (.@spawn_count > 0) {
+				// Debug: log boss/miniboss/mvp spawns
+				if ($@InvasionDebug && .@is_boss_tier) {
+					debugmes "[TownInvasion] Spawning " + .@tier$ + ": " + .@spawn_count + "x " + .@name$ + " (ID:" + .@mob + ")";
+				}
 				// areamonster spawns on walkable cells only, preventing stuck monsters
 				areamonster $@InvasionMap$, .@x1, .@y1, .@x2, .@y2, .@name$, .@mob, .@spawn_count, "TownInvasion::OnMonsterKilled";
 				.@total_spawned += .@spawn_count;
@@ -581,6 +686,8 @@ S_SpawnWave:
 	}
 
 	$@InvasionLastAnnounce = gettimetick(2);
+	$@InvasionWaveStartTime = gettimetick(2);  // Track when wave started for overtime detection
+	$@InvasionWaveOvertimeAnnounced = 0;       // Reset overtime announcement flag for new wave
 
 	debugmes "[TownInvasion] Spawned wave " + $@InvasionWave + " with " + .@total_spawned + " monsters (made aggressive)";
 	return;
@@ -644,16 +751,133 @@ OnMonsterKilled:
 	// Points stored as 10x for decimal support
 	query_sql "INSERT INTO event_invasion_contributions (invasion_id, char_id, char_name, kills, waves_participated, points_earned) VALUES (" + $@InvasionID + ", " + .@char_id + ", '" + escape_sql(.@char_name$) + "', 1, 1, " + .@kill_pts + ") ON DUPLICATE KEY UPDATE kills = kills + 1, points_earned = points_earned + " + .@kill_pts;
 
-	// Show pending points with decimals (stored as 10x) AND remaining monster count
+	// Show pending points with decimals (stored as 10x)
 	query_sql "SELECT points_earned FROM event_invasion_contributions WHERE invasion_id = " + $@InvasionID + " AND char_id = " + .@char_id, .@pending;
 	// Format as X.Y for both kill pts and pending
 	.@kill_whole = .@kill_pts / 10;
 	.@kill_dec = .@kill_pts % 10;
 	.@pend_whole = .@pending / 10;
 	.@pend_dec = .@pending % 10;
-	// Get remaining monster count for player feedback (use getmapunits for reliability)
-	.@remaining = getmapunits(BL_MOB, $@InvasionMap$, .@rem_gids[0]);
-	dispbottom "[Invasion] +" + .@kill_whole + "." + .@kill_dec + " pts | Pending: " + .@pend_whole + "." + .@pend_dec + " | Remaining: " + .@remaining, 0x00CC00;
+	dispbottom "[Invasion] +" + .@kill_whole + "." + .@kill_dec + " pts | Pending: " + .@pend_whole + "." + .@pend_dec, 0x00CC00;
+
+	// Map-local announcement for remaining monsters (every 5 kills, or every kill when < 10)
+	// Use tracked counts instead of getmapunits for accuracy (avoids counting stray mobs)
+	// Note: $@InvasionWaveKills was already incremented above, so this gives remaining AFTER this kill
+	.@remaining = $@InvasionWaveMonsters - $@InvasionWaveKills;
+	if (.@remaining < 0) .@remaining = 0;
+	.@display_remaining = .@remaining;
+
+	// Get GID array for location lookups (still needed for coordinates)
+	.@killed_gid = killedgid;
+	.@raw_count = getmapunits(BL_MOB, $@InvasionMap$, .@rem_gids[0]);
+
+	if ($@InvasionDebug) debugmes "[InvasionDebug] OnKill: WaveKills=" + $@InvasionWaveKills + " WaveMonsters=" + $@InvasionWaveMonsters + " remaining=" + .@remaining + " raw_count=" + .@raw_count;
+	.@boss_remaining = $@InvasionWaveBossSpawns - $@InvasionWaveBossKills;
+	.@regular_remaining = .@remaining - .@boss_remaining;
+	if (.@regular_remaining < 0) .@regular_remaining = 0;
+
+	// Check if wave is overtime
+	.@wave_overtime = ($@InvasionWaveStartTime > 0 && gettimetick(2) - $@InvasionWaveStartTime >= $@InvasionWaveOvertimeThreshold);
+
+	// Global announcement when overtime starts (only once per wave)
+	if (.@wave_overtime && !$@InvasionWaveOvertimeAnnounced) {
+		$@InvasionWaveOvertimeAnnounced = 1;
+		// Build message with boss/mob breakdown
+		.@ot_msg$ = "[TownInvasion] Wave " + $@InvasionWave + " OVERTIME! " + .@remaining + " remaining";
+		if (.@boss_remaining > 0 || .@regular_remaining > 0) {
+			.@ot_msg$ = .@ot_msg$ + " (";
+			if (.@boss_remaining > 0) {
+				.@ot_msg$ = .@ot_msg$ + .@boss_remaining + " boss";
+				if (.@boss_remaining != 1) .@ot_msg$ = .@ot_msg$ + "es";
+			}
+			if (.@boss_remaining > 0 && .@regular_remaining > 0) .@ot_msg$ = .@ot_msg$ + ", ";
+			if (.@regular_remaining > 0) {
+				.@ot_msg$ = .@ot_msg$ + .@regular_remaining + " mob";
+				if (.@regular_remaining != 1) .@ot_msg$ = .@ot_msg$ + "s";
+			}
+			.@ot_msg$ = .@ot_msg$ + ")";
+		}
+		.@ot_msg$ = .@ot_msg$ + " - Locations revealed every " + $@InvasionAnnounceLocInterval + "s!";
+		announce .@ot_msg$, bc_all, 0xFF6600;
+	}
+
+	// Calculate 50% threshold for per-kill announcements
+	.@announce_threshold = ($@InvasionWaveMonsters * $@InvasionAnnounceCountPercent) / 100;
+	if (.@announce_threshold < 1) .@announce_threshold = 1;
+
+	// Announce every X kills OR every kill when under percentage threshold
+	if (.@remaining > 0 && (.@remaining <= .@announce_threshold || $@InvasionWaveKills % $@InvasionAnnounceEvery == 0)) {
+		// Show locations only when wave is overtime - helps find stragglers
+		if (.@wave_overtime) {
+			.@locations$ = "";
+			.@shown = 0;
+			// Cap display at tracked remaining count (not raw map count) to avoid showing stale monsters
+			.@max_show = (.@remaining < 5) ? .@remaining : 5;
+			if ($@InvasionDebug) debugmes "[InvasionDebug] Building locations for " + .@remaining + " monsters, max_show=" + .@max_show + ", iterating " + .@raw_count + " entries";
+			for (.@k = 0; .@k < .@raw_count && .@shown < .@max_show; .@k++) {
+				.@gid = .@rem_gids[.@k];
+				if ($@InvasionDebug) debugmes "[InvasionDebug] Loop " + .@k + ": gid=" + .@gid;
+				// Skip the dying monster if it's still in the list
+				if (.@gid == .@killed_gid) {
+					if ($@InvasionDebug) debugmes "[InvasionDebug] -> Skipping (killed monster)";
+					continue;
+				}
+				// Use array form of getunitdata to get all mob data at once
+				deletearray .@mobdata;
+				getunitdata .@gid, .@mobdata;
+				.@mob_id = .@mobdata[UMOB_CLASS];
+				.@mx = .@mobdata[UMOB_X];
+				.@my = .@mobdata[UMOB_Y];
+				if ($@InvasionDebug) debugmes "[InvasionDebug] -> mob_id=" + .@mob_id + " pos=(" + .@mx + "," + .@my + ")";
+				// Skip monsters with invalid coordinates (dead/despawning)
+				if (.@mx == 0 && .@my == 0) {
+					if ($@InvasionDebug) debugmes "[InvasionDebug] -> Skipping (0,0 coords)";
+					continue;
+				}
+				// Check if this monster is part of our invasion theme (filter out non-invasion mobs)
+				// IMPORTANT: Clear variable first - query_sql doesn't clear it when no rows returned
+				.@mname$ = "";
+				query_sql "SELECT mob_name FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND mob_id = " + .@mob_id + " LIMIT 1", .@mname$;
+				if (.@mname$ == "") {
+					if ($@InvasionDebug) debugmes "[InvasionDebug] -> Skipping (not in invasion theme)";
+					continue;
+				}
+				if (.@shown > 0) .@locations$ = .@locations$ + ", ";
+				.@locations$ = .@locations$ + .@mname$ + " (" + .@mx + ", " + .@my + ")";
+				.@shown++;
+			}
+			if ($@InvasionDebug) debugmes "[InvasionDebug] Final locations$: " + .@locations$;
+			// Build message with boss/mob breakdown
+			.@loc_msg$ = "[Invasion] " + .@display_remaining + "/" + $@InvasionWaveMonsters + " remaining";
+			if (.@boss_remaining > 0 || .@regular_remaining > 0) {
+				.@loc_msg$ = .@loc_msg$ + " (";
+				if (.@boss_remaining > 0) {
+					.@loc_msg$ = .@loc_msg$ + .@boss_remaining + " boss";
+					if (.@boss_remaining != 1) .@loc_msg$ = .@loc_msg$ + "es";
+				}
+				if (.@boss_remaining > 0 && .@regular_remaining > 0) .@loc_msg$ = .@loc_msg$ + ", ";
+				if (.@regular_remaining > 0) {
+					.@loc_msg$ = .@loc_msg$ + .@regular_remaining + " mob";
+					if (.@regular_remaining != 1) .@loc_msg$ = .@loc_msg$ + "s";
+				}
+				.@loc_msg$ = .@loc_msg$ + ")";
+			}
+			.@loc_msg$ = .@loc_msg$ + ": " + .@locations$;
+			mapannounce $@InvasionMap$, .@loc_msg$, bc_map, 0xFFAA00;
+		} else {
+			.@msg$ = "[Invasion] " + .@display_remaining + "/" + $@InvasionWaveMonsters + " monsters remaining";
+			if (.@boss_remaining > 0) {
+				.@msg$ = .@msg$ + " (" + .@boss_remaining + " boss";
+				if (.@boss_remaining != 1) .@msg$ = .@msg$ + "es";
+				if (.@regular_remaining > 0) {
+					.@msg$ = .@msg$ + ", " + .@regular_remaining + " mob";
+					if (.@regular_remaining != 1) .@msg$ = .@msg$ + "s";
+				}
+				.@msg$ = .@msg$ + ")";
+			}
+			mapannounce $@InvasionMap$, .@msg$, bc_map, 0xFFAA00;
+		}
+	}
 
 	// Party kill sharing - give credit to nearby party members
 	.@killer_aid = getcharid(3);  // Save killer's account ID before loop (detachrid clears attachment)
@@ -699,9 +923,10 @@ OnMonsterKilled:
 OnWaveCleared:
 	if (!$@InvasionActive) end;
 
-	// IMPORTANT: Reset wave monster count FIRST to prevent failsafe from re-triggering
+	// IMPORTANT: Reset wave state FIRST to prevent failsafe/overtime from re-triggering
 	// during the countdown period before the next wave spawns
 	$@InvasionWaveMonsters = 0;
+	$@InvasionWaveStartTime = 0;  // Reset to prevent overtime check during countdown
 
 	// Clean up remaining monsters from this wave (both methods for robustness)
 	killmonster $@InvasionMap$, "TownInvasion::OnMonsterKilled";
@@ -743,6 +968,8 @@ OnWaveCleared:
 	$@InvasionNextWaveTime = gettimetick(2) + 15;
 	announce "[TownInvasion] Wave " + $@InvasionWave + "/" + $@InvasionTotalWaves + " starting in 15 seconds...", bc_all, 0xFFAA00;
 	debugmes "[TownInvasion] OnWaveCleared - next wave scheduled at " + $@InvasionNextWaveTime;
+	// CRITICAL: Restart timer so OnTimer10000 fires again to check $@InvasionNextWaveTime
+	initnpctimer;
 	end;
 
 OnNextWave:
@@ -799,8 +1026,9 @@ OnInvasionVictory:
 		query_sql "UPDATE event_instances SET status = 'completed', actual_end = NOW() WHERE id = " + $@InvasionEventInstanceID;
 	}
 
-	// Remove mapflag
+	// Remove invasion mapflags (restore normal town behavior)
 	removemapflag .@map$, mf_nopenalty;
+	setmapflag .@map$, mf_noteleport;
 
 	// Reset state
 	callsub S_ResetState;
@@ -850,8 +1078,9 @@ OnInvasionTimeout:
 		query_sql "UPDATE event_instances SET status = 'failed', actual_end = NOW() WHERE id = " + $@InvasionEventInstanceID;
 	}
 
-	// Remove mapflag
+	// Remove invasion mapflags (restore normal town behavior)
 	removemapflag .@map$, mf_nopenalty;
+	setmapflag .@map$, mf_noteleport;
 
 	// Reset state
 	callsub S_ResetState;
@@ -920,8 +1149,9 @@ OnGMCancelInvasion:
 		query_sql "UPDATE event_instances SET status = 'cancelled', actual_end = NOW() WHERE id = " + $@InvasionEventInstanceID;
 	}
 
-	// Remove mapflag
+	// Remove invasion mapflags (restore normal town behavior)
 	removemapflag .@map$, mf_nopenalty;
+	setmapflag .@map$, mf_noteleport;
 
 	// Reset state
 	callsub S_ResetState;
@@ -978,6 +1208,7 @@ S_ResetState:
 	$@InvasionNextWaveTime = 0;
 	$@InvasionEventInstanceID = 0;
 	$@InvasionLastBossGather = 0;
+	$@InvasionLastLocAnnounce = 0;
 	return;
 
 // ============================================================
@@ -1049,21 +1280,21 @@ S_QueueDiscordEnd:
 // ============================================================
 S_GetThreatName:
 	switch(getarg(0)) {
-		case 0: return "WOLF";
-		case 1: return "TIGER";
-		case 2: return "DEMON";
-		case 3: return "DRAGON";
-		case 4: return "GOD";
+		case 0: return "WOLF (Easy)";
+		case 1: return "TIGER (Medium)";
+		case 2: return "DEMON (Hard)";
+		case 3: return "DRAGON (Very Hard)";
+		case 4: return "GOD (Extreme)";
 	}
 	return "UNKNOWN";
 
 S_GetThreatIcon:
 	switch(getarg(0)) {
-		case 0: return "[WOLF]";
-		case 1: return "[TIGER]";
-		case 2: return "[DEMON]";
-		case 3: return "[DRAGON]";
-		case 4: return "[GOD]";
+		case 0: return "[WOLF - Easy]";
+		case 1: return "[TIGER - Medium]";
+		case 2: return "[DEMON - Hard]";
+		case 3: return "[DRAGON - V.Hard]";
+		case 4: return "[GOD - Extreme]";
 	}
 	return "[?]";
 

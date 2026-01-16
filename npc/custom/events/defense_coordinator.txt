@@ -109,8 +109,9 @@ L_WarpToInvasion:
 	mes "I'll send you directly to";
 	mes "^00AA00" + $@InvasionTownName$ + "^000000 to help defend!";
 	mes " ";
-	mes "^888888No EXP loss while the";
-	mes "invasion is active.^000000";
+	mes "^888888During the invasion:^000000";
+	mes "- No EXP loss on death";
+	mes "- ^00CCFFTeleport enabled!^000000";
 	next;
 
 	// Check if player already has this town unlocked in Quest Warper
@@ -145,7 +146,29 @@ L_WarpToInvasion:
 	mes "[Defense Coordinator]";
 	mes "For the kingdom!";
 	close2;
-	warp $@InvasionMap$, $@InvasionSafeX, $@InvasionSafeY;
+	// Warp to invasion center (where monsters spawn) instead of safe point
+	warp $@InvasionMap$, $@InvasionCenterX, $@InvasionCenterY;
+	// Auto-navigate to nearest monster after warping
+	sleep2 500;  // Brief delay for warp to complete
+	.@mob_count = getmapunits(BL_MOB, $@InvasionMap$, .@gids[0]);
+	if (.@mob_count > 0) {
+		// Find first valid invasion monster
+		for (.@i = 0; .@i < .@mob_count; .@i++) {
+			.@gid = .@gids[.@i];
+			.@mob_id = getunitdata(.@gid, UMOB_CLASS);
+			.@mx = getunitdata(.@gid, UMOB_X);
+			.@my = getunitdata(.@gid, UMOB_Y);
+			if (.@mx == 0 && .@my == 0) continue;
+			// Check if it's an invasion monster
+			.@mname$ = "";
+			query_sql "SELECT mob_name FROM event_invasion_monsters WHERE theme_id = " + $@InvasionTheme + " AND mob_id = " + .@mob_id + " LIMIT 1", .@mname$;
+			if (.@mname$ != "") {
+				navigateto $@InvasionMap$, .@mx, .@my;
+				dispbottom "[Invasion] Navigating to " + .@mname$ + "...", 0x00CCFF;
+				break;
+			}
+		}
+	}
 	end;
 
 // ============================================================
@@ -668,7 +691,7 @@ L_GM_Start:
 	mes "Select theme:";
 	next;
 
-	query_sql "SELECT id, name FROM event_invasion_themes ORDER BY id", .@theme_ids, .@theme_names$;
+	query_sql "SELECT id, name FROM event_invasion_themes ORDER BY name", .@theme_ids, .@theme_names$;
 
 	.@menu$ = "";
 	for (.@i = 0; .@i < getarraysize(.@theme_ids); .@i++) {
@@ -755,7 +778,7 @@ L_GM_SchedOneTime:
 	mes "Select theme:";
 	next;
 
-	query_sql "SELECT id, name FROM event_invasion_themes ORDER BY id", .@theme_ids, .@theme_names$;
+	query_sql "SELECT id, name FROM event_invasion_themes ORDER BY name", .@theme_ids, .@theme_names$;
 	.@menu$ = "Random:";
 	for (.@i = 0; .@i < getarraysize(.@theme_ids); .@i++) {
 		.@menu$ = .@menu$ + .@theme_names$[.@i] + ":";
@@ -1084,22 +1107,22 @@ L_GM_History:
 // ============================================================
 function	script	GetInvasionThreatName	{
 	switch(getarg(0)) {
-		case 0: return "WOLF";
-		case 1: return "TIGER";
-		case 2: return "DEMON";
-		case 3: return "DRAGON";
-		case 4: return "GOD";
+		case 0: return "WOLF (Easy)";
+		case 1: return "TIGER (Medium)";
+		case 2: return "DEMON (Hard)";
+		case 3: return "DRAGON (Very Hard)";
+		case 4: return "GOD (Extreme)";
 	}
 	return "UNKNOWN";
 }
 
 function	script	GetInvasionThreatIcon	{
 	switch(getarg(0)) {
-		case 0: return "[WOLF]";
-		case 1: return "[TIGER]";
-		case 2: return "[DEMON]";
-		case 3: return "[DRAGON]";
-		case 4: return "[GOD]";
+		case 0: return "[WOLF - Easy]";
+		case 1: return "[TIGER - Medium]";
+		case 2: return "[DEMON - Hard]";
+		case 3: return "[DRAGON - V.Hard]";
+		case 4: return "[GOD - Extreme]";
 	}
 	return "[?]";
 }
