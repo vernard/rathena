@@ -16,6 +16,11 @@
 //= - Kiel Hyre: Luxurious Keycard (7509)
 //= - The Sign: The Sign accessory (2644) + sign_q >= 141
 //=
+//= Future candidates (no proof item - use quest variable):
+//= - Veins Spy Quest: rachel_camel >= 25 (1M base EXP reward quest)
+//= - Rachel Sanctuary Quest: ra_san_q >= X
+//= - Nameless Island Quest: aru_monas >= X
+//=
 //= Helper System:
 //= - Players who completed quests can register as helpers
 //= - New players can request help from registered helpers

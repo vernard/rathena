@@ -1134,8 +1134,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "ein_fild06";
-	setarray @pFXcoords[@Fi], 185;
-	setarray @pFYcoords[@Fi], 145;
+	setarray @pFXcoords[@Fi], 200;
+	setarray @pFYcoords[@Fi], 180;
 
 	QWS_Make_Field_Menu 10;
 //----------------EIN FIELD 07 - Metaling Plains
@@ -1413,8 +1413,8 @@ function	script	QWS_Farray	{
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "gef_fild13";
-	setarray @pFXcoords[@Fi], 189;
-	setarray @pFYcoords[@Fi], 240;
+	setarray @pFXcoords[@Fi], 299;
+	setarray @pFYcoords[@Fi], 242;
 
 	QWS_Make_Field_Menu 45;
 //----------------YUNO FIELD 03 - El Mes Plateau
@@ -1480,6 +1480,89 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 302;
 
 	QWS_Make_Field_Menu 3;
+
+//----------------PRT FIELD 00 - Mjolnir Foothills (Acolyte quest)
+	setarray @pFmenuitems$[@Fi], "prt_fild00 - Mjolnir Foothills";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "prt_fild00";
+	setarray @pFXcoords[@Fi], 210;
+	setarray @pFYcoords[@Fi], 220;
+
+	QWS_Make_Field_Menu 47;
+//----------------PRT FIELD 01 - Hidden Temple Road
+	setarray @pFmenuitems$[@Fi], "prt_fild01 - Hidden Temple Road";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "prt_fild01";
+	setarray @pFXcoords[@Fi], 140;
+	setarray @pFYcoords[@Fi], 365;
+
+	QWS_Make_Field_Menu 48;
+//----------------PRT FIELD 02 - Capitolina Road (Brisingamen quest)
+	setarray @pFmenuitems$[@Fi], "prt_fild02 - Capitolina Road";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "prt_fild02";
+	setarray @pFXcoords[@Fi], 201;
+	setarray @pFYcoords[@Fi], 268;
+
+	QWS_Make_Field_Menu 49;
+//----------------PRT MONK - St. Capitolina Abbey (Monk job quest)
+	setarray @pFmenuitems$[@Fi], "prt_monk - St. Capitolina Abbey";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "prt_monk";
+	setarray @pFXcoords[@Fi], 245;
+	setarray @pFYcoords[@Fi], 165;
+
+	QWS_Make_Field_Menu 50;
+//----------------PRT FIELD 05 - West Gate / Culvert entrance
+	setarray @pFmenuitems$[@Fi], "prt_fild05 - West Gate";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "prt_fild05";
+	setarray @pFXcoords[@Fi], 273;
+	setarray @pFYcoords[@Fi], 215;
+
+	QWS_Make_Field_Menu 51;
+//----------------PRT FIELD 09 - Desert Frontier (gap map Prontera-Morroc)
+	setarray @pFmenuitems$[@Fi], "prt_fild09 - Desert Frontier";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "prt_fild09";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+
+	QWS_Make_Field_Menu 52;
+
+//----------------RACHEL FIELD 01 - Nameless Quest (Lost Boy)
+	setarray @pFmenuitems$[@Fi], "ra_fild01 - Rachel Outskirts";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild01";
+	setarray @pFXcoords[@Fi], 228;
+	setarray @pFYcoords[@Fi], 325;
+
+	QWS_Make_Field_Menu 54;
+//----------------RACHEL FIELD 03 - Arunafeltz quest (Ishmael)
+	setarray @pFmenuitems$[@Fi], "ra_fild03 - Arunafeltz Road";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "ra_fild03";
+	setarray @pFXcoords[@Fi], 141;
+	setarray @pFYcoords[@Fi], 355;
+
+	QWS_Make_Field_Menu 55;
+//----------------COMODO FIELD 01 - Alligator Hunt + Nameless quest
+	setarray @pFmenuitems$[@Fi], "cmd_fild01 - Comodo Beach";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "cmd_fild01";
+	setarray @pFXcoords[@Fi], 57;
+	setarray @pFYcoords[@Fi], 160;
+
+	QWS_Make_Field_Menu 56;
 
 //----------------Exit option
 	set @Fmenulist$[@Fj], "Exit";
@@ -2422,7 +2505,6 @@ moc_fild19,106,97,4	duplicate(Warpra#0)	Warpra#7	113
 moc_ruins,64,166,4	duplicate(Warpra#0)	Warpra#8	113
 niflheim,197,192,3	duplicate(Warpra#0)	Warpra#9	113
 pay_arche,39,135,4	duplicate(Warpra#0)	Warpra#10	113
-prt_fild05,273,215,4	duplicate(Warpra#0)	Warpra#11	113
 tur_dun01,148,239,4	duplicate(Warpra#0)	Warpra#12	113
 valkyrie,48,35,8	duplicate(Warpra#0)	Warpra#13	113
 yuno_fild03,37,135,4	duplicate(Warpra#0)	Warpra#14	113
@@ -2521,7 +2603,7 @@ ein_fild01,182,200,4	script	Field Warpra#ef01	112,{ callfunc "QWS_Field_Warpra",
 ein_fild02,165,193,4	script	Field Warpra#ef02	112,{ callfunc "QWS_Field_Warpra",7,"ein_fild02 - Mine Field"; close; }
 ein_fild03,216,208,4	script	Field Warpra#ef03	112,{ callfunc "QWS_Field_Warpra",8,"ein_fild03 - Einbroch Field"; close; }
 ein_fild05,247,175,4	script	Field Warpra#ef05	112,{ callfunc "QWS_Field_Warpra",9,"ein_fild05 - Einbroch Field"; close; }
-ein_fild06,185,145,4	script	Field Warpra#ef06	112,{ callfunc "QWS_Field_Warpra",10,"ein_fild06 - Goat Valley"; close; }
+ein_fild06,200,180,4	script	Field Warpra#ef06	112,{ callfunc "QWS_Field_Warpra",10,"ein_fild06 - Goat Valley"; close; }
 ein_fild07,261,225,4	script	Field Warpra#ef07	112,{ callfunc "QWS_Field_Warpra",11,"ein_fild07 - Metaling Plains"; close; }
 ein_fild10,197,190,4	script	Field Warpra#ef10	112,{ callfunc "QWS_Field_Warpra",12,"ein_fild10 - Porcellio Plains"; close; }
 
@@ -2568,4 +2650,23 @@ gef_fild08,233,149,4	script	Field Warpra#gf08	112,{ callfunc "QWS_Field_Warpra",
 gef_fild09,221,50,4	script	Field Warpra#gf09	112,{ callfunc "QWS_Field_Warpra",38,"gef_fild09 - Geffen Field"; close; }
 gef_fild10,233,196,4	script	Field Warpra#gf10	112,{ callfunc "QWS_Field_Warpra",44,"gef_fild10 - Geffen Field"; close; }
 gef_fild12,201,226,4	script	Field Warpra#gf12	112,{ callfunc "QWS_Field_Warpra",39,"gef_fild12 - Kordt Forest"; close; }
-gef_fild13,189,240,4	script	Field Warpra#gf13	112,{ callfunc "QWS_Field_Warpra",45,"gef_fild13 - Britoniah"; close; }
+gef_fild13,299,242,4	script	Field Warpra#gf13	112,{ callfunc "QWS_Field_Warpra",45,"gef_fild13 - Britoniah"; close; }
+
+// Prontera Fields - Quest-critical maps
+// prt_fild00: Acolyte/Priest quest (Father Yosuke at 208,218)
+prt_fild00,210,220,4	script	Field Warpra#pf00	112,{ callfunc "QWS_Field_Warpra",47,"prt_fild00 - Mjolnir Foothills"; close; }
+// prt_fild01: Hidden Temple entrance (136,373), Mjolnir Seal quest (Roskva at 196,47)
+prt_fild01,140,365,4	script	Field Warpra#pf01	112,{ callfunc "QWS_Field_Warpra",48,"prt_fild01 - Hidden Temple Road"; close; }
+// prt_fild02: Brisingamen Seal quest (Dvalin at 185,270)
+prt_fild02,201,268,4	script	Field Warpra#pf02	112,{ callfunc "QWS_Field_Warpra",49,"prt_fild02 - Capitolina Road"; close; }
+// prt_monk: St. Capitolina Abbey (Monk job quest)
+prt_monk,245,165,4	script	Field Warpra#pm	112,{ callfunc "QWS_Field_Warpra",50,"prt_monk - St. Capitolina Abbey"; close; }
+// prt_fild05: West Gate / Culvert entrance
+prt_fild05,273,215,4	script	Field Warpra#pf05	112,{ callfunc "QWS_Field_Warpra",51,"prt_fild05 - West Gate"; close; }
+// prt_fild09: Desert Frontier (gap map Prontera-Morroc)
+prt_fild09,202,200,4	script	Field Warpra#pf09	112,{ callfunc "QWS_Field_Warpra",52,"prt_fild09 - Desert Frontier"; close; }
+
+// Quest-critical fields - new additions
+ra_fild01,228,325,4	script	Field Warpra#rf01	112,{ callfunc "QWS_Field_Warpra",54,"ra_fild01 - Rachel Outskirts"; close; }
+ra_fild03,141,355,4	script	Field Warpra#rf03	112,{ callfunc "QWS_Field_Warpra",55,"ra_fild03 - Arunafeltz Road"; close; }
+cmd_fild01,57,160,4	script	Field Warpra#cf01	112,{ callfunc "QWS_Field_Warpra",56,"cmd_fild01 - Comodo Beach"; close; }

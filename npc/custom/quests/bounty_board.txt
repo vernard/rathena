@@ -856,7 +856,9 @@ OnInit:
 	// Maps array for lookup
 	setarray .Maps$[0],
 		// Beginner Fields (Lv 1-20)
-		"prt_fild05", "prt_fild08", "gef_fild00", "mjolnir_01", "pay_fild01",
+		"prt_fild00", "prt_fild01", "prt_fild02", "prt_fild04", "prt_fild05", "prt_fild06", "prt_fild08", "gef_fild00", "mjolnir_01", "pay_fild01",
+		// Prontera Fields (Lv 17-44)
+		"prt_fild03", "prt_fild07", "prt_fild09", "prt_fild10", "prt_fild11",
 		// Beginner Dungeons (Lv 5-25)
 		"prt_sewb1", "prt_sewb2", "pay_dun00",
 		// Low-Mid Fields (Lv 15-35)
@@ -922,12 +924,22 @@ OnInit:
 		"lou_fild01",
 		// Amatsu Field (Lv 31-55)
 		"ama_fild01";
-	.MapCount = 147;  // Total maps in .Maps$ array (90 + 57 new fields)
+	.MapCount = 157;  // Total maps in .Maps$ array (147 + 10 new Prontera fields)
 
 	// ==================== MAP NAMES ====================
 	// Beginner Fields
-	set .MapName_prt_fild05$, "Prontera Field";
-	set .MapName_prt_fild08$, "Prontera Field";
+	set .MapName_prt_fild00$, "Mjolnir Foothills";
+	set .MapName_prt_fild01$, "Hidden Temple Road";
+	set .MapName_prt_fild02$, "Capitolina Road";
+	set .MapName_prt_fild03$, "St. Capitolina";
+	set .MapName_prt_fild04$, "Creamy Fields";
+	set .MapName_prt_fild05$, "West Gate";
+	set .MapName_prt_fild06$, "East Gate";
+	set .MapName_prt_fild07$, "Southern Crossroads";
+	set .MapName_prt_fild08$, "Izlude Road";
+	set .MapName_prt_fild09$, "Desert Frontier";
+	set .MapName_prt_fild10$, "Savage Plains";
+	set .MapName_prt_fild11$, "Goblin Territory";
 	set .MapName_gef_fild00$, "Geffen Field";
 	set .MapName_mjolnir_01$, "Mt. Mjolnir";
 	set .MapName_pay_fild01$, "Payon Forest";
@@ -1111,12 +1123,42 @@ OnInit:
 	// Format: setarray .Mobs_<mapname>[0], <mob_id1>, <mob_id2>, ...
 	// Monster IDs from rAthena mob_db
 
-	// Beginner Fields (Lv 1-20)
+	// Prontera Fields (Lv 1-44)
+	setarray .Mobs_prt_fild00[0], 1002, 1063, 1004;  // Poring (Lv 1), Lunatic (Lv 3), Hornet (Lv 8)
+	set .Mobs_prt_fild00_count, 3;
+
+	setarray .Mobs_prt_fild01[0], 1063, 1051, 1007;  // Lunatic (Lv 3), Thief Bug (Lv 7), Fabre (Lv 2)
+	set .Mobs_prt_fild01_count, 3;
+
+	setarray .Mobs_prt_fild02[0], 1020, 1007, 1002;  // Mandragora (Lv 12), Fabre (Lv 2), Poring (Lv 1)
+	set .Mobs_prt_fild02_count, 3;
+
+	setarray .Mobs_prt_fild03[0], 1057, 1056, 1031;  // Yoyo (Lv 29), Smokie (Lv 17), Poporing (Lv 17)
+	set .Mobs_prt_fild03_count, 3;
+
+	setarray .Mobs_prt_fild04[0], 1052, 1018, 1002;  // Rocker (Lv 9), Creamy (Lv 24), Poring (Lv 1)
+	set .Mobs_prt_fild04_count, 3;
+
 	setarray .Mobs_prt_fild05[0], 1002, 1063;  // Poring (Lv 1), Lunatic (Lv 3)
 	set .Mobs_prt_fild05_count, 2;
 
-	setarray .Mobs_prt_fild08[0], 1002, 1063;  // Poring (1002), Lunatic (1063)
+	setarray .Mobs_prt_fild06[0], 1063, 1002, 1051;  // Lunatic (Lv 3), Poring (Lv 1), Thief Bug (Lv 7)
+	set .Mobs_prt_fild06_count, 3;
+
+	setarray .Mobs_prt_fild07[0], 1052, 1031;  // Rocker (Lv 9), Poporing (Lv 17)
+	set .Mobs_prt_fild07_count, 2;
+
+	setarray .Mobs_prt_fild08[0], 1002, 1063;  // Poring (Lv 1), Lunatic (Lv 3)
 	set .Mobs_prt_fild08_count, 2;
+
+	setarray .Mobs_prt_fild09[0], 1167, 1107, 1009;  // Savage Babe (Lv 7), Baby Desert Wolf (Lv 9), Condor (Lv 5)
+	set .Mobs_prt_fild09_count, 3;
+
+	setarray .Mobs_prt_fild10[0], 1166, 1167, 1031;  // Savage (Lv 44), Savage Babe (Lv 7), Poporing (Lv 17)
+	set .Mobs_prt_fild10_count, 3;
+
+	setarray .Mobs_prt_fild11[0], 1122, 1123, 1258;  // Goblin (Lv 24), Goblin (Lv 24), Goblin Archer (Lv 31)
+	set .Mobs_prt_fild11_count, 3;
 
 	setarray .Mobs_gef_fild00[0], 1002, 1007, 1008;  // Poring, Fabre (1007), Pupa (1008)
 	set .Mobs_gef_fild00_count, 3;
@@ -2033,11 +2075,41 @@ OnNPCKillEvent:
 // Format: <map>,<x>,<y>,<dir>	duplicate(BountyBoard)	Bounty Board#<map>	4_BOARD3
 // Multiple NPCs per map: one at entrance, others spread centrally
 
-// Beginner Fields (Lv 1-20)
+// Prontera Fields (Lv 1-44)
+// prt_fild00 - South exit from prt_fild04 (Acolyte quest: Father Yosuke)
+prt_fild00,165,30,4	duplicate(BountyBoard)	Bounty Board#prt_fild00	4_BOARD3
+prt_fild00,210,224,4	duplicate(BountyBoard)	Bounty Board#prt_fild00_2	4_BOARD3
+// prt_fild01 - Hidden Temple entrance, Mjolnir Seal quest
+prt_fild01,140,368,4	duplicate(BountyBoard)	Bounty Board#prt_fild01	4_BOARD3
+prt_fild01,200,200,4	duplicate(BountyBoard)	Bounty Board#prt_fild01_2	4_BOARD3
+// prt_fild02 - Brisingamen Seal quest (Dvalin dwarf at 185,269)
+prt_fild02,300,30,4	duplicate(BountyBoard)	Bounty Board#prt_fild02	4_BOARD3
+prt_fild02,199,268,4	duplicate(BountyBoard)	Bounty Board#prt_fild02_2	4_BOARD3
+// prt_fild03 - Abbey entrance, Acolyte/Priest/Monk quests
+prt_fild03,25,249,4	duplicate(BountyBoard)	Bounty Board#prt_fild03	4_BOARD3
+prt_fild03,200,150,4	duplicate(BountyBoard)	Bounty Board#prt_fild03_2	4_BOARD3
+// prt_fild04 - Rocker/Creamy area, Creamy Hunt quest
+prt_fild04,160,372,4	duplicate(BountyBoard)	Bounty Board#prt_fild04	4_BOARD3
+prt_fild04,364,159,4	duplicate(BountyBoard)	Bounty Board#prt_fild04_2	4_BOARD3
+// prt_fild05 - Prontera west exit
 prt_fild05,272,206,4	duplicate(BountyBoard)	Bounty Board#prt_fild05	4_BOARD3
-prt_fild05,150,150,4	duplicate(BountyBoard)	Bounty Board#prt_fild05_2	4_BOARD3
-prt_fild08,231,22,4	duplicate(BountyBoard)	Bounty Board#prt_fild08	4_BOARD3
+prt_fild05,268,208,4	duplicate(BountyBoard)	Bounty Board#prt_fild05_2	4_BOARD3
+// prt_fild06 - Prontera east exit
+prt_fild06,30,193,4	duplicate(BountyBoard)	Bounty Board#prt_fild06	4_BOARD3
+// prt_fild07 - Rocker/Poporing crossroads
+prt_fild07,350,253,4	duplicate(BountyBoard)	Bounty Board#prt_fild07	4_BOARD3
+// prt_fild08 - Prontera north exit
+prt_fild08,175,369,4	duplicate(BountyBoard)	Bounty Board#prt_fild08	4_BOARD3
 prt_fild08,180,180,4	duplicate(BountyBoard)	Bounty Board#prt_fild08_2	4_BOARD3
+// prt_fild09 - Savage Babe area, south transition
+prt_fild09,223,372,4	duplicate(BountyBoard)	Bounty Board#prt_fild09	4_BOARD3
+prt_fild09,200,200,4	duplicate(BountyBoard)	Bounty Board#prt_fild09_2	4_BOARD3
+// prt_fild10 - Savage Plains
+prt_fild10,216,289,4	duplicate(BountyBoard)	Bounty Board#prt_fild10	4_BOARD3
+prt_fild10,299,138,4	duplicate(BountyBoard)	Bounty Board#prt_fild10_2	4_BOARD3
+// prt_fild11 - Goblin Territory
+prt_fild11,300,292,4	duplicate(BountyBoard)	Bounty Board#prt_fild11	4_BOARD3
+prt_fild11,200,200,4	duplicate(BountyBoard)	Bounty Board#prt_fild11_2	4_BOARD3
 gef_fild00,52,197,4	duplicate(BountyBoard)	Bounty Board#gef_fild00	4_BOARD3
 gef_fild00,200,150,4	duplicate(BountyBoard)	Bounty Board#gef_fild00_2	4_BOARD3
 mjolnir_01,282,23,4	duplicate(BountyBoard)	Bounty Board#mjolnir_01	4_BOARD3
@@ -2371,7 +2443,7 @@ ein_fild05,245,175,4	duplicate(BountyBoard)	Bounty Board#ein_fild05_2	4_BOARD3
 
 // ein_fild06 - Einbroch Field (town direction: yuno_fild04 at 252,365)
 ein_fild06,254,357,4	duplicate(BountyBoard)	Bounty Board#ein_fild06	4_BOARD3
-ein_fild06,183,145,4	duplicate(BountyBoard)	Bounty Board#ein_fild06_2	4_BOARD3
+ein_fild06,200,175,4	duplicate(BountyBoard)	Bounty Board#ein_fild06_2	4_BOARD3
 
 // ein_fild07 - Einbroch Field (town direction: fild06 at 145,362)
 ein_fild07,150,357,4	duplicate(BountyBoard)	Bounty Board#ein_fild07	4_BOARD3
@@ -2401,7 +2473,7 @@ ra_fild02,250,200,4	duplicate(BountyBoard)	Bounty Board#ra_fild02_2	4_BOARD3
 
 // ra_fild03 - Rachel Field (town direction: fild02 at 23,294)
 ra_fild03,28,289,4	duplicate(BountyBoard)	Bounty Board#ra_fild03	4_BOARD3
-ra_fild03,200,180,4	duplicate(BountyBoard)	Bounty Board#ra_fild03_2	4_BOARD3
+ra_fild03,139,350,4	duplicate(BountyBoard)	Bounty Board#ra_fild03_2	4_BOARD3
 
 // ra_fild04 - Rachel Field (town direction: fild03 at 374,168)
 ra_fild04,265,64,4	duplicate(BountyBoard)	Bounty Board#ra_fild04	4_BOARD3
@@ -2497,14 +2569,13 @@ ve_fild05,247,135,4	duplicate(BountyBoard)	Bounty Board#ve_fild05_2	4_BOARD3
 
 // ve_fild07 - Veins Field (town direction: veins at 147,371)
 ve_fild07,153,364,4	duplicate(BountyBoard)	Bounty Board#ve_fild07	4_BOARD3
-ve_fild07,180,200,4	duplicate(BountyBoard)	Bounty Board#ve_fild07_2	4_BOARD3
 
 
 // ==================== COMODO REGION FIELDS ====================
 
 // cmd_fild01 - Papuchicha Forest (entry from cmd_fild02 at 222,24)
 cmd_fild01,221,30,4	duplicate(BountyBoard)	Bounty Board#cmd_fild01	4_BOARD3
-cmd_fild01,190,200,4	duplicate(BountyBoard)	Bounty Board#cmd_fild01_2	4_BOARD3
+cmd_fild01,53,160,4	duplicate(BountyBoard)	Bounty Board#cmd_fild01_2	4_BOARD3
 
 // cmd_fild02 - Kokomo Beach (entry from cmd_fild01 at 222,376)
 cmd_fild02,218,369,4	duplicate(BountyBoard)	Bounty Board#cmd_fild02	4_BOARD3
@@ -2579,7 +2650,7 @@ gef_fild12,199,226,4	duplicate(BountyBoard)	Bounty Board#gef_fild12_2	4_BOARD3
 
 // gef_fild13 - Britoniah (exit to gef_fild09 at 380,56)
 gef_fild13,370,66,4	duplicate(BountyBoard)	Bounty Board#gef_fild13	4_BOARD3
-gef_fild13,187,240,4	duplicate(BountyBoard)	Bounty Board#gef_fild13_2	4_BOARD3
+gef_fild13,295,242,4	duplicate(BountyBoard)	Bounty Board#gef_fild13_2	4_BOARD3
 
 // gef_fild14 - West Orc Village (exit to gef_fild13 at 180,360)
 gef_fild14,180,350,4	duplicate(BountyBoard)	Bounty Board#gef_fild14	4_BOARD3
