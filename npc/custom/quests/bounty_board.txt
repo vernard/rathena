@@ -860,6 +860,8 @@ OnInit:
 		"prt_sewb1", "prt_sewb2", "pay_dun00",
 		// Low-Mid Fields (Lv 15-35)
 		"pay_fild02", "pay_fild05", "pay_fild06", "pay_fild09", "moc_fild01", "moc_fild02", "moc_fild17", "moc_fild18", "mjolnir_02",
+		// Mjolnir Mountains (Lv 15-45)
+		"mjolnir_03", "mjolnir_04", "mjolnir_05", "mjolnir_06", "mjolnir_07", "mjolnir_08", "mjolnir_09", "mjolnir_11", "mjolnir_12",
 		// Payon Mid-High Fields (Lv 29-52)
 		"pay_fild04", "pay_fild07", "pay_fild10", "pay_fild11",
 		// Low-Mid Dungeons (Lv 20-40)
@@ -926,7 +928,7 @@ OnInit:
 		"lou_fild01",
 		// Amatsu Field (Lv 31-55)
 		"ama_fild01";
-	.MapCount = 157;  // Total maps in .Maps$ array (147 + 10 new Prontera fields)
+	.MapCount = 166;  // Total maps in .Maps$ array (157 + 9 Mjolnir Mountains, no mjo10)
 
 	// ==================== MAP NAMES ====================
 	// Beginner Fields
@@ -971,6 +973,17 @@ OnInit:
 	set .MapName_moc_fild21$, "moc_fild21 - Dimensional Gorge";
 	set .MapName_moc_fild22$, "moc_fild22 - Dimensional Gorge";
 	set .MapName_mjolnir_02$, "mjolnir_02 - Mt. Mjolnir";
+	// Mjolnir Mountain Range (03-12)
+	set .MapName_mjolnir_03$, "mjolnir_03 - Petite Valley";
+	set .MapName_mjolnir_04$, "mjolnir_04 - Mistress's Domain";
+	set .MapName_mjolnir_05$, "mjolnir_05 - Argiope Den";
+	set .MapName_mjolnir_06$, "mjolnir_06 - Geffen Trailhead";
+	set .MapName_mjolnir_07$, "mjolnir_07 - Prontera Path";
+	set .MapName_mjolnir_08$, "mjolnir_08 - Mountain Core";
+	set .MapName_mjolnir_09$, "mjolnir_09 - Northern Pass";
+	// mjolnir_10 removed - no distinct monsters
+	set .MapName_mjolnir_11$, "mjolnir_11 - Flora Ridge";
+	set .MapName_mjolnir_12$, "mjolnir_12 - Hidden Temple Entrance";
 	// Payon Mid-High Fields
 	set .MapName_pay_fild04$, "pay_fild04 - Poring Island";
 	set .MapName_pay_fild07$, "pay_fild07 - Elder Willow Forest";
@@ -1261,6 +1274,36 @@ OnInit:
 
 	setarray .Mobs_mjolnir_02[0], 1155, 1004, 1118;  // Petite (Lv 44), Hornet (Lv 8), Flora (Lv 26)
 	set .Mobs_mjolnir_02_count, 3;
+
+	// Mjolnir Mountains 03-12
+	setarray .Mobs_mjolnir_03[0], 1156, 1139, 1100;  // Petite (Lv 38), Mantis (Lv 40), Argos (Lv 37)
+	set .Mobs_mjolnir_03_count, 3;
+
+	setarray .Mobs_mjolnir_04[0], 1099, 1139, 1118;  // Argiope (Lv 41), Mantis (Lv 40), Flora (Lv 26)
+	set .Mobs_mjolnir_04_count, 3;
+
+	setarray .Mobs_mjolnir_05[0], 1099, 1139, 1100;  // Argiope (Lv 41), Mantis (Lv 40), Argos (Lv 37)
+	set .Mobs_mjolnir_05_count, 3;
+
+	setarray .Mobs_mjolnir_06[0], 1174, 1128, 1103;  // Stainer (Lv 19), Horn (Lv 18), Caramel (Lv 15)
+	set .Mobs_mjolnir_06_count, 3;
+
+	setarray .Mobs_mjolnir_07[0], 1077, 1094, 1128;  // Poison Spore (Lv 15), Ambernite (Lv 37), Horn (Lv 18)
+	set .Mobs_mjolnir_07_count, 3;
+
+	setarray .Mobs_mjolnir_08[0], 1139, 1099, 1100;  // Mantis (Lv 40), Argiope (Lv 41), Argos (Lv 37)
+	set .Mobs_mjolnir_08_count, 3;
+
+	setarray .Mobs_mjolnir_09[0], 1128, 1013, 1174;  // Horn (Lv 18), Wolf (Lv 9), Stainer (Lv 19)
+	set .Mobs_mjolnir_09_count, 3;
+
+	// mjolnir_10 removed - no distinct monsters
+
+	setarray .Mobs_mjolnir_11[0], 1118, 1020, 1099;  // Flora (Lv 26), Mandragora (Lv 13), Argiope (Lv 41)
+	set .Mobs_mjolnir_11_count, 3;
+
+	setarray .Mobs_mjolnir_12[0], 1114, 1215, 1053;  // Dustiness (Lv 29), Stem Worm (Lv 32), Thief Bug Female (Lv 17)
+	set .Mobs_mjolnir_12_count, 3;
 
 	// Payon Mid-High Fields (Lv 29-52)
 	setarray .Mobs_pay_fild04[0], 1031, 1242, 1002;  // Poporing (Lv 11), Marin (Lv 38), Poring (Lv 1)
@@ -2253,6 +2296,30 @@ moc_fild22,35,198,4	duplicate(BountyBoard)	Bounty Board#moc_fild22	4_BOARD3
 moc_fild22,180,180,4	duplicate(BountyBoard)	Bounty Board#moc_fild22_2	4_BOARD3
 mjolnir_02,152,152,4	duplicate(BountyBoard)	Bounty Board#mjolnir_02	4_BOARD3
 mjolnir_02,250,200,4	duplicate(BountyBoard)	Bounty Board#mjolnir_02_2	4_BOARD3
+// mjolnir_03 - Petite Valley (Petite, Mantis, Argos) - Lv 35-40
+mjolnir_03,81,259,4	duplicate(BountyBoard)	Bounty Board#mjolnir_03	4_BOARD3
+mjolnir_03,217,214,4	duplicate(BountyBoard)	Bounty Board#mjolnir_03_2	4_BOARD3
+// mjolnir_04 - [MVP MAP] Mistress's Domain (Argiope, Mantis, Mistress MVP) - single board + warpra
+mjolnir_04,152,211,4	duplicate(BountyBoard)	Bounty Board#mjolnir_04	4_BOARD3
+// mjolnir_05 - Argiope Den (Argiope, Mantis, Argos) - Lv 37-41
+mjolnir_05,217,339,4	duplicate(BountyBoard)	Bounty Board#mjolnir_05	4_BOARD3
+mjolnir_05,200,200,4	duplicate(BountyBoard)	Bounty Board#mjolnir_05_2	4_BOARD3
+// mjolnir_06 - Geffen Trailhead (Stainer, Caramel, Horn) - Lv 15-19
+mjolnir_06,369,374,4	duplicate(BountyBoard)	Bounty Board#mjolnir_06	4_BOARD3
+mjolnir_06,31,332,4	duplicate(BountyBoard)	Bounty Board#mjolnir_06_2	4_BOARD3
+// mjolnir_07 - Prontera Path (Poison Spore, Ambernite, Horn) - Lv 15-37
+mjolnir_07,156,25,4	duplicate(BountyBoard)	Bounty Board#mjolnir_07	4_BOARD3
+mjolnir_07,200,200,4	duplicate(BountyBoard)	Bounty Board#mjolnir_07_2	4_BOARD3
+// mjolnir_08 - Mountain Core (Mantis, Argiope, Argos) - Lv 37-41
+mjolnir_08,159,363,4	duplicate(BountyBoard)	Bounty Board#mjolnir_08	4_BOARD3
+mjolnir_08,218,263,4	duplicate(BountyBoard)	Bounty Board#mjolnir_08_2	4_BOARD3
+// mjolnir_09 - Northern Pass (Horn, Wolf, Stainer) - Lv 9-19
+mjolnir_09,200,200,4	duplicate(BountyBoard)	Bounty Board#mjolnir_09	4_BOARD3
+// mjolnir_11 - Flora Ridge (Flora, Mandragora, Argiope) - Lv 13-41
+mjolnir_11,177,40,4	duplicate(BountyBoard)	Bounty Board#mjolnir_11	4_BOARD3
+// mjolnir_12 - Hidden Temple Entrance (Dustiness, Stem Worm) - Lv 17-32
+mjolnir_12,220,35,4	duplicate(BountyBoard)	Bounty Board#mjolnir_12	4_BOARD3
+mjolnir_12,50,30,4	duplicate(BountyBoard)	Bounty Board#mjolnir_12_2	4_BOARD3
 
 // Low-Mid Dungeons (Lv 20-40)
 anthell01,37,265,4	duplicate(BountyBoard)	Bounty Board#anthell01	4_BOARD3

@@ -1659,6 +1659,41 @@ function	script	QWS_Farray	{
 	setarray @pFXcoords[@Fi], 85;
 	setarray @pFYcoords[@Fi], 357;
 	QWS_Make_Field_Menu 62;
+
+	setarray @pFmenuitems$[@Fi], "mjolnir_04 - Mistress's Domain";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "mjolnir_04";
+	setarray @pFXcoords[@Fi], 154;
+	setarray @pFYcoords[@Fi], 211;
+	QWS_Make_Field_Menu 64;
+
+	setarray @pFmenuitems$[@Fi], "mjolnir_05 - Argiope Den";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "mjolnir_05";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+	QWS_Make_Field_Menu 65;
+
+	setarray @pFmenuitems$[@Fi], "mjolnir_08 - Mountain Core";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "mjolnir_08";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+	QWS_Make_Field_Menu 66;
+
+	setarray @pFmenuitems$[@Fi], "mjolnir_11 - Flora Ridge";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "mjolnir_11";
+	setarray @pFXcoords[@Fi], 202;
+	setarray @pFYcoords[@Fi], 200;
+	QWS_Make_Field_Menu 67;
+
+	setarray @pFmenuitems$[@Fi], "mjolnir_12 - Hidden Temple Entrance";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "mjolnir_12";
+	setarray @pFXcoords[@Fi], 45;
+	setarray @pFYcoords[@Fi], 24;
+	QWS_Make_Field_Menu 68;
 //----------------MAGMA DUNGEON ENTRANCE (yuno_fild03)
 	setarray @pFmenuitems$[@Fi], "yuno_fild03 - Magma Dungeon Entrance";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
@@ -2877,6 +2912,12 @@ moc_fild02,275,264,4	script	Field Warpra#mcf02	112,{ callfunc "QWS_Field_Warpra"
 
 // Remaining Field Warpras (dungeon entrances moved to Dungeon menu)
 mjolnir_02,85,357,4	script	Field Warpra#mjo02	112,{ callfunc "QWS_Field_Warpra",62,"mjolnir_02 - Mt. Mjolnir South"; close; }
+// Mjolnir Mountains expansion (strategic locations only)
+mjolnir_04,154,211,4	script	Field Warpra#mjo04	112,{ callfunc "QWS_Field_Warpra",64,"mjolnir_04 - Mistress's Domain"; close; }
+mjolnir_05,202,200,4	script	Field Warpra#mjo05	112,{ callfunc "QWS_Field_Warpra",65,"mjolnir_05 - Argiope Den"; close; }
+mjolnir_08,220,263,4	script	Field Warpra#mjo08	112,{ callfunc "QWS_Field_Warpra",66,"mjolnir_08 - Mountain Core"; close; }
+mjolnir_11,179,40,4	script	Field Warpra#mjo11	112,{ callfunc "QWS_Field_Warpra",67,"mjolnir_11 - Flora Ridge"; close; }
+mjolnir_12,45,24,4	script	Field Warpra#mjo12	112,{ callfunc "QWS_Field_Warpra",68,"mjolnir_12 - Hidden Temple Entrance"; close; }
 yuno_fild03,37,135,4	script	Field Warpra#yf03mag	112,{ callfunc "QWS_Field_Warpra",63,"yuno_fild03 - Magma Dungeon Entrance"; close; }
 
 // Dungeon Entrance Warpras (unlock entrance area separately from main dungeon)
