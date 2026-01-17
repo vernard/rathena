@@ -1518,7 +1518,7 @@ function	script	QWS_Farray	{
 
 	QWS_Make_Field_Menu 50;
 //----------------PRT FIELD 05 - West Gate / Culvert entrance
-	setarray @pFmenuitems$[@Fi], "prt_fild05 - West Gate";
+	setarray @pFmenuitems$[@Fi], "prt_fild05 - Prontera West Gate";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "prt_fild05";
@@ -1527,7 +1527,7 @@ function	script	QWS_Farray	{
 
 	QWS_Make_Field_Menu 51;
 //----------------PRT FIELD 09 - Desert Frontier (gap map Prontera-Morroc)
-	setarray @pFmenuitems$[@Fi], "prt_fild09 - Desert Frontier";
+	setarray @pFmenuitems$[@Fi], "prt_fild09 - Prontera Desert Border";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "prt_fild09";
@@ -1600,6 +1600,73 @@ function	script	QWS_Farray	{
 
 	QWS_Make_Field_Menu 60;
 
+//----------------MORROC FIELD 03 - Elder Willow, Greatest General
+	setarray @pFmenuitems$[@Fi], "moc_fild03 - Sograt Desert Central";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "moc_fild03";
+	setarray @pFXcoords[@Fi], 132;
+	setarray @pFYcoords[@Fi], 144;
+	QWS_Make_Field_Menu 61;
+//----------------MORROC FIELD 11 - Golem, Hode, Muka
+	setarray @pFmenuitems$[@Fi], "moc_fild11 - Sograt Golem Valley";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "moc_fild11";
+	setarray @pFXcoords[@Fi], 194;
+	setarray @pFYcoords[@Fi], 210;
+	QWS_Make_Field_Menu 53;
+//----------------MORROC FIELD 13 - Anacondaq, Side Winder
+	setarray @pFmenuitems$[@Fi], "moc_fild13 - Sograt Snake Den";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "moc_fild13";
+	setarray @pFXcoords[@Fi], 179;
+	setarray @pFYcoords[@Fi], 263;
+	QWS_Make_Field_Menu 40;
+//----------------MORROC FIELD 16 - Sandman, Hode (near Assassin Guild)
+	setarray @pFmenuitems$[@Fi], "moc_fild16 - Morroc Assassin Guild";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "moc_fild16";
+	setarray @pFXcoords[@Fi], 206;
+	setarray @pFYcoords[@Fi], 251;
+	QWS_Make_Field_Menu 41;
+//----------------MORROC FIELD 21 - Dimensional Gorge (Golems)
+	setarray @pFmenuitems$[@Fi], "moc_fild21 - Dimensional Gorge";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "moc_fild21";
+	setarray @pFXcoords[@Fi], 32;
+	setarray @pFYcoords[@Fi], 198;
+	QWS_Make_Field_Menu 21;
+//----------------MORROC FIELD 02 - Peco Peco field (near center bounty)
+	setarray @pFmenuitems$[@Fi], "moc_fild02 - Morroc Peco Plains";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "moc_fild02";
+	setarray @pFXcoords[@Fi], 275;
+	setarray @pFYcoords[@Fi], 264;
+	QWS_Make_Field_Menu 28;
+
+//----------------ADDITIONAL FIELDS (Third Bitmap: 62+)
+// Note: Dungeon entrance areas moved to Dungeon menu as "Entrance" level:
+// - pay_arche -> Payon Dungeon
+// - alb2trea -> Sunken Ship Dungeon
+// - izlu2dun -> Byalan Dungeon
+// - moc_ruins -> Pyramids Dungeon
+// - moc_fild19 -> Sphinx Dungeon
+// - tur_dun01 -> Turtle Island Dungeon
+
+//----------------MJOLNIR MOUNTAINS
+	setarray @pFmenuitems$[@Fi], "mjolnir_02 - Mt. Mjolnir South";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "mjolnir_02";
+	setarray @pFXcoords[@Fi], 85;
+	setarray @pFYcoords[@Fi], 357;
+	QWS_Make_Field_Menu 62;
+//----------------MAGMA DUNGEON ENTRANCE (yuno_fild03)
+	setarray @pFmenuitems$[@Fi], "yuno_fild03 - Magma Dungeon Entrance";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+	setarray @pFmap$[@Fi], "yuno_fild03";
+	setarray @pFXcoords[@Fi], 37;
+	setarray @pFYcoords[@Fi], 135;
+	QWS_Make_Field_Menu 63;
+
 //----------------Exit option
 	set @Fmenulist$[@Fj], "Exit";
 	set @Fmenuref[@Fj], 57005; // 57005='dead' in hex
@@ -1607,17 +1674,25 @@ function	script	QWS_Farray	{
 
 
 function	QWS_Make_Field_Menu	{
-	// Get bit for this field
-	set @tempfieldmenubin,1;
-	if (getarg(0) == 0) goto fieldmenucheck;
-	set @tempfieldmenuloop,0;
-	do {
-		set @tempfieldmenubin, @tempfieldmenubin * 2;
-		set @tempfieldmenuloop, @tempfieldmenuloop + 1;
-	} while (getarg(0) > @tempfieldmenuloop);
-fieldmenucheck:
-	// Check if field is unlocked (using ##QWS_F_Unlock or ##QWS_F_Unlock2)
-	if (getarg(0) > 30) {
+	// Check if field is unlocked using bitmaps:
+	// Fields 0-30: ##QWS_F_Unlock, Fields 31-61: ##QWS_F_Unlock2, Fields 62-92: ##QWS_F_Unlock3
+	if (getarg(0) > 61) {
+		// Third bitmap (fields 62-92)
+		set .@bitindex, getarg(0) - 62;
+		set @tempfieldcheck,1;
+		if (.@bitindex > 0) {
+			set .@loop,0;
+			do {
+				set @tempfieldcheck, @tempfieldcheck * 2;
+				set .@loop, .@loop + 1;
+			} while (.@bitindex > .@loop);
+		}
+		if ((@tempfieldcheck & ##QWS_F_Unlock3) != @tempfieldcheck) {
+			set @Fi,@Fi+1;
+			return;
+		}
+	} else if (getarg(0) > 30) {
+		// Second bitmap (fields 31-61)
 		set .@bitindex, getarg(0) - 31;
 		set @tempfieldcheck,1;
 		if (.@bitindex > 0) {
@@ -1632,6 +1707,15 @@ fieldmenucheck:
 			return;
 		}
 	} else {
+		// First bitmap (fields 0-30)
+		set @tempfieldmenubin,1;
+		if (getarg(0) > 0) {
+			set .@loop,0;
+			do {
+				set @tempfieldmenubin, @tempfieldmenubin * 2;
+				set .@loop, .@loop + 1;
+			} while (getarg(0) > .@loop);
+		}
 		if ((@tempfieldmenubin & ##QWS_F_Unlock) != @tempfieldmenubin) {
 			set @Fi,@Fi+1;
 			return;
@@ -1764,7 +1848,20 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 35;
 
-//----------------BYALAN
+//----------------BYALAN ENTRANCE (Izlude Island)
+	setarray @pDmenuitems$[@Di], "Byalan Entrance";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 1;
+	setarray @DGat$[@Dref], "izlu2dun";
+	setarray @DLevelName$[@Dref], "Island Beach";
+	setarray @DXcoords[@Dref], 112;
+	setarray @DYcoords[@Dref], 87;
+	setarray @DDepth[@Dref], 0;
+
+	QWS_Make_Dungeon_Menu 44;
+
+//----------------BYALAN DUNGEON
 	setarray @pDmenuitems$[@Di], "Byalan Dungeon";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
@@ -2129,6 +2226,19 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 19;
 
+//----------------PAYON CAVE ENTRANCE (Archer Village)
+	setarray @pDmenuitems$[@Di], "Payon Cave Entrance";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 1;
+	setarray @DGat$[@Dref], "pay_arche";
+	setarray @DLevelName$[@Dref], "Archer Village";
+	setarray @DXcoords[@Dref], 39;
+	setarray @DYcoords[@Dref], 135;
+	setarray @DDepth[@Dref], 0;
+
+	QWS_Make_Dungeon_Menu 43;
+
 //----------------PAYON DUNGEON
 	setarray @pDmenuitems$[@Di], "Payon Dungeon";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
@@ -2142,6 +2252,19 @@ function	script	QWS_Darray	{
 	setarray @DDepth[@Dref], 0, 1, 2, 3, 4;
 
 	QWS_Make_Dungeon_Menu 20;
+
+//----------------PYRAMIDS ENTRANCE (Morroc Ruins)
+	setarray @pDmenuitems$[@Di], "Pyramids Entrance";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 1;
+	setarray @DGat$[@Dref], "moc_ruins";
+	setarray @DLevelName$[@Dref], "Ancient Ruins";
+	setarray @DXcoords[@Dref], 64;
+	setarray @DYcoords[@Dref], 166;
+	setarray @DDepth[@Dref], 0;
+
+	QWS_Make_Dungeon_Menu 46;
 
 //----------------PYRAMIDS
 	setarray @pDmenuitems$[@Di], "Pyramids Dungeon";
@@ -2171,7 +2294,20 @@ function	script	QWS_Darray	{
 
 	QWS_Make_Dungeon_Menu 39;
 
-//----------------SPHINX
+//----------------SPHINX ENTRANCE (Desert Field)
+	setarray @pDmenuitems$[@Di], "Sphinx Entrance";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 1;
+	setarray @DGat$[@Dref], "moc_fild19";
+	setarray @DLevelName$[@Dref], "Sphinx Field";
+	setarray @DXcoords[@Dref], 106;
+	setarray @DYcoords[@Dref], 97;
+	setarray @DDepth[@Dref], 0;
+
+	QWS_Make_Dungeon_Menu 47;
+
+//----------------SPHINX DUNGEON
 	setarray @pDmenuitems$[@Di], "Sphinx Dungeon";
 	setarray @pDprice[@Di], $QW_BW_PRICE;
 	setarray @pDfee$[@Di], "$QW_BW_FEE";
@@ -2184,6 +2320,19 @@ function	script	QWS_Darray	{
 	setarray @DDepth[@Dref], 0, 1, 2, 3, 4;
 
 	QWS_Make_Dungeon_Menu 22;
+
+//----------------SUNKEN SHIP ENTRANCE (Alberta Dock)
+	setarray @pDmenuitems$[@Di], "Sunken Ship Entrance";
+	setarray @pDprice[@Di], $QW_BW_PRICE;
+	setarray @pDfee$[@Di], "$QW_BW_FEE";
+	setarray @DLevels[@Di], 1;
+	setarray @DGat$[@Dref], "alb2trea";
+	setarray @DLevelName$[@Dref], "Treasure Dock";
+	setarray @DXcoords[@Dref], 73;
+	setarray @DYcoords[@Dref], 101;
+	setarray @DDepth[@Dref], 0;
+
+	QWS_Make_Dungeon_Menu 45;
 
 //----------------SUNKEN SHIP
 	setarray @pDmenuitems$[@Di], "Sunken Ship Dungeon";
@@ -2248,9 +2397,9 @@ function	script	QWS_Darray	{
 	setarray @DLevels[@Di], 4;
 
 	setarray @DGat$[@Dref], "tur_dun01", "tur_dun02", "tur_dun03", "tur_dun04";
-	setarray @DLevelName$[@Dref], "Outside", "Level 1", "Level 2", "Level 3";
-	setarray @DXcoords[@Dref], 161, 148, 132, 100;
-	setarray @DYcoords[@Dref], 34, 256, 190, 192;
+	setarray @DLevelName$[@Dref], "Entrance", "Level 1", "Level 2", "Level 3";
+	setarray @DXcoords[@Dref], 156, 148, 132, 100;
+	setarray @DYcoords[@Dref], 38, 256, 190, 192;
 	setarray @DDepth[@Dref], 0, 0, 1, 2;
 
 	QWS_Make_Dungeon_Menu 26;
@@ -2489,10 +2638,11 @@ function	script	QWS_Field_Warpra	{
 
 
 function	QWS_F_setbin	{
-	// Use ##QWS_F_Unlock for bits 0-30, ##QWS_F_Unlock2 for bits 31+
+	// Bitmaps: 0-30 = ##QWS_F_Unlock, 31-61 = ##QWS_F_Unlock2, 62-92 = ##QWS_F_Unlock3
 	set @tempsetbindata,1;
 	set .@bitindex, getarg(0);
-	if (.@bitindex > 30) set .@bitindex, .@bitindex - 31;
+	if (.@bitindex > 61) set .@bitindex, .@bitindex - 62;
+	else if (.@bitindex > 30) set .@bitindex, .@bitindex - 31;
 	if (.@bitindex == 0) goto binset;
 	set @temploopsetbin,0;
 	do {
@@ -2500,7 +2650,9 @@ function	QWS_F_setbin	{
 		set @temploopsetbin, @temploopsetbin + 1;
 	} while (.@bitindex > @temploopsetbin);
 binset:
-	if (getarg(0) > 30)
+	if (getarg(0) > 61)
+		set ##QWS_F_Unlock3,(##QWS_F_Unlock3 | @tempsetbindata);
+	else if (getarg(0) > 30)
 		set ##QWS_F_Unlock2,(##QWS_F_Unlock2 | @tempsetbindata);
 	else
 		set ##QWS_F_Unlock,(##QWS_F_Unlock | @tempsetbindata);
@@ -2508,10 +2660,11 @@ binset:
 }
 
 function	QWS_F_getbin	{
-	// Use ##QWS_F_Unlock for bits 0-30, ##QWS_F_Unlock2 for bits 31+
+	// Bitmaps: 0-30 = ##QWS_F_Unlock, 31-61 = ##QWS_F_Unlock2, 62-92 = ##QWS_F_Unlock3
 	set @tempgetbindata,1;
 	set .@bitindex, getarg(0);
-	if (.@bitindex > 30) set .@bitindex, .@bitindex - 31;
+	if (.@bitindex > 61) set .@bitindex, .@bitindex - 62;
+	else if (.@bitindex > 30) set .@bitindex, .@bitindex - 31;
 	if (.@bitindex == 0) goto binget;
 	set @temploopgetbin,0;
 	do {
@@ -2519,7 +2672,9 @@ function	QWS_F_getbin	{
 		set @temploopgetbin, @temploopgetbin + 1;
 	} while (.@bitindex > @temploopgetbin);
 binget:
-	if (getarg(0) > 30) {
+	if (getarg(0) > 61) {
+		if ((@tempgetbindata & ##QWS_F_Unlock3) == @tempgetbindata) return 1;
+	} else if (getarg(0) > 30) {
 		if ((@tempgetbindata & ##QWS_F_Unlock2) == @tempgetbindata) return 1;
 	} else {
 		if ((@tempgetbindata & ##QWS_F_Unlock) == @tempgetbindata) return 1;
@@ -2531,19 +2686,16 @@ binget:
 //============================Warpras==============================
 
 -	script	Warpra#0	-1,{ callfunc "Q_Warpra",1; }
-alb2trea,73,101,4	duplicate(Warpra#0)	Warpra#1	113
-ama_fild01,178,325,1	duplicate(Warpra#0)	Warpra#2	113
-gef_fild10,71,339,4	duplicate(Warpra#0)	Warpra#3	113
-izlu2dun,104,82,4	duplicate(Warpra#0)	Warpra#4	113
-mjolnir_02,85,363,4	duplicate(Warpra#0)	Warpra#5	113
-moc_fild04,207,331,4	duplicate(Warpra#0)	Warpra#6	113
-moc_fild19,106,97,4	duplicate(Warpra#0)	Warpra#7	113
-moc_ruins,64,166,4	duplicate(Warpra#0)	Warpra#8	113
+// Field Warpras moved to dedicated section below:
+// - alb2trea (Sunken Ship) -> Field Warpra #64
+// - izlu2dun (Byalan Island) -> Field Warpra #65
+// - mjolnir_02 -> Field Warpra #66
+// - moc_ruins -> Field Warpra #67
+// - tur_dun01 (Turtle Island) -> Field Warpra #68
+// Removed (already have Field Warpras): gef_fild10, yuno_fild03
+// Removed (invalid/not dungeon entrance): ama_fild01, moc_fild04
 niflheim,197,192,3	duplicate(Warpra#0)	Warpra#9	113
-pay_arche,39,135,4	duplicate(Warpra#0)	Warpra#10	113
-tur_dun01,148,239,4	duplicate(Warpra#0)	Warpra#12	113
 valkyrie,48,35,8	duplicate(Warpra#0)	Warpra#13	113
-yuno_fild03,37,135,4	duplicate(Warpra#0)	Warpra#14	113
 
 alberta,32,240,4	script	Warpra#15	113,{ callfunc "QWS_Town_Warpra",1,"Alberta Town"; close; }
 aldebaran,146,118,4	script	Warpra#16	113,{ callfunc "QWS_Town_Warpra",2,"Aldebaran Town"; close; }
@@ -2623,7 +2775,7 @@ abbey02,149,20,3	script	Warpra Helper#40	112,{ callfunc "QWS_Dungeon_Warpra",40,
 // - 2-portal rule: yuno_fild03, fild05 (from Yuno), fild09, fild12 (from Alde)
 // - Dungeon/Quest access: fild07 (Juperos), fild08 (Kiel Academy), fild02 (Kiel Villa)
 //==================================================================
-yuno_fild03,182,200,4	script	Field Warpra#yf03	112,{ callfunc "QWS_Field_Warpra",0,"yuno_fild03 - El Mes Plateau"; close; }
+// Removed - using Magma Dungeon Entrance Field Warpra instead (field #69)
 yuno_fild05,238,235,4	script	Field Warpra#yf05	112,{ callfunc "QWS_Field_Warpra",1,"yuno_fild05 - El Mes Plateau"; close; }
 yuno_fild09,219,250,4	script	Field Warpra#yf09	112,{ callfunc "QWS_Field_Warpra",2,"yuno_fild09 - Guards Camp"; close; }
 yuno_fild12,201,302,4	script	Field Warpra#yf12	112,{ callfunc "QWS_Field_Warpra",3,"yuno_fild12 - Border Checkpoint"; close; }
@@ -2713,3 +2865,24 @@ pay_fild08,220,285,4	script	Field Warpra#pyf08	112,{ callfunc "QWS_Field_Warpra"
 pay_fild10,200,245,4	script	Field Warpra#pyf10	112,{ callfunc "QWS_Field_Warpra",59,"pay_fild10 - Payon Deep Forest"; close; }
 // [MVP MAP] - May be disabled later to prevent MVP camping
 pay_fild11,150,225,4	script	Field Warpra#pyf11	112,{ callfunc "QWS_Field_Warpra",60,"pay_fild11 - Eddga's Domain"; close; }
+
+// Morroc Fields expansion (warpra 2 tiles right of bounty board)
+moc_fild03,132,144,4	script	Field Warpra#mcf03	112,{ callfunc "QWS_Field_Warpra",61,"moc_fild03 - Sograt Desert Central"; close; }
+moc_fild11,194,210,4	script	Field Warpra#mcf11	112,{ callfunc "QWS_Field_Warpra",53,"moc_fild11 - Sograt Golem Valley"; close; }
+moc_fild13,179,263,4	script	Field Warpra#mcf13	112,{ callfunc "QWS_Field_Warpra",40,"moc_fild13 - Sograt Snake Den"; close; }
+moc_fild16,206,251,4	script	Field Warpra#mcf16	112,{ callfunc "QWS_Field_Warpra",41,"moc_fild16 - Morroc Assassin Guild"; close; }
+// Dimensional Gorge
+moc_fild21,32,198,4	script	Field Warpra#mcf21	112,{ callfunc "QWS_Field_Warpra",21,"moc_fild21 - Dimensional Gorge"; close; }
+moc_fild02,275,264,4	script	Field Warpra#mcf02	112,{ callfunc "QWS_Field_Warpra",28,"moc_fild02 - Morroc Peco Plains"; close; }
+
+// Remaining Field Warpras (dungeon entrances moved to Dungeon menu)
+mjolnir_02,85,357,4	script	Field Warpra#mjo02	112,{ callfunc "QWS_Field_Warpra",62,"mjolnir_02 - Mt. Mjolnir South"; close; }
+yuno_fild03,37,135,4	script	Field Warpra#yf03mag	112,{ callfunc "QWS_Field_Warpra",63,"yuno_fild03 - Magma Dungeon Entrance"; close; }
+
+// Dungeon Entrance Warpras (unlock entrance area separately from main dungeon)
+pay_arche,39,135,4	script	Warpra Helper#payarche	112,{ callfunc "QWS_Dungeon_Warpra",43,"Payon Cave Entrance"; close; }
+izlu2dun,112,87,4	script	Warpra Helper#izludun	112,{ callfunc "QWS_Dungeon_Warpra",44,"Byalan Entrance"; close; }
+alb2trea,73,101,4	script	Warpra Helper#albtrea	112,{ callfunc "QWS_Dungeon_Warpra",45,"Sunken Ship Entrance"; close; }
+moc_ruins,64,166,4	script	Warpra Helper#mocruin	112,{ callfunc "QWS_Dungeon_Warpra",46,"Pyramids Entrance"; close; }
+moc_fild19,106,97,4	script	Warpra Helper#mcf19	112,{ callfunc "QWS_Dungeon_Warpra",47,"Sphinx Entrance"; close; }
+tur_dun01,156,38,4	script	Warpra Helper#turdun1	112,{ callfunc "QWS_Dungeon_Warpra",26,"Turtle Island Dungeon"; close; }

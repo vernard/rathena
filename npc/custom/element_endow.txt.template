@@ -191,38 +191,14 @@ izlude,126,114,4	duplicate(Enchanter)	Enchanter#izl	4_M_SAGE_A
 jawaii,252,139,4	duplicate(Enchanter)	Enchanter#jaw	4_M_SAGE_A
 lighthalzen,159,100,6	duplicate(Enchanter)	Enchanter#lhz	4_M_SAGE_A
 louyang,228,103,4	duplicate(Enchanter)	Enchanter#lou	4_M_SAGE_A
-mid_camp,205,289,6	duplicate(Enchanter)	Enchanter#mid	4_M_SAGE_A
-moc_ruins,74,164,4	duplicate(Enchanter)	Enchanter#moc	4_M_SAGE_A
 morocc,155,97,6	duplicate(Enchanter)	Enchanter#mor	4_M_SAGE_A
 moscovia,222,191,4	duplicate(Enchanter)	Enchanter#mos	4_M_SAGE_A
 niflheim,214,182,5	duplicate(Enchanter)	Enchanter#nif	4_M_SAGE_A
 payon,181,106,4	duplicate(Enchanter)	Enchanter#pay	4_M_SAGE_A
 prontera,165,193,4	duplicate(Enchanter)	Enchanter#prt	4_M_SAGE_A
 rachel,127,116,6	duplicate(Enchanter)	Enchanter#rac	4_M_SAGE_A
-thor_camp,251,74,4	duplicate(Enchanter)	Enchanter#thor	4_M_SAGE_A
 umbala,107,148,3	duplicate(Enchanter)	Enchanter#umb	4_M_SAGE_A
 veins,219,121,4	duplicate(Enchanter)	Enchanter#ve	4_M_SAGE_A
 xmas,145,136,4	duplicate(Enchanter)	Enchanter#xmas	4_M_SAGE_A
 yuno,166,45,4	duplicate(Enchanter)	Enchanter#yuno	4_M_SAGE_A
 
-// Renewal Town Duplicates
-//============================================================
-brasilis,196,221,6	duplicate(Enchanter)	Enchanter#bra	4_M_SAGE_A
-dewata,197,187,4	duplicate(Enchanter)	Enchanter#dew	4_M_SAGE_A
-dicastes01,203,194,4	duplicate(Enchanter)	Enchanter#dic	4_M_SAGE_A
-ecl_in01,47,60,4	duplicate(Enchanter)	Enchanter#ecl	4_M_SAGE_A
-malangdo,134,114,6	duplicate(Enchanter)	Enchanter#mal	4_M_SAGE_A
-malaya,229,204,6	duplicate(Enchanter)	Enchanter#ma	4_M_SAGE_A
-mora,57,152,4	duplicate(Enchanter)	Enchanter#mora	4_M_SAGE_A
-manuk,274,144,6	duplicate(Enchanter)	Enchanter#man	4_M_SAGE_A
-splendide,203,153,4	duplicate(Enchanter)	Enchanter#spl	4_M_SAGE_A
-
-// Field Enchanters (near Quest Warpers, alongside Healers)
-//============================================================
-ama_fild01,185,325,4	duplicate(Enchanter)	Enchanter#ama_fld	4_M_SAGE_A
-gef_fild10,78,339,4	duplicate(Enchanter)	Enchanter#gef_fld	4_M_SAGE_A
-mjolnir_02,92,363,4	duplicate(Enchanter)	Enchanter#mjo_fld	4_M_SAGE_A
-moc_fild04,214,331,4	duplicate(Enchanter)	Enchanter#moc_fld04	4_M_SAGE_A
-moc_fild19,113,97,4	duplicate(Enchanter)	Enchanter#moc_fld19	4_M_SAGE_A
-prt_fild05,280,215,4	duplicate(Enchanter)	Enchanter#prt_fld	4_M_SAGE_A
-yuno_fild03,44,135,4	duplicate(Enchanter)	Enchanter#yuno_fld	4_M_SAGE_A

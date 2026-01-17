@@ -857,7 +857,7 @@ OnInit:
 	setarray .Maps$[0],
 		// Beginner Fields (Lv 1-20)
 		"prt_fild00", "prt_fild01", "prt_fild02", "prt_fild04", "prt_fild05", "prt_fild06", "prt_fild08", "gef_fild00", "mjolnir_01", "pay_fild01",
-		"pay_fild03", "pay_fild08",
+		"pay_fild03", "pay_fild08", "moc_fild12",
 		// Prontera Fields (Lv 17-44)
 		"prt_fild03", "prt_fild07", "prt_fild09", "prt_fild10", "prt_fild11",
 		// Beginner Dungeons (Lv 5-25)
@@ -869,7 +869,10 @@ OnInit:
 		// Low-Mid Dungeons (Lv 20-40)
 		"anthell01", "anthell02", "moc_pryd01", "pay_dun01",
 		// Mid Fields (Lv 30-50)
+		"moc_fild03", "moc_fild11", "moc_fild13", "moc_fild16",
 		"gef_fild02", "gef_fild03", "gef_fild10",
+		// Dimensional Gorge (Lv 25-90+)
+		"moc_fild20", "moc_fild21", "moc_fild22",
 		// Mid Dungeons (Lv 30-55)
 		"orcsdun01", "orcsdun02", "pay_dun02", "iz_dun01", "iz_dun02", "gef_dun00",
 		// Upper-Mid Dungeons (Lv 40-65)
@@ -959,8 +962,18 @@ OnInit:
 	set .MapName_pay_fild09$, "Payon Forest";
 	set .MapName_moc_fild01$, "Sograt Desert";
 	set .MapName_moc_fild02$, "Sograt Desert";
+	set .MapName_moc_fild12$, "Sograt Desert";
 	set .MapName_moc_fild17$, "Sograt Desert";
 	set .MapName_moc_fild18$, "Sograt Desert";
+	// Morroc Mid Fields
+	set .MapName_moc_fild03$, "Sograt Desert";
+	set .MapName_moc_fild11$, "Sograt Desert";
+	set .MapName_moc_fild13$, "Sograt Desert";
+	set .MapName_moc_fild16$, "Sograt Desert";
+	// Dimensional Gorge
+	set .MapName_moc_fild20$, "Dimensional Gorge";
+	set .MapName_moc_fild21$, "Dimensional Gorge";
+	set .MapName_moc_fild22$, "Dimensional Gorge";
 	set .MapName_mjolnir_02$, "Mt. Mjolnir";
 	// Payon Mid-High Fields
 	set .MapName_pay_fild04$, "Poring Island";
@@ -1217,11 +1230,38 @@ OnInit:
 	setarray .Mobs_moc_fild02[0], 1019, 1113;  // Peco Peco (Lv 19), Drops (Lv 3)
 	set .Mobs_moc_fild02_count, 2;
 
+	setarray .Mobs_moc_fild12[0], 1049, 1113, 1047;  // Picky (Lv 3), Drops (Lv 3), Peco Peco Egg (Lv 2)
+	set .Mobs_moc_fild12_count, 3;
+
 	setarray .Mobs_moc_fild17[0], 1127;  // Hode (1127)
 	set .Mobs_moc_fild17_count, 1;
 
 	setarray .Mobs_moc_fild18[0], 1055, 1042;  // Muka (1055), Steel Chonchon (1042)
 	set .Mobs_moc_fild18_count, 2;
+
+	// Morroc Mid Fields
+	setarray .Mobs_moc_fild03[0], 1033, 1277, 1116;  // Elder Willow (32), Greatest General (45), Eggyra (27)
+	set .Mobs_moc_fild03_count, 3;
+
+	setarray .Mobs_moc_fild11[0], 1040, 1127, 1055;  // Golem (36), Hode (23), Muka (23)
+	set .Mobs_moc_fild11_count, 3;
+
+	setarray .Mobs_moc_fild13[0], 1030, 1106, 1037;  // Anacondaq (23), Desert Wolf (27), Side Winder (43)
+	set .Mobs_moc_fild13_count, 3;
+
+	setarray .Mobs_moc_fild16[0], 1165, 1127, 1138;  // Sandman (44), Hode (23), Magnolia (26)
+	set .Mobs_moc_fild16_count, 3;
+
+	// Dimensional Gorge
+	setarray .Mobs_moc_fild20[0], 1001, 1058, 1095;  // Scorpion (24), Metaller (22), Andre (17)
+	set .Mobs_moc_fild20_count, 3;
+
+	setarray .Mobs_moc_fild21[0], 1040, 1278, 1366;  // Golem (36), Stalactic Golem (60), Lava Golem (68)
+	set .Mobs_moc_fild21_count, 3;
+
+	// [MVP MAP] Wounded Morocc spawns here
+	setarray .Mobs_moc_fild22[0], 1918, 1919, 1920;  // Incarnation of Morocc variants (Lv 88-90)
+	set .Mobs_moc_fild22_count, 3;
 
 	setarray .Mobs_mjolnir_02[0], 1155, 1004, 1118;  // Petite (Lv 44), Hornet (Lv 8), Flora (Lv 26)
 	set .Mobs_mjolnir_02_count, 3;
@@ -2190,12 +2230,31 @@ pay_fild04,22,165,4	duplicate(BountyBoard)	Bounty Board#pay_fild04	4_BOARD3
 pay_fild04,200,200,4	duplicate(BountyBoard)	Bounty Board#pay_fild04_2	4_BOARD3
 moc_fild01,80,240,4	duplicate(BountyBoard)	Bounty Board#moc_fild01	4_BOARD3
 moc_fild01,180,180,4	duplicate(BountyBoard)	Bounty Board#moc_fild01_2	4_BOARD3
-moc_fild02,69,340,4	duplicate(BountyBoard)	Bounty Board#moc_fild02	4_BOARD3
-moc_fild02,200,200,4	duplicate(BountyBoard)	Bounty Board#moc_fild02_2	4_BOARD3
+moc_fild02,73,335,4	duplicate(BountyBoard)	Bounty Board#moc_fild02	4_BOARD3
+moc_fild02,273,264,4	duplicate(BountyBoard)	Bounty Board#moc_fild02_2	4_BOARD3
+// moc_fild12 - Picky, Drops, Peco Peco Egg (beginner area near portal)
+moc_fild12,161,368,4	duplicate(BountyBoard)	Bounty Board#moc_fild12	4_BOARD3
 moc_fild17,216,364,4	duplicate(BountyBoard)	Bounty Board#moc_fild17	4_BOARD3
-moc_fild17,200,200,4	duplicate(BountyBoard)	Bounty Board#moc_fild17_2	4_BOARD3
 moc_fild18,160,377,4	duplicate(BountyBoard)	Bounty Board#moc_fild18	4_BOARD3
 moc_fild18,200,200,4	duplicate(BountyBoard)	Bounty Board#moc_fild18_2	4_BOARD3
+// moc_fild03 - Elder Willow, Greatest General, Eggyra (warpra 2 right)
+moc_fild03,130,144,4	duplicate(BountyBoard)	Bounty Board#moc_fild03	4_BOARD3
+// moc_fild11 - Golem, Hode, Muka (warpra 2 right)
+moc_fild11,192,210,4	duplicate(BountyBoard)	Bounty Board#moc_fild11	4_BOARD3
+// moc_fild13 - Anacondaq, Desert Wolf, Side Winder (warpra 2 right)
+moc_fild13,177,263,4	duplicate(BountyBoard)	Bounty Board#moc_fild13	4_BOARD3
+// moc_fild16 - Sandman, Hode (warpra 2 right, near Assassin Guild)
+moc_fild16,204,251,4	duplicate(BountyBoard)	Bounty Board#moc_fild16	4_BOARD3
+// Dimensional Gorge
+// moc_fild20 - Entry to Dimensional Gorge
+moc_fild20,212,340,4	duplicate(BountyBoard)	Bounty Board#moc_fild20	4_BOARD3
+moc_fild20,200,180,4	duplicate(BountyBoard)	Bounty Board#moc_fild20_2	4_BOARD3
+// moc_fild21 - Golem variants, Incarnations
+moc_fild21,28,198,4	duplicate(BountyBoard)	Bounty Board#moc_fild21	4_BOARD3
+moc_fild21,150,150,4	duplicate(BountyBoard)	Bounty Board#moc_fild21_2	4_BOARD3
+// moc_fild22 - [MVP MAP] Wounded Morocc, Incarnations
+moc_fild22,35,198,4	duplicate(BountyBoard)	Bounty Board#moc_fild22	4_BOARD3
+moc_fild22,180,180,4	duplicate(BountyBoard)	Bounty Board#moc_fild22_2	4_BOARD3
 mjolnir_02,152,152,4	duplicate(BountyBoard)	Bounty Board#mjolnir_02	4_BOARD3
 mjolnir_02,250,200,4	duplicate(BountyBoard)	Bounty Board#mjolnir_02_2	4_BOARD3
 
@@ -2316,9 +2375,11 @@ in_sphinx4,123,118,4	duplicate(BountyBoard)	Bounty Board#in_sphinx4_2	4_BOARD3
 in_sphinx5,100,103,4	duplicate(BountyBoard)	Bounty Board#in_sphinx5	4_BOARD3
 
 // ==================== TURTLE ISLAND (Lv 58-75) ====================
-// tur_dun01 - Turtle Island F1 (warp to F2 at 154,241)
-tur_dun01,154,237,4	duplicate(BountyBoard)	Bounty Board#tur_dun01	4_BOARD3
-tur_dun01,100,150,4	duplicate(BountyBoard)	Bounty Board#tur_dun01_2	4_BOARD3
+// tur_dun01 - Turtle Island F1
+// Entrance bounty near sailor/Warpra at 156,38
+tur_dun01,154,38,4	duplicate(BountyBoard)	Bounty Board#tur_dun01	4_BOARD3
+// Deep bounty near F2 warp at 154,241
+tur_dun01,154,237,4	duplicate(BountyBoard)	Bounty Board#tur_dun01_2	4_BOARD3
 
 // tur_dun02 - Turtle Island F2 (entry at 148,268)
 tur_dun02,148,264,4	duplicate(BountyBoard)	Bounty Board#tur_dun02	4_BOARD3
@@ -2452,7 +2513,8 @@ yuno_fild02,181,211,4	duplicate(BountyBoard)	Bounty Board#yuno_fild02_2	4_BOARD3
 
 // yuno_fild03 - El Mes Plateau (town direction: fild04 at 375,90)
 yuno_fild03,184,23,4	duplicate(BountyBoard)	Bounty Board#yuno_fild03	4_BOARD3
-yuno_fild03,180,200,4	duplicate(BountyBoard)	Bounty Board#yuno_fild03_2	4_BOARD3
+// Center bounty moved near Magma Dungeon entrance (Field Warpra at 37,135)
+yuno_fild03,39,135,4	duplicate(BountyBoard)	Bounty Board#yuno_fild03_2	4_BOARD3
 
 // yuno_fild04 - El Mes Plateau (entry from Yuno city at 231,288)
 yuno_fild04,235,282,4	duplicate(BountyBoard)	Bounty Board#yuno_fild04	4_BOARD3
