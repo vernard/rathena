@@ -1354,8 +1354,8 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 152;
 
 	QWS_Make_Field_Menu 42;
-//----------------GEF FIELD 05 - Geffen Field
-	setarray @pFmenuitems$[@Fi], "gef_fild05 - Geffen Field";
+//----------------GEF FIELD 05 - Wild Rose Garden
+	setarray @pFmenuitems$[@Fi], "gef_fild05 - Wild Rose Garden";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "gef_fild05";
@@ -1363,8 +1363,8 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 240;
 
 	QWS_Make_Field_Menu 36;
-//----------------GEF FIELD 06 - Geffen Field
-	setarray @pFmenuitems$[@Fi], "gef_fild06 - Geffen Field";
+//----------------GEF FIELD 06 - Petite Valley
+	setarray @pFmenuitems$[@Fi], "gef_fild06 - Petite Valley";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "gef_fild06";
@@ -1372,8 +1372,8 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 29;
 
 	QWS_Make_Field_Menu 37;
-//----------------GEF FIELD 08 - Geffen Field
-	setarray @pFmenuitems$[@Fi], "gef_fild08 - Geffen Field";
+//----------------GEF FIELD 08 - Golem Plains
+	setarray @pFmenuitems$[@Fi], "gef_fild08 - Golem Plains";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "gef_fild08";
@@ -1381,8 +1381,8 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 149;
 
 	QWS_Make_Field_Menu 43;
-//----------------GEF FIELD 09 - Geffen Field
-	setarray @pFmenuitems$[@Fi], "gef_fild09 - Geffen Field";
+//----------------GEF FIELD 09 - Ambernite Woods
+	setarray @pFmenuitems$[@Fi], "gef_fild09 - Ambernite Woods";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "gef_fild09";
@@ -1390,8 +1390,8 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 50;
 
 	QWS_Make_Field_Menu 38;
-//----------------GEF FIELD 10 - Geffen Field
-	setarray @pFmenuitems$[@Fi], "gef_fild10 - Geffen Field";
+//----------------GEF FIELD 10 - Orc Lady Camp
+	setarray @pFmenuitems$[@Fi], "gef_fild10 - Orc Lady Camp";
 	setarray @pFprice[@Fi], $QW_FW_PRICE;
 
 	setarray @pFmap$[@Fi], "gef_fild10";
@@ -2832,11 +2832,11 @@ cmd_fild07,256,113,4	script	Field Warpra#cf07	112,{ callfunc "QWS_Field_Warpra",
 cmd_fild08,116,152,4	script	Field Warpra#cf08	112,{ callfunc "QWS_Field_Warpra",42,"cmd_fild08 - Fortress St. Darmain East"; close; }
 
 // Geffen Region - 7 fields
-gef_fild05,201,240,4	script	Field Warpra#gf05	112,{ callfunc "QWS_Field_Warpra",36,"gef_fild05 - Geffen Field"; close; }
-gef_fild06,217,29,4	script	Field Warpra#gf06	112,{ callfunc "QWS_Field_Warpra",37,"gef_fild06 - Geffen Field"; close; }
-gef_fild08,233,149,4	script	Field Warpra#gf08	112,{ callfunc "QWS_Field_Warpra",43,"gef_fild08 - Geffen Field"; close; }
-gef_fild09,221,50,4	script	Field Warpra#gf09	112,{ callfunc "QWS_Field_Warpra",38,"gef_fild09 - Geffen Field"; close; }
-gef_fild10,233,196,4	script	Field Warpra#gf10	112,{ callfunc "QWS_Field_Warpra",44,"gef_fild10 - Geffen Field"; close; }
+gef_fild05,201,240,4	script	Field Warpra#gf05	112,{ callfunc "QWS_Field_Warpra",36,"gef_fild05 - Wild Rose Garden"; close; }
+gef_fild06,217,29,4	script	Field Warpra#gf06	112,{ callfunc "QWS_Field_Warpra",37,"gef_fild06 - Petite Valley"; close; }
+gef_fild08,233,149,4	script	Field Warpra#gf08	112,{ callfunc "QWS_Field_Warpra",43,"gef_fild08 - Golem Plains"; close; }
+gef_fild09,221,50,4	script	Field Warpra#gf09	112,{ callfunc "QWS_Field_Warpra",38,"gef_fild09 - Ambernite Woods"; close; }
+gef_fild10,233,196,4	script	Field Warpra#gf10	112,{ callfunc "QWS_Field_Warpra",44,"gef_fild10 - Orc Lady Camp"; close; }
 gef_fild12,201,226,4	script	Field Warpra#gf12	112,{ callfunc "QWS_Field_Warpra",39,"gef_fild12 - Kordt Forest"; close; }
 gef_fild13,299,242,4	script	Field Warpra#gf13	112,{ callfunc "QWS_Field_Warpra",45,"gef_fild13 - Britoniah"; close; }
 

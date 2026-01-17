@@ -96,28 +96,24 @@ function	script	F_BuildSuggestions	{
 		setarray .@m_id[0],   1831, 1833, 1867, 1219, 1379, 1864, 1366, 1837, 1098, 1865, 1208, 1202, 1319, 1866, 1201, 1315, 1316, 1401, 1618, 1318, 1382, 1384, 1405, 1774, 1884, 1132, 1314, 1772, 1883, 1154, 1207, 1206, 1321, 1773, 1777, 1775, 1869, 1072, 1692, 1194, 1260, 1771, 1322, 1117, 1195, 1780, 1376, 1778, 1276, 1310;
 		setarray .@m_lv[0],     91,   85,   81,   79,   78,   77,   77,   76,   75,   75,   74,   73,   72,   71,   71,   71,   70,   69,   69,   68,   67,   66,   65,   65,   63,   63,   63,   62,   61,   61,   61,   61,   61,   61,   60,   60,   60,   60,   60,   59,   59,   59,   58,   58,   58,   57,   57,   55,   55,   55;
 		setarray .@m_map$[0], "thor_v01", "thor_v01", "abbey02", "gl_cas02", "mag_dun02", "abbey01", "mag_dun01", "thor_v01", "in_sphinx4", "abbey02", "gl_cas02", "gl_prison1", "tur_dun02", "abbey01", "gl_prison", "tur_dun03", "tur_dun02", "ama_dun03", "ein_fild02", "tur_dun03", "mag_dun02", "mag_dun02", "ama_dun03", "ra_san03", "mosk_dun03", "gl_knt02", "tur_dun01", "ra_san01", "mosk_dun02", "in_sphinx5", "gl_sew03", "gl_sew04", "tur_dun01", "ra_san01", "ice_dun02", "ice_dun02", "abbey03", "mag_dun01", "hu_fild01", "gl_dun01", "gl_in01", "ra_san01", "tur_dun01", "gl_chyard", "c_tower1", "ra_fild01", "yuno_fild07", "ice_dun03", "gl_knt01", "gl_dun02";
-		setarray .@m_loc$[0], "Thor F1", "Thor F1", "Abbey F2", "GH Castle F2", "Magma F2", "Abbey F1", "Magma F1", "Thor F1", "Sphinx F4", "Abbey F2", "GH Castle F2", "GH Prison", "Turtle F2", "Abbey F1", "GH Underprison", "Turtle F3", "Turtle F2", "Amatsu F3", "Einbroch Field", "Turtle F3", "Magma F2", "Magma F2", "Amatsu F3", "Rachel Sanc F3", "Moscovia F3", "GH Chivalry F2", "Turtle F1", "Rachel Sanc F1", "Moscovia F2", "Sphinx F5", "GH Culvert F3", "GH Culvert F4", "Turtle F1", "Rachel Sanc F1", "Ice Cave F2", "Ice Cave F2", "Abbey F3", "Magma F1", "Hugel Field", "GH Cave F1", "GH Inner", "Rachel Sanc F1", "Turtle F1", "GH Churchyard", "Clock Tower F1", "Rachel Field", "Yuno Field", "Ice Cave F3", "GH Chivalry F1", "GH Cave F2";
 		.@total = 50;
 	} else if (.@plv >= 50) {
 		// Mid-high monsters (Lv 40-65) - 50 monsters, sorted by level desc
 		setarray .@m_id[0],   1132, 1207, 1206, 1194, 1154, 1195, 1117, 1780, 1376, 1386, 1193, 1180, 1197, 1163, 1149, 1715, 1192, 1257, 1369, 1882, 1253, 1029, 1681, 1680, 1155, 1129, 1372, 1494, 1403, 1165, 1781, 1143, 1209, 1139, 1170, 1880, 1061, 1882, 1130, 1378, 1156, 1037, 1776, 1036, 1179, 1110, 1271, 1881, 1162, 1368;
 		setarray .@m_lv[0],     63,   61,   61,   59,   61,   58,   58,   57,   57,   54,   53,   53,   53,   52,   52,   50,   53,   51,   50,   49,   48,   47,   46,   45,   44,   44,   43,   47,   47,   46,   46,   41,   41,   40,   40,   42,   43,   49,   38,   39,   38,   37,   42,   40,   34,   33,   40,   39,   35,   36;
 		setarray .@m_map$[0], "gl_knt01", "gl_sew03", "gl_sew04", "gl_dun01", "in_sphinx5", "c_tower1", "gl_chyard", "ra_fild01", "yuno_fild07", "yuno_fild06", "c_tower3", "pay_dun04", "gl_prison", "gl_cas01", "in_sphinx4", "hu_fild03", "gl_chyard", "gl_prison1", "yuno_fild08", "mosk_dun02", "gl_sew01", "moc_pryd04", "ra_fild02", "ra_fild05", "mjolnir_02", "pay_dun04", "yuno_fild06", "yuno_fild02", "ama_dun03", "ve_fild03", "ra_fild02", "gl_in01", "gl_sew02", "lou_fild01", "pay_dun03", "mosk_dun01", "gef_dun01", "mosk_dun03", "gef_dun01", "yuno_fild12", "gef_fild06", "in_sphinx5", "ice_dun01", "gl_chyard", "gef_dun02", "pay_dun04", "cmd_fild01", "mosk_dun01", "yuno_fild05", "yuno_fild03";
-		setarray .@m_loc$[0], "GH Chivalry F1", "GH Culvert F3", "GH Culvert F4", "GH Cave F1", "Sphinx F5", "Clock Tower F1", "GH Churchyard", "Rachel Field", "Yuno Field", "Yuno Field", "Clock Tower F3", "Payon Cave F5", "GH Underprison", "GH Castle F1", "Sphinx F4", "Hugel Field", "GH Churchyard", "GH Prison", "Yuno Field", "Moscovia F2", "GH Culvert F1", "Pyramid F4", "Rachel Field", "Rachel Field", "Mt. Mjolnir", "Payon Cave F5", "Yuno Field", "Yuno Field", "Amatsu F3", "Veins Field", "Rachel Field", "GH Inner", "GH Culvert F2", "Louyang Field", "Payon Cave F4", "Moscovia F1", "Geffen Dungeon F2", "Moscovia F3", "Geffen Dungeon F2", "Yuno Field", "Geffen Field", "Sphinx F5", "Ice Cave F1", "GH Churchyard", "Geffen Dungeon F3", "Payon Cave F5", "Comodo Field", "Moscovia F1", "Yuno Field", "Yuno Field";
 		.@total = 50;
 	} else if (.@plv >= 30) {
 		// Mid-level monsters (Lv 20-45) - 50 monsters, sorted by level desc
 		setarray .@m_id[0],   1264, 1155, 1152, 1153, 1189, 1188, 1026, 1028, 1782, 1029, 1016, 1114, 1035, 1166, 1118, 1077, 1076, 1023, 1784, 1068, 1067, 1127, 1055, 1105, 1160, 1095, 1024, 1019, 1128, 1042, 1025, 1103, 1015, 1018, 1012, 1031, 1119, 1030, 1057, 1094, 1266, 1282, 1258, 1134, 1133, 1040, 1139, 1317, 1273, 1261;
 		setarray .@m_lv[0],     42,   44,   36,   35,   54,   32,   30,   32,   31,   47,   31,   29,   28,   27,   26,   26,   15,   24,   23,   23,   25,   23,   17,   21,   20,   20,   16,   19,   18,   17,   16,   15,   14,   16,    9,   11,   30,   23,   21,   37,   17,   36,   33,   36,   36,   40,   40,   43,   52,   47;
 		setarray .@m_map$[0], "iz_dun03", "mjolnir_02", "orcsdun02", "orcsdun01", "gef_fild14", "pay_dun02", "pay_dun02", "pay_dun01", "ra_fild03", "moc_pryd04", "pay_dun01", "yuno_fild01", "gef_dun00", "gef_fild03", "mjolnir_02", "gef_dun00", "pay_dun00", "gef_fild02", "ra_fild04", "iz_dun02", "iz_dun01", "moc_fild17", "moc_fild02", "anthell01", "anthell01", "anthell02", "pay_fild06", "moc_fild02", "mjolnir_01", "moc_fild18", "mjolnir_02", "mjolnir_01", "pay_dun00", "gef_fild13", "gef_fild01", "yuno_fild01", "cmd_fild05", "cmd_fild09", "gef_fild02", "gef_fild09", "cmd_fild04", "cmd_fild06", "cmd_fild06", "gef_fild12", "gef_fild06", "gef_fild08", "gef_fild06", "cmd_fild02", "gef_fild10", "gef_fild05";
-		setarray .@m_loc$[0], "Byalan F4", "Mt. Mjolnir", "Orc Dungeon F2", "Orc Dungeon F1", "Geffen Field", "Payon Cave F3", "Payon Cave F3", "Payon Cave F2", "Rachel Field", "Pyramid F4", "Payon Cave F2", "Yuno Field", "Geffen Dungeon F1", "Geffen Field", "Mt. Mjolnir", "Geffen Dungeon F1", "Payon Cave F1", "Geffen Field", "Rachel Field", "Byalan F3", "Byalan F2", "Sograt Desert", "Sograt Desert", "Ant Hell F1", "Ant Hell F1", "Ant Hell F2", "Payon Forest", "Sograt Desert", "Mt. Mjolnir", "Sograt Desert", "Mt. Mjolnir", "Mt. Mjolnir", "Payon Cave F1", "Geffen Field", "Geffen Field", "Yuno Field", "Comodo Field", "Comodo Field", "Geffen Field", "Geffen Field", "Comodo Field", "Comodo Field", "Comodo Field", "Geffen Field", "Geffen Field", "Geffen Field", "Geffen Field", "Comodo Field", "Geffen Field", "Geffen Field";
 		.@total = 50;
 	} else {
 		// Beginner monsters (Lv 1-25) - 50 monsters, sorted by level desc
 		setarray .@m_id[0],   1127, 1105, 1160, 1019, 1104, 1055, 1042, 1025, 1103, 1076, 1015, 1167, 1024, 1011, 1128, 1107, 1014, 1051, 1009, 1048, 1008, 1113, 1007, 1063, 1002, 1010, 1018, 1012, 1069, 1066, 1067, 1068, 1031, 1057, 1005, 1053, 1004, 1174, 1116, 1060, 1406, 1400, 1613, 1619, 1074, 1254, 1266, 1628, 1627, 1782;
 		setarray .@m_lv[0],     23,   21,   20,   19,   18,   17,   17,   16,   15,   15,   14,    7,   16,   10,   18,    9,    5,    6,    5,    1,    3,    3,    2,    1,    1,    4,   16,    9,   30,   23,   25,   23,   11,   21,    5,   17,    8,   19,   29,   31,   41,   43,   26,   28,   26,   23,   17,   36,   23,   31;
 		setarray .@m_map$[0], "moc_fild17", "anthell01", "anthell01", "moc_fild02", "mjolnir_01", "moc_fild02", "moc_fild18", "mjolnir_02", "mjolnir_01", "pay_dun00", "pay_dun00", "pay_fild01", "pay_fild06", "mjolnir_01", "mjolnir_01", "moc_fild01", "pay_fild01", "prt_sewb1", "moc_fild01", "prt_sewb1", "gef_fild00", "prt_fild05", "gef_fild00", "prt_fild08", "prt_fild08", "pay_fild01", "gef_fild13", "gef_fild01", "iz_dun03", "iz_dun01", "iz_dun01", "iz_dun02", "moc_pryd01", "gef_fild02", "prt_sewb2", "prt_sewb2", "mjolnir_01", "yuno_fild09", "pay_dun01", "ama_fild01", "ama_fild01", "ama_fild01", "ein_fild03", "ein_fild08", "cmd_fild02", "cmd_fild02", "cmd_fild04", "hu_fild06", "hu_fild02", "ra_fild03";
-		setarray .@m_loc$[0], "Sograt Desert", "Ant Hell F1", "Ant Hell F1", "Sograt Desert", "Mt. Mjolnir", "Sograt Desert", "Sograt Desert", "Mt. Mjolnir", "Mt. Mjolnir", "Payon Cave F1", "Payon Cave F1", "Payon Forest", "Payon Forest", "Mt. Mjolnir", "Mt. Mjolnir", "Sograt Desert", "Payon Forest", "Prontera Culvert F1", "Sograt Desert", "Prontera Culvert F1", "Geffen Field", "Prontera Field", "Geffen Field", "Prontera Field", "Prontera Field", "Payon Forest", "Geffen Field", "Geffen Field", "Byalan F4", "Byalan F2", "Byalan F2", "Byalan F3", "Pyramid F1", "Geffen Field", "Prontera Culvert F2", "Prontera Culvert F2", "Mt. Mjolnir", "Yuno Field", "Payon Cave F2", "Amatsu Field", "Amatsu Field", "Amatsu Field", "Einbroch Field", "Einbroch Field", "Comodo Field", "Comodo Field", "Comodo Field", "Hugel Field", "Hugel Field", "Rachel Field";
 		.@total = 50;
 	}
 
@@ -153,7 +149,7 @@ function	script	F_BuildSuggestions	{
 			.@d_mob[.@disc_cnt] = .@m_id[.@j];
 			.@d_lv[.@disc_cnt] = .@m_lv[.@j];
 			.@d_map$[.@disc_cnt] = .@m_map$[.@j];
-			.@d_loc$[.@disc_cnt] = .@m_loc$[.@j];
+			.@d_loc$[.@disc_cnt] = getd(".MapName_" + .@m_map$[.@j] + "$");
 			.@d_exp[.@disc_cnt] = .@exp_pct;
 			.@d_zeny[.@disc_cnt] = .@zeny;
 			.@d_cd[.@disc_cnt] = .@cd_pct;
@@ -163,7 +159,7 @@ function	script	F_BuildSuggestions	{
 			.@o_mob[.@motd_cnt] = .@m_id[.@j];
 			.@o_lv[.@motd_cnt] = .@m_lv[.@j];
 			.@o_map$[.@motd_cnt] = .@m_map$[.@j];
-			.@o_loc$[.@motd_cnt] = .@m_loc$[.@j];
+			.@o_loc$[.@motd_cnt] = getd(".MapName_" + .@m_map$[.@j] + "$");
 			.@o_exp[.@motd_cnt] = .@exp_pct;
 			.@o_zeny[.@motd_cnt] = .@zeny;
 			.@o_cd[.@motd_cnt] = .@cd_pct;
@@ -173,7 +169,7 @@ function	script	F_BuildSuggestions	{
 			.@r_mob[.@reg_cnt] = .@m_id[.@j];
 			.@r_lv[.@reg_cnt] = .@m_lv[.@j];
 			.@r_map$[.@reg_cnt] = .@m_map$[.@j];
-			.@r_loc$[.@reg_cnt] = .@m_loc$[.@j];
+			.@r_loc$[.@reg_cnt] = getd(".MapName_" + .@m_map$[.@j] + "$");
 			.@r_exp[.@reg_cnt] = .@exp_pct;
 			.@r_zeny[.@reg_cnt] = .@zeny;
 			.@r_cd[.@reg_cnt] = .@cd_pct;
@@ -934,216 +930,216 @@ OnInit:
 
 	// ==================== MAP NAMES ====================
 	// Beginner Fields
-	set .MapName_prt_fild00$, "Mjolnir Foothills";
-	set .MapName_prt_fild01$, "Hidden Temple Road";
-	set .MapName_prt_fild02$, "Capitolina Road";
-	set .MapName_prt_fild03$, "St. Capitolina";
-	set .MapName_prt_fild04$, "Creamy Fields";
-	set .MapName_prt_fild05$, "West Gate";
-	set .MapName_prt_fild06$, "East Gate";
-	set .MapName_prt_fild07$, "Southern Crossroads";
-	set .MapName_prt_fild08$, "Izlude Road";
-	set .MapName_prt_fild09$, "Desert Frontier";
-	set .MapName_prt_fild10$, "Savage Plains";
-	set .MapName_prt_fild11$, "Goblin Territory";
-	set .MapName_gef_fild00$, "Geffen Field";
-	set .MapName_mjolnir_01$, "Mt. Mjolnir";
-	set .MapName_pay_fild01$, "Payon Forest";
-	set .MapName_pay_fild03$, "Payon Forest";
-	set .MapName_pay_fild08$, "Payon Outskirts";
+	set .MapName_prt_fild00$, "prt_fild00 - Mjolnir Foothills";
+	set .MapName_prt_fild01$, "prt_fild01 - Hidden Temple Road";
+	set .MapName_prt_fild02$, "prt_fild02 - Capitolina Road";
+	set .MapName_prt_fild03$, "prt_fild03 - St. Capitolina";
+	set .MapName_prt_fild04$, "prt_fild04 - Creamy Fields";
+	set .MapName_prt_fild05$, "prt_fild05 - West Gate";
+	set .MapName_prt_fild06$, "prt_fild06 - East Gate";
+	set .MapName_prt_fild07$, "prt_fild07 - Southern Crossroads";
+	set .MapName_prt_fild08$, "prt_fild08 - Izlude Road";
+	set .MapName_prt_fild09$, "prt_fild09 - Desert Frontier";
+	set .MapName_prt_fild10$, "prt_fild10 - Savage Plains";
+	set .MapName_prt_fild11$, "prt_fild11 - Goblin Territory";
+	set .MapName_gef_fild00$, "gef_fild00 - Geffen South";
+	set .MapName_mjolnir_01$, "mjolnir_01 - Mt. Mjolnir";
+	set .MapName_pay_fild01$, "pay_fild01 - Willow Woods";
+	set .MapName_pay_fild03$, "pay_fild03 - Payon South";
+	set .MapName_pay_fild08$, "pay_fild08 - Payon Outskirts";
 	// Beginner Dungeons
-	set .MapName_prt_sewb1$, "Prontera Culvert F1";
-	set .MapName_prt_sewb2$, "Prontera Culvert F2";
-	set .MapName_pay_dun00$, "Payon Cave F1";
+	set .MapName_prt_sewb1$, "prt_sewb1 - Prontera Culvert F1";
+	set .MapName_prt_sewb2$, "prt_sewb2 - Prontera Culvert F2";
+	set .MapName_pay_dun00$, "pay_dun00 - Payon Cave F1";
 	// Low-Mid Fields
-	set .MapName_pay_fild02$, "Payon Forest";
-	set .MapName_pay_fild05$, "Payon Forest";
-	set .MapName_pay_fild06$, "Payon Forest";
-	set .MapName_pay_fild09$, "Payon Forest";
-	set .MapName_moc_fild01$, "Sograt Desert";
-	set .MapName_moc_fild02$, "Sograt Desert";
-	set .MapName_moc_fild12$, "Sograt Desert";
-	set .MapName_moc_fild17$, "Sograt Desert";
-	set .MapName_moc_fild18$, "Sograt Desert";
+	set .MapName_pay_fild02$, "pay_fild02 - Wolf Territory";
+	set .MapName_pay_fild05$, "pay_fild05 - Dragon Tail Valley";
+	set .MapName_pay_fild06$, "pay_fild06 - Wormtail Woods";
+	set .MapName_pay_fild09$, "pay_fild09 - Smokie Forest";
+	set .MapName_moc_fild01$, "moc_fild01 - Desert Wolf Pups";
+	set .MapName_moc_fild02$, "moc_fild02 - Morroc Peco Plains";
+	set .MapName_moc_fild12$, "moc_fild12 - Peco Nesting Ground";
+	set .MapName_moc_fild17$, "moc_fild17 - Hode Burrows";
+	set .MapName_moc_fild18$, "moc_fild18 - Muka Plains";
 	// Morroc Mid Fields
-	set .MapName_moc_fild03$, "Sograt Desert";
-	set .MapName_moc_fild11$, "Sograt Desert";
-	set .MapName_moc_fild13$, "Sograt Desert";
-	set .MapName_moc_fild16$, "Sograt Desert";
+	set .MapName_moc_fild03$, "moc_fild03 - Sograt Desert Central";
+	set .MapName_moc_fild11$, "moc_fild11 - Sograt Golem Valley";
+	set .MapName_moc_fild13$, "moc_fild13 - Sograt Snake Den";
+	set .MapName_moc_fild16$, "moc_fild16 - Morroc Assassin Guild";
 	// Dimensional Gorge
-	set .MapName_moc_fild20$, "Dimensional Gorge";
-	set .MapName_moc_fild21$, "Dimensional Gorge";
-	set .MapName_moc_fild22$, "Dimensional Gorge";
-	set .MapName_mjolnir_02$, "Mt. Mjolnir";
+	set .MapName_moc_fild20$, "moc_fild20 - Dimensional Gorge";
+	set .MapName_moc_fild21$, "moc_fild21 - Dimensional Gorge";
+	set .MapName_moc_fild22$, "moc_fild22 - Dimensional Gorge";
+	set .MapName_mjolnir_02$, "mjolnir_02 - Mt. Mjolnir";
 	// Payon Mid-High Fields
-	set .MapName_pay_fild04$, "Poring Island";
-	set .MapName_pay_fild07$, "Payon Forest";
-	set .MapName_pay_fild10$, "Payon Deep Forest";
-	set .MapName_pay_fild11$, "Eddga's Domain";
+	set .MapName_pay_fild04$, "pay_fild04 - Poring Island";
+	set .MapName_pay_fild07$, "pay_fild07 - Elder Willow Forest";
+	set .MapName_pay_fild10$, "pay_fild10 - Payon Deep Forest";
+	set .MapName_pay_fild11$, "pay_fild11 - Eddga's Domain";
 	// Low-Mid Dungeons
-	set .MapName_anthell01$, "Ant Hell F1";
-	set .MapName_anthell02$, "Ant Hell F2";
-	set .MapName_moc_pryd01$, "Pyramid F1";
-	set .MapName_pay_dun01$, "Payon Cave F2";
+	set .MapName_anthell01$, "anthell01 - Ant Hell F1";
+	set .MapName_anthell02$, "anthell02 - Ant Hell F2";
+	set .MapName_moc_pryd01$, "moc_pryd01 - Pyramid F1";
+	set .MapName_pay_dun01$, "pay_dun01 - Payon Cave F2";
 	// Mid Fields
-	set .MapName_gef_fild02$, "Geffen Field (Orcs)";
-	set .MapName_gef_fild03$, "Geffen Field (Orcs)";
-	set .MapName_gef_fild10$, "Geffen Field (Orcs)";
+	set .MapName_gef_fild02$, "gef_fild02 - Orc Frontier";
+	set .MapName_gef_fild03$, "gef_fild03 - Orc Outpost";
+	set .MapName_gef_fild10$, "gef_fild10 - Orc Lady Camp";
 	// Mid Dungeons
-	set .MapName_orcsdun01$, "Orc Dungeon F1";
-	set .MapName_orcsdun02$, "Orc Dungeon F2";
-	set .MapName_pay_dun02$, "Payon Cave F3";
-	set .MapName_iz_dun01$, "Byalan Island F2";
-	set .MapName_iz_dun02$, "Byalan Island F3";
-	set .MapName_gef_dun00$, "Geffen Dungeon F1";
+	set .MapName_orcsdun01$, "orcsdun01 - Orc Dungeon F1";
+	set .MapName_orcsdun02$, "orcsdun02 - Orc Dungeon F2";
+	set .MapName_pay_dun02$, "pay_dun02 - Payon Cave F3";
+	set .MapName_iz_dun01$, "iz_dun01 - Byalan Island F2";
+	set .MapName_iz_dun02$, "iz_dun02 - Byalan Island F3";
+	set .MapName_gef_dun00$, "gef_dun00 - Geffen Dungeon F1";
 	// Upper-Mid Dungeons
-	set .MapName_pay_dun03$, "Payon Cave F4";
-	set .MapName_pay_dun04$, "Payon Cave F5";
-	set .MapName_gef_dun01$, "Geffen Dungeon F2";
-	set .MapName_moc_pryd04$, "Pyramid B1";
-	set .MapName_iz_dun03$, "Byalan Island F4";
+	set .MapName_pay_dun03$, "pay_dun03 - Payon Cave F4";
+	set .MapName_pay_dun04$, "pay_dun04 - Payon Cave F5";
+	set .MapName_gef_dun01$, "gef_dun01 - Geffen Dungeon F2";
+	set .MapName_moc_pryd04$, "moc_pryd04 - Pyramid B1";
+	set .MapName_iz_dun03$, "iz_dun03 - Byalan Island F4";
 	// High-Level Dungeons
-	set .MapName_c_tower1$, "Clock Tower F1";
-	set .MapName_c_tower3$, "Clock Tower F3";
-	set .MapName_gef_dun02$, "Geffen Dungeon F3";
-	set .MapName_iz_dun04$, "Byalan Island F5";
+	set .MapName_c_tower1$, "c_tower1 - Clock Tower F1";
+	set .MapName_c_tower3$, "c_tower3 - Clock Tower F3";
+	set .MapName_gef_dun02$, "gef_dun02 - Geffen Dungeon F3";
+	set .MapName_iz_dun04$, "iz_dun04 - Byalan Island F5";
 	// Themed
-	set .MapName_treasure01$, "Sunken Ship F1";
-	set .MapName_xmas_dun01$, "Toy Factory F1";
-	set .MapName_beach_dun$, "Comodo Beach Cave";
+	set .MapName_treasure01$, "treasure01 - Sunken Ship F1";
+	set .MapName_xmas_dun01$, "xmas_dun01 - Toy Factory F1";
+	set .MapName_beach_dun$, "beach_dun - Comodo Beach Cave";
 	// Glast Heim (Lv 41-79)
-	set .MapName_gl_in01$, "Glast Heim Inner";
-	set .MapName_gl_prison$, "GH Underprison F1";
-	set .MapName_gl_cas01$, "GH Castle F1";
-	set .MapName_gl_cas02$, "GH Castle F2";
-	set .MapName_gl_knt01$, "GH Chivalry F1";
-	set .MapName_gl_knt02$, "GH Chivalry F2";
-	set .MapName_gl_chyard$, "GH Churchyard";
-	set .MapName_gl_sew03$, "GH Culvert F3";
-	set .MapName_gl_sew04$, "GH Culvert F4";
+	set .MapName_gl_in01$, "gl_in01 - Glast Heim Inner";
+	set .MapName_gl_prison$, "gl_prison - GH Underprison F1";
+	set .MapName_gl_cas01$, "gl_cas01 - GH Castle F1";
+	set .MapName_gl_cas02$, "gl_cas02 - GH Castle F2";
+	set .MapName_gl_knt01$, "gl_knt01 - GH Chivalry F1";
+	set .MapName_gl_knt02$, "gl_knt02 - GH Chivalry F2";
+	set .MapName_gl_chyard$, "gl_chyard - GH Churchyard";
+	set .MapName_gl_sew03$, "gl_sew03 - GH Culvert F3";
+	set .MapName_gl_sew04$, "gl_sew04 - GH Culvert F4";
 	// Sphinx (Lv 52-75)
-	set .MapName_in_sphinx4$, "Sphinx F4";
-	set .MapName_in_sphinx5$, "Sphinx F5";
+	set .MapName_in_sphinx4$, "in_sphinx4 - Sphinx F4";
+	set .MapName_in_sphinx5$, "in_sphinx5 - Sphinx F5";
 	// Turtle Island (Lv 61-75)
-	set .MapName_tur_dun01$, "Turtle Island F1";
-	set .MapName_tur_dun02$, "Turtle Island F2";
-	set .MapName_tur_dun03$, "Turtle Island F3";
+	set .MapName_tur_dun01$, "tur_dun01 - Turtle Island F1";
+	set .MapName_tur_dun02$, "tur_dun02 - Turtle Island F2";
+	set .MapName_tur_dun03$, "tur_dun03 - Turtle Island F3";
 	// Coal Mine (Lv 43-78)
-	set .MapName_mag_dun01$, "Magma Dungeon F1";
-	set .MapName_mag_dun02$, "Magma Dungeon F2";
+	set .MapName_mag_dun01$, "mag_dun01 - Magma Dungeon F1";
+	set .MapName_mag_dun02$, "mag_dun02 - Magma Dungeon F2";
 	// Ice Cave (Lv 42-60)
-	set .MapName_ice_dun02$, "Ice Cave F2";
-	set .MapName_ice_dun03$, "Ice Cave F3";
+	set .MapName_ice_dun02$, "ice_dun02 - Ice Cave F2";
+	set .MapName_ice_dun03$, "ice_dun03 - Ice Cave F3";
 	// Amatsu Dungeon (Lv 47-69)
-	set .MapName_ama_dun03$, "Amatsu Dungeon F3";
+	set .MapName_ama_dun03$, "ama_dun03 - Amatsu Dungeon F3";
 	// Nameless Abbey (Lv 71-81)
-	set .MapName_abbey01$, "Nameless Abbey F1";
-	set .MapName_abbey02$, "Nameless Abbey F2";
-	set .MapName_abbey03$, "Nameless Abbey F3";
+	set .MapName_abbey01$, "abbey01 - Nameless Abbey F1";
+	set .MapName_abbey02$, "abbey02 - Nameless Abbey F2";
+	set .MapName_abbey03$, "abbey03 - Nameless Abbey F3";
 	// Thor Volcano (Lv 76-91)
-	set .MapName_thor_v01$, "Thor Volcano F1";
-	set .MapName_thor_v02$, "Thor Volcano F2";
+	set .MapName_thor_v01$, "thor_v01 - Thor Volcano F1";
+	set .MapName_thor_v02$, "thor_v02 - Thor Volcano F2";
 	// Additional Ice Cave floor
-	set .MapName_ice_dun01$, "Ice Cave F1";
+	set .MapName_ice_dun01$, "ice_dun01 - Ice Cave F1";
 	// Additional Thor Volcano floor
-	set .MapName_thor_v03$, "Thor Volcano F3";
+	set .MapName_thor_v03$, "thor_v03 - Thor Volcano F3";
 	// Additional Beach Dungeon floors
-	set .MapName_beach_dun2$, "Beach Cave F2";
-	set .MapName_beach_dun3$, "Beach Cave F3";
+	set .MapName_beach_dun2$, "beach_dun2 - Beach Cave F2";
+	set .MapName_beach_dun3$, "beach_dun3 - Beach Cave F3";
 	// Moscovia Dungeon (Lv 39-63)
-	set .MapName_mosk_dun01$, "Moscovia Forest F1";
-	set .MapName_mosk_dun02$, "Moscovia Forest F2";
-	set .MapName_mosk_dun03$, "Moscovia Forest F3";
+	set .MapName_mosk_dun01$, "mosk_dun01 - Moscovia Forest F1";
+	set .MapName_mosk_dun02$, "mosk_dun02 - Moscovia Forest F2";
+	set .MapName_mosk_dun03$, "mosk_dun03 - Moscovia Forest F3";
 	// Rachel Sanctuary (Lv 53-65)
-	set .MapName_ra_san01$, "Rachel Sanctuary Entrance";
-	set .MapName_ra_san03$, "Rachel Sanctuary Central";
+	set .MapName_ra_san01$, "ra_san01 - Rachel Sanctuary Entrance";
+	set .MapName_ra_san03$, "ra_san03 - Rachel Sanctuary Central";
 	// Additional GH maps
-	set .MapName_gl_church$, "GH Church";
-	set .MapName_gl_prison1$, "GH Underprison F2";
-	set .MapName_gl_sew01$, "GH Culvert F1";
-	set .MapName_gl_sew02$, "GH Culvert F2";
-	set .MapName_gl_dun01$, "GH Lowest Cave F1";
-	set .MapName_gl_dun02$, "GH Lowest Cave F2";
+	set .MapName_gl_church$, "gl_church - GH Church";
+	set .MapName_gl_prison1$, "gl_prison1 - GH Underprison F2";
+	set .MapName_gl_sew01$, "gl_sew01 - GH Culvert F1";
+	set .MapName_gl_sew02$, "gl_sew02 - GH Culvert F2";
+	set .MapName_gl_dun01$, "gl_dun01 - GH Lowest Cave F1";
+	set .MapName_gl_dun02$, "gl_dun02 - GH Lowest Cave F2";
 	// Yuno/Juno Fields
-	set .MapName_yuno_fild01$, "Juno Field (Border)";
-	set .MapName_yuno_fild02$, "Juno Field (Kiel Cottage)";
-	set .MapName_yuno_fild03$, "El Mes Plateau";
-	set .MapName_yuno_fild04$, "El Mes Plateau";
-	set .MapName_yuno_fild05$, "El Mes Plateau";
-	set .MapName_yuno_fild06$, "Juno Field";
-	set .MapName_yuno_fild07$, "El Mes Gorge";
-	set .MapName_yuno_fild08$, "Juno Field (Academy)";
-	set .MapName_yuno_fild09$, "Juno Field (Guards Camp)";
-	set .MapName_yuno_fild10$, "Juno Field";
-	set .MapName_yuno_fild11$, "Juno Field";
-	set .MapName_yuno_fild12$, "Juno Field (Border)";
+	set .MapName_yuno_fild01$, "yuno_fild01 - Juno Field (Border)";
+	set .MapName_yuno_fild02$, "yuno_fild02 - Juno Field (Kiel Cottage)";
+	set .MapName_yuno_fild03$, "yuno_fild03 - El Mes Plateau (Geographer)";
+	set .MapName_yuno_fild04$, "yuno_fild04 - El Mes Plateau (South)";
+	set .MapName_yuno_fild05$, "yuno_fild05 - El Mes Plateau (Rafflesia)";
+	set .MapName_yuno_fild06$, "yuno_fild06 - Sleeper Fields";
+	set .MapName_yuno_fild07$, "yuno_fild07 - El Mes Gorge";
+	set .MapName_yuno_fild08$, "yuno_fild08 - Juno Field (Academy)";
+	set .MapName_yuno_fild09$, "yuno_fild09 - Juno Field (Guards Camp)";
+	set .MapName_yuno_fild10$, "yuno_fild10 - Beetle King Valley";
+	set .MapName_yuno_fild11$, "yuno_fild11 - Juno Sleeper Den";
+	set .MapName_yuno_fild12$, "yuno_fild12 - Juno Field (Border)";
 	// Einbroch Fields
-	set .MapName_ein_fild01$, "Mine Field";
-	set .MapName_ein_fild02$, "Mine Field";
-	set .MapName_ein_fild03$, "Einbroch Field";
-	set .MapName_ein_fild04$, "Einbroch Field";
-	set .MapName_ein_fild05$, "Einbroch Field";
-	set .MapName_ein_fild06$, "Goat Valley";
-	set .MapName_ein_fild07$, "Metaling Plains";
-	set .MapName_ein_fild08$, "Einbroch Field";
-	set .MapName_ein_fild09$, "Einbech Field";
-	set .MapName_ein_fild10$, "Porcellio Plains";
+	set .MapName_ein_fild01$, "ein_fild01 - Punk Territory";
+	set .MapName_ein_fild02$, "ein_fild02 - Driller Mines";
+	set .MapName_ein_fild03$, "ein_fild03 - Metaling Fields";
+	set .MapName_ein_fild04$, "ein_fild04 - Holden Plains";
+	set .MapName_ein_fild05$, "ein_fild05 - Mineral Quarry";
+	set .MapName_ein_fild06$, "ein_fild06 - Goat Valley";
+	set .MapName_ein_fild07$, "ein_fild07 - Metaling Plains";
+	set .MapName_ein_fild08$, "ein_fild08 - Porcellio Flats";
+	set .MapName_ein_fild09$, "ein_fild09 - Einbech Field";
+	set .MapName_ein_fild10$, "ein_fild10 - Porcellio Plains";
 	// Rachel Fields
-	set .MapName_ra_fild01$, "Rachel Field";
-	set .MapName_ra_fild02$, "Muscipular Valley";
-	set .MapName_ra_fild03$, "Rachel Field";
-	set .MapName_ra_fild04$, "Rachel Field";
-	set .MapName_ra_fild05$, "Rachel Field";
-	set .MapName_ra_fild06$, "Rachel Field";
-	set .MapName_ra_fild07$, "Roween Plains";
-	set .MapName_ra_fild08$, "Stapo Field";
-	set .MapName_ra_fild09$, "Drosera Field";
-	set .MapName_ra_fild10$, "Galion Plains";
-	set .MapName_ra_fild11$, "Rachel Field";
-	set .MapName_ra_fild12$, "Rachel Field";
-	set .MapName_ra_fild13$, "Border Post";
+	set .MapName_ra_fild01$, "ra_fild01 - Gryphon Hills";
+	set .MapName_ra_fild02$, "ra_fild02 - Muscipular Valley";
+	set .MapName_ra_fild03$, "ra_fild03 - Galion Territory";
+	set .MapName_ra_fild04$, "ra_fild04 - Roween Pastures";
+	set .MapName_ra_fild05$, "ra_fild05 - Hill Wind Valley";
+	set .MapName_ra_fild06$, "ra_fild06 - Anopheles Marsh";
+	set .MapName_ra_fild07$, "ra_fild07 - Roween Plains";
+	set .MapName_ra_fild08$, "ra_fild08 - Stapo Field";
+	set .MapName_ra_fild09$, "ra_fild09 - Drosera Field";
+	set .MapName_ra_fild10$, "ra_fild10 - Galion Plains";
+	set .MapName_ra_fild11$, "ra_fild11 - Rachel South";
+	set .MapName_ra_fild12$, "ra_fild12 - Rachel East";
+	set .MapName_ra_fild13$, "ra_fild13 - Border Post";
 	// Hugel Fields
-	set .MapName_hu_fild01$, "Thanatos Tower";
-	set .MapName_hu_fild02$, "Novus Field";
-	set .MapName_hu_fild03$, "Grove Forest";
-	set .MapName_hu_fild04$, "Petite Valley";
-	set .MapName_hu_fild05$, "Abyss Lake Ent.";
-	set .MapName_hu_fild06$, "Hugel Field";
-	set .MapName_hu_fild07$, "Hugel Field";
+	set .MapName_hu_fild01$, "hu_fild01 - Thanatos Tower";
+	set .MapName_hu_fild02$, "hu_fild02 - Novus Field";
+	set .MapName_hu_fild03$, "hu_fild03 - Grove Forest";
+	set .MapName_hu_fild04$, "hu_fild04 - Petite Valley";
+	set .MapName_hu_fild05$, "hu_fild05 - Abyss Lake Ent.";
+	set .MapName_hu_fild06$, "hu_fild06 - Caramel Plains";
+	set .MapName_hu_fild07$, "hu_fild07 - Deleter Territory";
 	// Veins Fields
-	set .MapName_ve_fild01$, "Gryphon Field";
-	set .MapName_ve_fild02$, "Imp Field";
-	set .MapName_ve_fild03$, "Thor Volcano";
-	set .MapName_ve_fild04$, "Magma Field";
-	set .MapName_ve_fild05$, "Kasa Field";
-	set .MapName_ve_fild06$, "Veins Field";
-	set .MapName_ve_fild07$, "Veins Field";
+	set .MapName_ve_fild01$, "ve_fild01 - Gryphon Field";
+	set .MapName_ve_fild02$, "ve_fild02 - Imp Field";
+	set .MapName_ve_fild03$, "ve_fild03 - Thor Volcano";
+	set .MapName_ve_fild04$, "ve_fild04 - Magma Field";
+	set .MapName_ve_fild05$, "ve_fild05 - Kasa Field";
+	set .MapName_ve_fild06$, "ve_fild06 - Stapo Meadow";
+	set .MapName_ve_fild07$, "ve_fild07 - Raggler Coast";
 	// Comodo Fields
-	set .MapName_cmd_fild01$, "Papuchicha Forest";
-	set .MapName_cmd_fild02$, "Kokomo Beach";
-	set .MapName_cmd_fild03$, "Zenhai Marsh";
-	set .MapName_cmd_fild04$, "Kokomo Beach";
-	set .MapName_cmd_fild05$, "Papuchicha Forest";
-	set .MapName_cmd_fild06$, "Fortress St. Darmain (West)";
-	set .MapName_cmd_fild07$, "Pharos Beacon Island";
-	set .MapName_cmd_fild08$, "Fortress St. Darmain (East)";
-	set .MapName_cmd_fild09$, "Fortress St. Darmain (South)";
-	// Geffen Fields (missing)
-	set .MapName_gef_fild01$, "Geffen Field";
-	set .MapName_gef_fild04$, "Geffen Field";
-	set .MapName_gef_fild05$, "Geffen Field";
-	set .MapName_gef_fild06$, "Geffen Field";
-	set .MapName_gef_fild07$, "Geffen Field";
-	set .MapName_gef_fild08$, "Geffen Field";
-	set .MapName_gef_fild09$, "Geffen Field";
-	set .MapName_gef_fild11$, "Geffen Field (Goblins)";
-	set .MapName_gef_fild12$, "Kordt Forest";
-	set .MapName_gef_fild13$, "Britoniah";
-	set .MapName_gef_fild14$, "West Orc Village";
+	set .MapName_cmd_fild01$, "cmd_fild01 - Papuchicha Forest (West)";
+	set .MapName_cmd_fild02$, "cmd_fild02 - Kokomo Beach (West)";
+	set .MapName_cmd_fild03$, "cmd_fild03 - Zenhai Marsh";
+	set .MapName_cmd_fild04$, "cmd_fild04 - Kokomo Beach (East)";
+	set .MapName_cmd_fild05$, "cmd_fild05 - Papuchicha Forest (East)";
+	set .MapName_cmd_fild06$, "cmd_fild06 - Fortress St. Darmain (West)";
+	set .MapName_cmd_fild07$, "cmd_fild07 - Pharos Beacon Island";
+	set .MapName_cmd_fild08$, "cmd_fild08 - Fortress St. Darmain (East)";
+	set .MapName_cmd_fild09$, "cmd_fild09 - Fortress St. Darmain (South)";
+	// Geffen Fields
+	set .MapName_gef_fild01$, "gef_fild01 - Frog Pond";
+	set .MapName_gef_fild04$, "gef_fild04 - Geffen North";
+	set .MapName_gef_fild05$, "gef_fild05 - Wild Rose Garden";
+	set .MapName_gef_fild06$, "gef_fild06 - Petite Valley";
+	set .MapName_gef_fild07$, "gef_fild07 - Fabre Meadow";
+	set .MapName_gef_fild08$, "gef_fild08 - Golem Plains";
+	set .MapName_gef_fild09$, "gef_fild09 - Ambernite Woods";
+	set .MapName_gef_fild11$, "gef_fild11 - Goblin Camp";
+	set .MapName_gef_fild12$, "gef_fild12 - Kordt Forest";
+	set .MapName_gef_fild13$, "gef_fild13 - Britoniah";
+	set .MapName_gef_fild14$, "gef_fild14 - West Orc Village";
 	// Louyang Field
-	set .MapName_lou_fild01$, "Luoyang Field";
+	set .MapName_lou_fild01$, "lou_fild01 - Luoyang Field";
 	// Amatsu Field
-	set .MapName_ama_fild01$, "Amatsu Field";
+	set .MapName_ama_fild01$, "ama_fild01 - Amatsu Field";
 
 	// ==================== MONSTER LISTS ====================
 	// Format: setarray .Mobs_<mapname>[0], <mob_id1>, <mob_id2>, ...
@@ -3210,7 +3206,7 @@ L_SuggestDisplay:
 			.@reward$ = @suggest_exp[.@i] + "% " + .@zeny_k + "k";
 		}
 
-		mes "  ^777777Lv" + @suggest_lv[.@i] + "^000000 " + .@name$ + " " + .@reward$;
+		mes "Lv" + @suggest_lv[.@i] + " ^0055FF" + .@name$ + "^000000 (" + @suggest_mob[.@i] + ") - " + .@reward$;
 		.@show_count++;
 		@suggest_shown++;
 	}

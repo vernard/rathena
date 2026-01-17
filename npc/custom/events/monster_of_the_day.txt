@@ -92,7 +92,7 @@ prontera,164,175,5	script	Monster Hunter Board	4_BOARD3,{
 	if (.@max_upcoming > 50) set .@max_upcoming, 50;
 	.@per_page = 10;
 
-	query_sql "SELECT ms.mob_id, ms.mob_name, TIMESTAMPDIFF(MINUTE, NOW(), ms.start_time), COALESCE(mm.map_display, '') FROM event_motd_schedule ms LEFT JOIN event_motd_monsters mm ON ms.mob_id = mm.mob_id WHERE ms.start_time > NOW() ORDER BY ms.start_time LIMIT " + .@max_upcoming, .@up_ids, .@up_names$, .@up_mins, .@up_locs$;
+	query_sql "SELECT mob_id, mob_name, TIMESTAMPDIFF(MINUTE, NOW(), start_time) FROM event_motd_schedule WHERE start_time > NOW() ORDER BY start_time LIMIT " + .@max_upcoming, .@up_ids, .@up_names$, .@up_mins;
 
 	.@total = getarraysize(.@up_ids);
 	.@page = 0;
@@ -124,10 +124,7 @@ L_ShowUpcoming:
 
 		// Get level for display
 		.@up_lv = getmonsterinfo(.@up_ids[.@i], MOB_LV);
-		mes "^0055FF"+.@up_names$[.@i]+"^000000 Lv"+.@up_lv+" - in "+.@until$;
-		if (.@up_locs$[.@i] != "") {
-			mes "  ^777777@ "+.@up_locs$[.@i]+"^000000";
-		}
+		mes "Lv"+.@up_lv+" ^0055FF"+.@up_names$[.@i]+"^000000 ("+.@up_ids[.@i]+") - in "+.@until$;
 	}
 	next;
 
