@@ -399,9 +399,9 @@ S_CheckMOTDRotation:
 		query_sql "SELECT has_bounty FROM event_motd_monsters WHERE mob_id = "+.@mob_id, .@has_bounty;
 
 		if (.@has_bounty) {
-			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP, Drops & Hunt Points for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+			announce "Monster of the Day: "+.@mob_name$+" ("+.@mob_id+")! 3x EXP, Drops & Hunt Points for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 		} else {
-			announce "Monster of the Day: "+.@mob_name$+"! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+			announce "Monster of the Day: "+.@mob_name$+" ("+.@mob_id+")! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 		}
 
 		debugmes "[EventScheduler] MOTD rotated to: "+.@mob_name$+" ("+.@mob_id+")";

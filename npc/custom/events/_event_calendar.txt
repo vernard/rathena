@@ -906,7 +906,7 @@ L_ChangeMOTD:
 
 	// Announce the change
 	query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE id = "+.@slot_id, .@mins_left;
-	announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+	announce "Monster of the Day changed: "+.@mob_name$+" ("+.@mob_id+")! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 
 	mes "[Events Manager]";
 	mes "MOTD changed to ^0000FF"+.@mob_name$+"^000000!";
@@ -973,7 +973,7 @@ L_EditMOTDSchedule:
 		set $@CurrentMOTDName$, .@mob_name$;
 
 		query_sql "SELECT TIMESTAMPDIFF(MINUTE, NOW(), end_time) FROM event_motd_schedule WHERE id = "+.@edit_slot_id, .@mins_left;
-		announce "Monster of the Day changed: "+.@mob_name$+"! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
+		announce "Monster of the Day changed: "+.@mob_name$+" ("+.@mob_id+")! 3x EXP & Drops for "+.@mins_left+" minutes!", bc_all, 0x00FF00;
 	}
 
 	callsub S_InvalidateCache;

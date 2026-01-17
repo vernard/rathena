@@ -313,7 +313,7 @@ L_Reshuffle:
 	set $@CurrentMOTDName$, .@new_mob_name$;
 
 	// Announce
-	announce "[Monster Hunter] " + strcharinfo(0) + " reshuffled the target! New Monster of the Day: " + .@new_mob_name$ + " - 3x EXP & Drops for " + .@mins_left + " minutes!", bc_all, 0x00FF00;
+	announce "[Monster Hunter] " + strcharinfo(0) + " reshuffled the target! New Monster of the Day: " + .@new_mob_name$ + " (" + .@new_mob_id + ") - 3x EXP & Drops for " + .@mins_left + " minutes!", bc_all, 0x00FF00;
 
 	mes "[Monster Hunter Board]";
 	mes "^00FF00Monster reshuffled!^000000";
@@ -466,7 +466,7 @@ L_GM_ChangeMonster:
 			mes "^0055FF" + .@new_mob_name$ + "^000000";
 
 			// Announce
-			announce "[MOTD] Featured monster changed: " + .@new_mob_name$ + "!", bc_all, 0xFFD700;
+			announce "[MOTD] Featured monster changed: " + .@new_mob_name$ + " (" + .@new_mob_id + ")!", bc_all, 0xFFD700;
 			close;
 
 		case 2:
@@ -487,7 +487,7 @@ L_GM_ChangeMonster:
 			mes "Monster changed to:";
 			mes "^0055FF" + .@mob_name$ + "^000000";
 
-			announce "[MOTD] Featured monster changed: " + .@mob_name$ + "!", bc_all, 0xFFD700;
+			announce "[MOTD] Featured monster changed: " + .@mob_name$ + " (" + .@mob_id + ")!", bc_all, 0xFFD700;
 			close;
 
 		case 3:
