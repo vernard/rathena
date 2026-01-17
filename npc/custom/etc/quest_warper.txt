@@ -1563,6 +1563,42 @@ function	script	QWS_Farray	{
 	setarray @pFYcoords[@Fi], 160;
 
 	QWS_Make_Field_Menu 56;
+//----------------PAYON FIELD 07 - Central hub (connects 4 maps)
+	setarray @pFmenuitems$[@Fi], "pay_fild07 - Payon Forest Hub";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "pay_fild07";
+	setarray @pFXcoords[@Fi], 200;
+	setarray @pFYcoords[@Fi], 195;
+
+	QWS_Make_Field_Menu 57;
+//----------------PAYON FIELD 08 - Doomed Swords quest (Mysterious Man)
+	setarray @pFmenuitems$[@Fi], "pay_fild08 - Payon Outskirts";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "pay_fild08";
+	setarray @pFXcoords[@Fi], 220;
+	setarray @pFYcoords[@Fi], 285;
+
+	QWS_Make_Field_Menu 58;
+//----------------PAYON FIELD 10 - High level grinding (Nine Tail, Dokebi)
+	setarray @pFmenuitems$[@Fi], "pay_fild10 - Payon Deep Forest";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "pay_fild10";
+	setarray @pFXcoords[@Fi], 200;
+	setarray @pFYcoords[@Fi], 245;
+
+	QWS_Make_Field_Menu 59;
+//----------------PAYON FIELD 11 - [MVP MAP] Eddga spawn
+	setarray @pFmenuitems$[@Fi], "pay_fild11 - Eddga's Domain";
+	setarray @pFprice[@Fi], $QW_FW_PRICE;
+
+	setarray @pFmap$[@Fi], "pay_fild11";
+	setarray @pFXcoords[@Fi], 150;
+	setarray @pFYcoords[@Fi], 225;
+
+	QWS_Make_Field_Menu 60;
 
 //----------------Exit option
 	set @Fmenulist$[@Fj], "Exit";
@@ -2670,3 +2706,10 @@ prt_fild09,202,200,4	script	Field Warpra#pf09	112,{ callfunc "QWS_Field_Warpra",
 ra_fild01,228,325,4	script	Field Warpra#rf01	112,{ callfunc "QWS_Field_Warpra",54,"ra_fild01 - Rachel Outskirts"; close; }
 ra_fild03,141,355,4	script	Field Warpra#rf03	112,{ callfunc "QWS_Field_Warpra",55,"ra_fild03 - Arunafeltz Road"; close; }
 cmd_fild01,57,160,4	script	Field Warpra#cf01	112,{ callfunc "QWS_Field_Warpra",56,"cmd_fild01 - Comodo Beach"; close; }
+
+// Payon Fields expansion
+pay_fild07,200,195,4	script	Field Warpra#pyf07	112,{ callfunc "QWS_Field_Warpra",57,"pay_fild07 - Payon Forest Hub"; close; }
+pay_fild08,220,285,4	script	Field Warpra#pyf08	112,{ callfunc "QWS_Field_Warpra",58,"pay_fild08 - Payon Outskirts"; close; }
+pay_fild10,200,245,4	script	Field Warpra#pyf10	112,{ callfunc "QWS_Field_Warpra",59,"pay_fild10 - Payon Deep Forest"; close; }
+// [MVP MAP] - May be disabled later to prevent MVP camping
+pay_fild11,150,225,4	script	Field Warpra#pyf11	112,{ callfunc "QWS_Field_Warpra",60,"pay_fild11 - Eddga's Domain"; close; }

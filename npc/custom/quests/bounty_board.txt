@@ -857,12 +857,15 @@ OnInit:
 	setarray .Maps$[0],
 		// Beginner Fields (Lv 1-20)
 		"prt_fild00", "prt_fild01", "prt_fild02", "prt_fild04", "prt_fild05", "prt_fild06", "prt_fild08", "gef_fild00", "mjolnir_01", "pay_fild01",
+		"pay_fild03", "pay_fild08",
 		// Prontera Fields (Lv 17-44)
 		"prt_fild03", "prt_fild07", "prt_fild09", "prt_fild10", "prt_fild11",
 		// Beginner Dungeons (Lv 5-25)
 		"prt_sewb1", "prt_sewb2", "pay_dun00",
 		// Low-Mid Fields (Lv 15-35)
-		"pay_fild06", "moc_fild01", "moc_fild02", "moc_fild17", "moc_fild18", "mjolnir_02",
+		"pay_fild02", "pay_fild05", "pay_fild06", "pay_fild09", "moc_fild01", "moc_fild02", "moc_fild17", "moc_fild18", "mjolnir_02",
+		// Payon Mid-High Fields (Lv 29-52)
+		"pay_fild04", "pay_fild07", "pay_fild10", "pay_fild11",
 		// Low-Mid Dungeons (Lv 20-40)
 		"anthell01", "anthell02", "moc_pryd01", "pay_dun01",
 		// Mid Fields (Lv 30-50)
@@ -943,17 +946,27 @@ OnInit:
 	set .MapName_gef_fild00$, "Geffen Field";
 	set .MapName_mjolnir_01$, "Mt. Mjolnir";
 	set .MapName_pay_fild01$, "Payon Forest";
+	set .MapName_pay_fild03$, "Payon Forest";
+	set .MapName_pay_fild08$, "Payon Outskirts";
 	// Beginner Dungeons
 	set .MapName_prt_sewb1$, "Prontera Culvert F1";
 	set .MapName_prt_sewb2$, "Prontera Culvert F2";
 	set .MapName_pay_dun00$, "Payon Cave F1";
 	// Low-Mid Fields
+	set .MapName_pay_fild02$, "Payon Forest";
+	set .MapName_pay_fild05$, "Payon Forest";
 	set .MapName_pay_fild06$, "Payon Forest";
+	set .MapName_pay_fild09$, "Payon Forest";
 	set .MapName_moc_fild01$, "Sograt Desert";
 	set .MapName_moc_fild02$, "Sograt Desert";
 	set .MapName_moc_fild17$, "Sograt Desert";
 	set .MapName_moc_fild18$, "Sograt Desert";
 	set .MapName_mjolnir_02$, "Mt. Mjolnir";
+	// Payon Mid-High Fields
+	set .MapName_pay_fild04$, "Poring Island";
+	set .MapName_pay_fild07$, "Payon Forest";
+	set .MapName_pay_fild10$, "Payon Deep Forest";
+	set .MapName_pay_fild11$, "Eddga's Domain";
 	// Low-Mid Dungeons
 	set .MapName_anthell01$, "Ant Hell F1";
 	set .MapName_anthell02$, "Ant Hell F2";
@@ -1169,6 +1182,12 @@ OnInit:
 	setarray .Mobs_pay_fild01[0], 1014, 1010;  // Spore (Lv 16), Willow (Lv 4)
 	set .Mobs_pay_fild01_count, 2;
 
+	setarray .Mobs_pay_fild03[0], 1002, 1010, 1063;  // Poring (Lv 1), Willow (Lv 4), Lunatic (Lv 1)
+	set .Mobs_pay_fild03_count, 3;
+
+	setarray .Mobs_pay_fild08[0], 1014, 1010, 1002;  // Spore (Lv 16), Willow (Lv 4), Poring (Lv 1)
+	set .Mobs_pay_fild08_count, 3;
+
 	// Beginner Dungeons (Lv 5-25)
 	setarray .Mobs_prt_sewb1[0], 1048, 1051;  // Thief Bug Egg (1048), Thief Bug (1051)
 	set .Mobs_prt_sewb1_count, 2;
@@ -1180,8 +1199,17 @@ OnInit:
 	set .Mobs_pay_dun00_count, 2;
 
 	// Low-Mid Fields (Lv 15-35)
+	setarray .Mobs_pay_fild02[0], 1013, 1025, 1031;  // Wolf (Lv 35), Boa (Lv 13), Poporing (Lv 11)
+	set .Mobs_pay_fild02_count, 3;
+
+	setarray .Mobs_pay_fild05[0], 1077, 1321, 1031;  // Poison Spore (Lv 19), Dragon Tail (Lv 37), Poporing (Lv 11)
+	set .Mobs_pay_fild05_count, 3;
+
 	setarray .Mobs_pay_fild06[0], 1024, 1014;  // Wormtail (Lv 16), Spore (Lv 16)
 	set .Mobs_pay_fild06_count, 2;
+
+	setarray .Mobs_pay_fild09[0], 1056, 1060, 1031;  // Smokie (Lv 18), Bigfoot (Lv 29), Poporing (Lv 11)
+	set .Mobs_pay_fild09_count, 3;
 
 	setarray .Mobs_moc_fild01[0], 1107, 1113, 1002;  // Baby Desert Wolf (Lv 9), Drops (Lv 3), Poring (Lv 1)
 	set .Mobs_moc_fild01_count, 3;
@@ -1197,6 +1225,20 @@ OnInit:
 
 	setarray .Mobs_mjolnir_02[0], 1155, 1004, 1118;  // Petite (Lv 44), Hornet (Lv 8), Flora (Lv 26)
 	set .Mobs_mjolnir_02_count, 3;
+
+	// Payon Mid-High Fields (Lv 29-52)
+	setarray .Mobs_pay_fild04[0], 1031, 1242, 1002;  // Poporing (Lv 11), Marin (Lv 38), Poring (Lv 1)
+	set .Mobs_pay_fild04_count, 3;
+
+	setarray .Mobs_pay_fild07[0], 1033, 1116, 1060;  // Elder Willow (Lv 37), Eggyra (Lv 29), Bigfoot (Lv 29)
+	set .Mobs_pay_fild07_count, 3;
+
+	setarray .Mobs_pay_fild10[0], 1277, 1110, 1180;  // Greatest General (Lv 40), Dokebi (Lv 33), Nine Tail (Lv 52)
+	set .Mobs_pay_fild10_count, 3;
+
+	// [MVP MAP] Eddga spawns here
+	setarray .Mobs_pay_fild11[0], 1180, 1321, 1277;  // Nine Tail (Lv 52), Dragon Tail (Lv 37), Greatest General (Lv 40)
+	set .Mobs_pay_fild11_count, 3;
 
 	// Low-Mid Dungeons (Lv 20-40)
 	setarray .Mobs_anthell01[0], 1160, 1105;  // Piere (1160), Deniro (1105)
@@ -2116,6 +2158,12 @@ mjolnir_01,282,23,4	duplicate(BountyBoard)	Bounty Board#mjolnir_01	4_BOARD3
 mjolnir_01,200,180,4	duplicate(BountyBoard)	Bounty Board#mjolnir_01_2	4_BOARD3
 pay_fild01,19,154,4	duplicate(BountyBoard)	Bounty Board#pay_fild01	4_BOARD3
 pay_fild01,150,100,4	duplicate(BountyBoard)	Bounty Board#pay_fild01_2	4_BOARD3
+// pay_fild03 - Alberta exit, low level
+pay_fild03,25,110,4	duplicate(BountyBoard)	Bounty Board#pay_fild03	4_BOARD3
+pay_fild03,200,150,4	duplicate(BountyBoard)	Bounty Board#pay_fild03_2	4_BOARD3
+// pay_fild08 - Payon town exit, Doomed Swords quest
+pay_fild08,20,77,4	duplicate(BountyBoard)	Bounty Board#pay_fild08	4_BOARD3
+pay_fild08,150,150,4	duplicate(BountyBoard)	Bounty Board#pay_fild08_2	4_BOARD3
 
 // Beginner Dungeons (Lv 5-25)
 prt_sewb1,137,246,4	duplicate(BountyBoard)	Bounty Board#prt_sewb1	4_BOARD3
@@ -2128,6 +2176,18 @@ pay_dun00,100,100,4	duplicate(BountyBoard)	Bounty Board#pay_dun00_2	4_BOARD3
 // Low-Mid Fields (Lv 15-35)
 pay_fild06,152,198,4	duplicate(BountyBoard)	Bounty Board#pay_fild06	4_BOARD3
 pay_fild06,200,100,4	duplicate(BountyBoard)	Bounty Board#pay_fild06_2	4_BOARD3
+// pay_fild02 - Archer Village exit, Wolf/Boa
+pay_fild02,85,380,4	duplicate(BountyBoard)	Bounty Board#pay_fild02	4_BOARD3
+pay_fild02,150,200,4	duplicate(BountyBoard)	Bounty Board#pay_fild02_2	4_BOARD3
+// pay_fild05 - Dragon Tail/Poison Spore zone
+pay_fild05,130,373,4	duplicate(BountyBoard)	Bounty Board#pay_fild05	4_BOARD3
+pay_fild05,150,200,4	duplicate(BountyBoard)	Bounty Board#pay_fild05_2	4_BOARD3
+// pay_fild09 - Smokie/Bigfoot forest
+pay_fild09,22,91,4	duplicate(BountyBoard)	Bounty Board#pay_fild09	4_BOARD3
+pay_fild09,150,150,4	duplicate(BountyBoard)	Bounty Board#pay_fild09_2	4_BOARD3
+// pay_fild04 - Poring Island (Poporing/Marin)
+pay_fild04,22,165,4	duplicate(BountyBoard)	Bounty Board#pay_fild04	4_BOARD3
+pay_fild04,200,200,4	duplicate(BountyBoard)	Bounty Board#pay_fild04_2	4_BOARD3
 moc_fild01,80,240,4	duplicate(BountyBoard)	Bounty Board#moc_fild01	4_BOARD3
 moc_fild01,180,180,4	duplicate(BountyBoard)	Bounty Board#moc_fild01_2	4_BOARD3
 moc_fild02,69,340,4	duplicate(BountyBoard)	Bounty Board#moc_fild02	4_BOARD3
@@ -2150,6 +2210,15 @@ pay_dun01,21,35,4	duplicate(BountyBoard)	Bounty Board#pay_dun01	4_BOARD3
 pay_dun01,150,100,4	duplicate(BountyBoard)	Bounty Board#pay_dun01_2	4_BOARD3
 
 // Mid Fields (Lv 30-50)
+// pay_fild07 - Central hub (Elder Willow, Eggyra, Bigfoot)
+pay_fild07,25,205,4	duplicate(BountyBoard)	Bounty Board#pay_fild07	4_BOARD3
+pay_fild07,200,200,4	duplicate(BountyBoard)	Bounty Board#pay_fild07_2	4_BOARD3
+// pay_fild10 - Payon Deep Forest (Greatest General, Dokebi, Nine Tail)
+pay_fild10,22,290,4	duplicate(BountyBoard)	Bounty Board#pay_fild10	4_BOARD3
+pay_fild10,200,250,4	duplicate(BountyBoard)	Bounty Board#pay_fild10_2	4_BOARD3
+// pay_fild11 - [MVP MAP] Eddga's Domain (Nine Tail, Dragon Tail, Greatest General)
+pay_fild11,292,137,4	duplicate(BountyBoard)	Bounty Board#pay_fild11	4_BOARD3
+pay_fild11,150,230,4	duplicate(BountyBoard)	Bounty Board#pay_fild11_2	4_BOARD3
 gef_fild02,28,84,4	duplicate(BountyBoard)	Bounty Board#gef_fild02	4_BOARD3
 gef_fild02,198,197,4	duplicate(BountyBoard)	Bounty Board#gef_fild02_2	4_BOARD3
 gef_fild03,367,89,4	duplicate(BountyBoard)	Bounty Board#gef_fild03	4_BOARD3
